@@ -21,11 +21,13 @@ pip install -r requirements.txt
 
 Structure
 
-architecture-bot/
-├── docs/              # Regional building codes and standards references
-├── src/               # Core bot logic
-├── workflows/         # Predefined workflows (concepts, compliance, docs)
-├── examples/          # Sample usage scripts
-├── tests/             # Unit tests
-├── README.md          # Project overview
-└── LICENSE            # License file
+ai-architecture
+
+├── docs/              (Regional building codes and standards references)
+├── src/               (Core bot logic)
+├── workflows/         (Predefined workflows (concepts, compliance, docs))
+├── examples/          (Sample usage scripts)
+├── tests/             (Unit tests)
+├── README.md          (Project overview)
+└── LICENSE           (License file)
+
