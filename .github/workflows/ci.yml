@@ -41,3 +41,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
           fail_ci_if_error: true
+
+
+- name: Run unit tests with coverage
+  run: pytest --cov=src --cov-report=xml
