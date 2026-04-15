@@ -1,0 +1,47 @@
+name: Compliance Validation
+
+on:
+  push:
+    paths:
+      - "drawings/**"
+      - "standards/**"
+      - "models/**"
+  pull_request:
+    paths:
+      - "drawings/**"
+      - "standards/**"
+      - "models/**"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout repository
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      # 2. Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      # 3. Install dependencies
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install ezdxf ifcopenshell pyyaml
+
+      # 4. Run compliance checker notebook
+      - name: Run compliance check
+        run: |
+          jupyter nbconvert --to notebook --execute models/compliance_checker.ipynb \
+            --output examples/compliance_report.ipynb
+
+      # 5. Upload compliance report as artifact
+      - name: Upload compliance report
+        uses: actions/upload-artifact@v3
+        with:
+          name: compliance-report
+          path: examples/compliance_report.ipynb
