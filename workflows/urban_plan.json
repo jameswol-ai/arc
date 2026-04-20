@@ -1,0 +1,30 @@
+{
+  "name": "urban_plan",
+  "description": "Generate a large-scale urban development plan",
+  "stages": [
+    {
+      "name": "input_validation",
+      "function": "validate_input"
+    },
+    {
+      "name": "concept_stage",
+      "function": "concept_stage"
+    },
+    {
+      "name": "zoning_stage",
+      "function": "zoning_stage"
+    },
+    {
+      "name": "infrastructure_stage",
+      "function": "infrastructure_stage"
+    },
+    {
+      "name": "sustainability_stage",
+      "function": "sustainability_stage"
+    },
+    {
+      "name": "output_stage",
+      "function": "output_stage"
+    }
+  ]
+}
