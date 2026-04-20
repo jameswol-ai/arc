@@ -58,3 +58,15 @@ def main() -> None:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+from workflows.workflow_engine import WorkflowEngine
+from workflows.architectural_workflows import architectural_workflow
+
+engine = WorkflowEngine(architectural_workflow)
+
+engine.set_context("input", "Eco-friendly school in tropical climate")
+
+result = engine.run_workflow("basic_design")
+
+print(result)
