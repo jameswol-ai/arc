@@ -25,6 +25,7 @@ ai-architecture
 ├── README.md          (Project overview)
 └── LICENSE           (License file)
 
+Final Repo Structure (Extended)
 ai-architecture-bot/
 │
 ├── src/
