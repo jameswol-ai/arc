@@ -1,17 +1,27 @@
-from src.core.context import Context
-from src.core.engine import WorkflowEngine
+from core.dispatcher import Dispatcher
+from core.context import Context
 
-def stage_one(ctx):
-    ctx.set("concept", "Eco-friendly school")
-    return "Concept created"
+class WorkflowEngine:
+    def __init__(self, workflow):
+        self.workflow = workflow
+        self.context = Context()
+        self.dispatcher = Dispatcher(workflow["stages"])
 
-def stage_two(ctx):
-    return f"Checked: {ctx.get('concept')}"
+    def set_context(self, key, value):
+        self.context.set(key, value)
 
-context = Context()
-engine = WorkflowEngine(context)
+    def run_workflow(self, workflow_name):
+        steps = self.workflow[workflow_name]
 
-workflow = [stage_one, stage_two]
+        for step in steps:
+            stage_name = step["name"]
 
-print(engine.run(workflow))
-print(context.all())
+            result = self.dispatcher.dispatch(
+                stage_name,
+                self.context
+            )
+
+            # store output of each stage like layers of a blueprint
+            self.context.set(stage_name, result)
+
+        return self.context.dump()
