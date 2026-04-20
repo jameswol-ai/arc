@@ -1,0 +1,9 @@
+{
+  "name": "basic_design",
+  "stages": [
+    "concept_stage",
+    "compliance_stage",
+    "analysis_stage",
+    "output_stage"
+  ]
+}
