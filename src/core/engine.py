@@ -1,3 +1,4 @@
+from core.function_registry import FUNCTION_REGISTRY
 class WorkflowEngine:
     def __init__(self, workflows):
         self.workflows = workflows
