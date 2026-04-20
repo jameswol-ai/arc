@@ -1,27 +1,29 @@
-from core.dispatcher import Dispatcher
-from core.context import Context
-
 class WorkflowEngine:
-    def __init__(self, workflow):
-        self.workflow = workflow
-        self.context = Context()
-        self.dispatcher = Dispatcher(workflow["stages"])
+    def __init__(self, workflows):
+        self.workflows = workflows
+        self.context = {}
 
     def set_context(self, key, value):
-        self.context.set(key, value)
+        self.context[key] = value
+
+    def get_context(self):
+        return self.context
 
     def run_workflow(self, workflow_name):
-        steps = self.workflow[workflow_name]
+        if workflow_name not in self.workflows:
+            raise ValueError(f"Workflow '{workflow_name}' not found")
+
+        steps = self.workflows[workflow_name]
 
         for step in steps:
-            stage_name = step["name"]
+            name = step["name"]
+            func = step["function"]
 
-            result = self.dispatcher.dispatch(
-                stage_name,
-                self.context
-            )
+            print(f"⚙️ Running stage: {name}")
 
-            # store output of each stage like layers of a blueprint
-            self.context.set(stage_name, result)
+            result = func(self.context)
 
-        return self.context.dump()
+            # Store result in context
+            self.context[name] = result
+
+        return self.context
