@@ -30,3 +30,11 @@ def main():
 if __name__ == "__main__":
     main()
 
+
+from core.doc_loader import DocLoader
+
+doc_loader = DocLoader()
+
+engine.set_context("building_codes", doc_loader.load_category("building_codes"))
+engine.set_context("system_design", doc_loader.load_doc("system_design.md"))
+engine.set_context("architecture_notes", doc_loader.load_doc("architecture_notes.md"))
