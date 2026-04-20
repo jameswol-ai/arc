@@ -1,8 +1,6 @@
 # arc
-ai-architecture
-[![CI Pipeline]https://github.com/jameswol-ai/arc.git/actions/workflows/ci.yml/badge.svg)](https://github.com/jameswol-ai/arc.git/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/https://github.com/jameswol-ai/arc.git/branch/main/graph/badge.svg)](https://codecov.io/gh/https://github.com/jameswol-ai/arc.git)
-
+#arc
+ai-architecture-bot
 
 Architecture AI is an AI tool that helps architects and engineers in East Africa design, check compliance, and prepare documentation quickly and efficiently.
 It provides references to regional building codes, automated compliance checks, and sample workflows for engineers and architects.
@@ -15,11 +13,6 @@ What It Does
 
 Getting Started
 Clone the repository and install requirements:
-
-```bash
-git clone https://github.com/jameswol-ai/arc.git
-cd architecture-bot
-pip install -r requirements.txt
 
 
 Structure
