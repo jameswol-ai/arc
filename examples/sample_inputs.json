@@ -1,0 +1,87 @@
+{
+  "basic_design": {
+    "input": "Eco-friendly primary school in a tropical climate",
+    "location": "Juba, South Sudan",
+    "requirements": [
+      "natural ventilation",
+      "low-cost materials",
+      "solar integration",
+      "flood resilience",
+      "community courtyard"
+    ],
+    "constraints": {
+      "budget_level": "low",
+      "max_height": "2 floors",
+      "material_preference": ["mud brick", "compressed earth block", "timber"],
+      "climate": "tropical"
+    }
+  },
+
+  "urban_plan": {
+    "input": "Design a sustainable mixed-use urban district",
+    "location": "tropical developing city",
+    "requirements": [
+      "walkable streets",
+      "public transit integration",
+      "green corridors",
+      "water drainage system",
+      "affordable housing zones"
+    ],
+    "constraints": {
+      "population_capacity": 50000,
+      "transport_focus": "bus + pedestrian",
+      "energy_target": "low carbon"
+    }
+  },
+
+  "emergency_shelter": {
+    "input": "Rapid deployment shelter for flood-affected communities",
+    "location": "river basin region",
+    "requirements": [
+      "quick assembly",
+      "portable materials",
+      "elevated structure",
+      "ventilation",
+      "rain protection"
+    ],
+    "constraints": {
+      "deployment_time": "48 hours",
+      "cost_priority": "extremely low",
+      "material_type": ["modular panels", "tarpaulin", "light steel frame"]
+    }
+  },
+
+  "residential_design": {
+    "input": "Affordable family housing cluster",
+    "location": "hot humid rural settlement",
+    "requirements": [
+      "cross ventilation",
+      "shaded outdoor space",
+      "rainwater harvesting",
+      "expandable units",
+      "community shared space"
+    ],
+    "constraints": {
+      "unit_count": 20,
+      "max_cost_per_unit": "low",
+      "material_preference": ["earth blocks", "bamboo", "corrugated metal roof"]
+    }
+  },
+
+  "institutional_building": {
+    "input": "Community health clinic for rural region",
+    "location": "tropical remote area",
+    "requirements": [
+      "sterile zones",
+      "natural lighting",
+      "reliable cooling without grid dependence",
+      "waiting shaded areas",
+      "water storage system"
+    ],
+    "constraints": {
+      "power_source": "solar",
+      "staff_capacity": 10,
+      "patient_capacity": 50
+    }
+  }
+}
