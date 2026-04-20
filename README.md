@@ -1,5 +1,5 @@
-# arc
-#arc
+# random
+#random
 ai-architecture-bot
 
 Architecture AI is an AI tool that helps architects and engineers in East Africa design, check compliance, and prepare documentation quickly and efficiently.
