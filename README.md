@@ -8,10 +8,8 @@ What It Does
 - Generate concept drawings adapted to tropical climates and local materials  
 - Check designs against Uganda Building Code 2024 and South Sudan guidelines  
 - Create simple reports, proposals, and compliance checklists  
-- Support collaboration through GitHub workflows  
-
-Getting Started
-Clone the repository and install requirements:
+- Support collaboration through GitHub workflows
+  
 
 Repo Structure
 
@@ -24,6 +22,7 @@ ai-architecture
 ├── tests/             (Unit tests)
 ├── README.md          (Project overview)
 └── LICENSE           (License file)
+
 
 Final Repo Structure (Extended)
 ai-architecture-bot/
