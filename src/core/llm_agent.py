@@ -1,21 +1,21 @@
 # src/core/llm_agent.py
 
 class LLMAgent:
-    def __init__(self, llm_client, metrics):
+    def __init__(self, llm_client):
         self.llm = llm_client
-        self.metrics = metrics
 
-    def debate(self, role, context, conversation):
-        weight = self.metrics.get_weight(role)
+    def run_dynamic(self, role_profile, context):
+        role_name = role_profile["name"]
+        traits = role_profile["traits"]
 
-        response = self.llm.generate(role, {
+        response = self.llm.generate(role_name, {
             **context,
-            "conversation": conversation,
-            "weight": weight
+            "traits": traits
         })
 
         return {
-            "speaker": role,
-            "message": response.get("output"),
-            "score": response.get("confidence", 0.5) * weight
+            "role": role_name,
+            "output": response.get("output"),
+            "traits": traits,
+            "confidence": response.get("confidence", 0.5)
         }
