@@ -58,3 +58,19 @@ class WorkflowEngine:
             return result["conversation"][0].get("score", 0.5)
         except:
             return 0.5
+
+
+from src.core.ecosystem_engine import EcosystemEngine
+
+
+class WorkflowEngine:
+    def __init__(self):
+        self.ecosystem = EcosystemEngine()
+        self.context = {}
+
+    def set_context(self, key, value):
+        self.context[key] = value
+
+    def run_workflow(self, workflow_name=None):
+        # 🌱 run evolutionary cycle instead of single system execution
+        return self.ecosystem.run_cycle()
