@@ -2,14 +2,17 @@
 
 from src.core.mock_llm import MockLLM
 from src.core.llm_agent import LLMAgent
-from src.core.firm_engine import FirmEngine
+from src.core.council_engine import CouncilEngine
+from src.core.iteration_engine import IterationEngine
 
 
 class WorkflowEngine:
     def __init__(self):
         self.llm = MockLLM()
         self.agent = LLMAgent(self.llm)
-        self.firm = FirmEngine(self.agent)
+
+        self.council = CouncilEngine(self.agent)
+        self.iteration = IterationEngine(self.council)
 
         self.context = {}
 
@@ -17,7 +20,4 @@ class WorkflowEngine:
         self.context[key] = value
 
     def run_workflow(self, workflow_name=None):
-        # 🏛️ ignore linear workflows for now
-        # we run “firm intelligence mode”
-
-        return self.firm.run_firm_cycle(self.context)
+        return self.iteration.run_iterations(self.context, rounds=3)
