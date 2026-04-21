@@ -2,10 +2,11 @@
 
 from src.core.mock_llm import MockLLM
 from src.core.llm_agent import LLMAgent
-from src.core.role_factory import RoleFactory
-from src.core.role_evolution import RoleEvolution
-from src.core.meta_controller import MetaController
 from src.core.debate_engine import DebateEngine
+from src.core.architecture_memory import ArchitectureMemory
+from src.core.system_architect import SystemArchitect
+from src.core.mutation_gate import MutationGate
+from src.core.architecture_evolver import ArchitectureEvolver
 
 
 class WorkflowEngine:
@@ -13,11 +14,12 @@ class WorkflowEngine:
         self.llm = MockLLM()
         self.agent = LLMAgent(self.llm)
 
-        self.factory = RoleFactory()
-        self.evolver = RoleEvolution()
-        self.meta = MetaController()
-
         self.debate = DebateEngine(self.agent)
+
+        self.memory = ArchitectureMemory()
+        self.architect = SystemArchitect()
+        self.gate = MutationGate()
+        self.evolver = ArchitectureEvolver(self.memory, self.gate)
 
         self.context = {}
 
@@ -26,25 +28,33 @@ class WorkflowEngine:
 
     def run_workflow(self, workflow_name=None):
 
-        # 🧠 base debate run
+        # 🧠 run system normally
         result = self.debate.run_debate(self.context)
 
-        self.meta.observe(result)
+        # 📦 record system state
+        self.memory.record(result)
 
-        # 🧬 check if system should invent new intelligence
-        if self.meta.should_create_new_role():
-            new_role = self.meta.suggest_new_role()
-            role_profile = self.factory.create_role(
-                new_role["name"],
-                new_role["traits"]
-            )
+        # 🧠 analyze system behavior
+        analysis = self.memory.analyze_trends()
 
-            # 🧠 inject new intelligence into system
-            dynamic_output = self.agent.run_dynamic(
-                role_profile,
-                self.context
-            )
+        # 🏗️ propose system evolution
+        proposal = self.architect.propose_changes(
+            analysis,
+            self._extract_score(result)
+        )
 
-            result["emergent_role"] = dynamic_output
+        # 🔁 attempt self-modification
+        evolution = self.evolver.evolve(proposal)
 
-        return result
+        return {
+            "result": result,
+            "architecture_analysis": analysis,
+            "evolution_proposal": proposal,
+            "evolution_result": evolution
+        }
+
+    def _extract_score(self, result):
+        try:
+            return result["conversation"][0].get("score", 0.5)
+        except:
+            return 0.5
