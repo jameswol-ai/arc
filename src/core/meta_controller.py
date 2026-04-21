@@ -2,38 +2,23 @@
 
 class MetaController:
     def __init__(self):
-        self.performance_log = []
+        self.history = []
 
-    def observe(self, run_result):
-        self.performance_log.append(run_result)
+    def observe(self, result):
+        self.history.append(result)
 
-    def evaluate(self):
-        """
-        Decide if system structure should change
-        """
-        recent = self.performance_log[-5:]
+    def should_create_new_role(self):
+        recent = self.history[-3:]
 
-        avg_score = sum(
-            sum(a.get("score", 0.5) for a in r["conversation"])
-            for r in recent
+        avg = sum(
+            r["result"]["conversation"][0]["score"]
+            for r in recent if r.get("result")
         ) / max(len(recent), 1)
 
-        return avg_score
+        return avg > 0.85  # high performance = allow complexity growth
 
-    def suggest_changes(self, avg_score):
-        if avg_score < 0.6:
-            return {
-                "action": "simplify_pipeline",
-                "reason": "low reasoning stability"
-            }
-
-        if avg_score > 0.85:
-            return {
-                "action": "add_complexity",
-                "reason": "system can handle richer reasoning"
-            }
-
+    def suggest_new_role(self):
         return {
-            "action": "maintain",
-            "reason": "stable system"
+            "name": "adaptive_architect",
+            "traits": ["design", "analysis", "climate"]
         }
