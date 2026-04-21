@@ -28,3 +28,12 @@
     }
   ]
 }
+
+
+{
+  "basic_design": [
+    { "name": "concept_stage" },
+    { "name": "compliance_stage" },
+    { "name": "output_stage" }
+  ]
+}
