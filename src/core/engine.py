@@ -10,20 +10,42 @@ class WorkflowEngine:
     def set_context(self, key, value):
         self.context[key] = value
 
+    def _evaluate_condition(self, condition):
+        """
+        Very simple condition evaluator (v1 brain 🧠)
+        Example: "climate == tropical"
+        """
+        if not condition:
+            return True
+
+        expr = condition.get("if", "")
+
+        try:
+            # Safe-ish evaluation using context only
+            key, _, value = expr.partition("==")
+            key = key.strip()
+            value = value.strip()
+
+            return str(self.context.get(key)) == value
+        except Exception:
+            return False
+
     def run_workflow(self, workflow_name):
         workflow = load_workflow(workflow_name)
-
-        if "basic_design" not in workflow:
-            raise ValueError("Workflow must contain 'basic_design'")
 
         steps = workflow["basic_design"]
         result = None
 
         for step in steps:
+            condition = step.get("condition")
+
+            if not self._evaluate_condition(condition):
+                continue  # skip this stage 🌿
+
             name = step["name"]
 
             if name not in FUNCTION_REGISTRY:
-                raise ValueError(f"Step '{name}' not found in registry")
+                raise ValueError(f"Step '{name}' not found")
 
             func = FUNCTION_REGISTRY[name]
 
