@@ -4,13 +4,15 @@ class LLMAgent:
     def __init__(self, llm_client):
         self.llm = llm_client
 
-    def run(self, role, context):
-        response = self.llm.generate(role, context)
+    def debate(self, role, context, incoming_arguments):
+        response = self.llm.generate(role, {
+            **context,
+            "debate": incoming_arguments
+        })
 
-        # 🧠 convert into council opinion format
         return {
-            "agent": role,
-            "proposal": response.get("output"),
-            "score": response.get("confidence", 0.5),
-            "reasoning": response.get("critique", "No critique provided")
+            "speaker": role,
+            "message": response.get("output"),
+            "supports": response.get("supports", []),
+            "challenges": response.get("challenges", [])
         }
