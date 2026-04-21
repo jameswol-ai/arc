@@ -36,3 +36,69 @@ class WorkflowEngine:
                 pass
 
         return result
+
+
+class WorkflowEngine:
+    def __init__(self, workflow_definition, context=None):
+        self.workflow = workflow_definition
+        self.context = context or {}
+
+    def set_context(self, key, value):
+        self.context[key] = value
+
+    def get_context(self):
+        return self.context
+
+    def run_stage(self, stage_func):
+        return stage_func(self.context)
+
+    def run_workflow(self, workflow_name):
+        if workflow_name not in self.workflow:
+            raise ValueError(f"Workflow '{workflow_name}' not found")
+
+        stages = self.workflow[workflow_name]
+        result = None
+
+        for stage in stages:
+            stage_func = stage["func"]
+            stage_name = stage.get("name", stage_func.__name__)
+
+            print(f"⚙️ Running stage: {stage_name}")
+
+            result = self.run_stage(stage_func)
+            self.context[stage_name] = result
+
+        return result
+
+
+class WorkflowEngine:
+    def __init__(self, workflow_definition, context=None):
+        self.workflow = workflow_definition
+        self.context = context or {}
+
+    def set_context(self, key, value):
+        self.context[key] = value
+
+    def get_context(self):
+        return self.context
+
+    def run_stage(self, stage_func):
+        return stage_func(self.context)
+
+    def run_workflow(self, workflow_name):
+        if workflow_name not in self.workflow:
+            raise ValueError(f"Workflow '{workflow_name}' not found")
+
+        stages = self.workflow[workflow_name]
+        result = None
+
+        for stage in stages:
+            stage_func = stage["func"]
+            stage_name = stage.get("name", stage_func.__name__)
+
+            print(f"⚙️ Running stage: {stage_name}")
+
+            result = self.run_stage(stage_func)
+            self.context[stage_name] = result
+
+        return result
