@@ -5,21 +5,38 @@ class DebateEngine:
         self.agent = agent
 
     def run_debate(self, context):
-        concept = self.agent.run("concept", context)
-        critic = self.agent.run("critic", {
-            **context,
-            "last_output": concept
-        })
+        roles = [
+            "architect",
+            "structural_engineer",
+            "climate_specialist",
+            "compliance_officer"
+        ]
+
+        # 🧠 initial idea seed from architect
+        architect_first = self.agent.debate("architect", context, [])
+
+        conversation = [architect_first]
+
+        # 🔁 iterative argument exchange
+        for role in roles[1:]:
+            response = self.agent.debate(role, context, conversation)
+            conversation.append(response)
+
+        # 🔄 second round: reactions
+        refined = []
+        for role in roles:
+            response = self.agent.debate(role, context, conversation)
+            refined.append(response)
 
         return {
-            "concept": concept,
-            "critique": critic,
-            "final": self._resolve(concept, critic)
+            "initial_round": conversation,
+            "refined_round": refined,
+            "final_state": self._merge(refined)
         }
 
-    def _resolve(self, concept, critic):
+    def _merge(self, responses):
+        # 🧠 simplified consensus merge
         return {
-            "output": f"Refined Design:\n{concept['output']}",
-            "review": critic.get("output"),
-            "confidence": 0.85
+            "final_design": responses[0]["message"],
+            "contributors": [r["speaker"] for r in responses]
         }
