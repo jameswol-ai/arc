@@ -1,9 +1,18 @@
 {
   "name": "basic_design",
-  "stages": [
-    "concept_stage",
-    "compliance_stage",
-    "analysis_stage",
-    "output_stage"
-  ]
+  "entry": "concept",
+  "graph": {
+    "concept": {
+      "next": "compliance"
+    },
+    "compliance": {
+      "next": "analysis"
+    },
+    "analysis": {
+      "next": "output"
+    },
+    "output": {
+      "next": null
+    }
+  }
 }
