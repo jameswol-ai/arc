@@ -1,9 +1,14 @@
-class Dispatcher:
-    def __init__(self, stages):
-        self.stages = {stage["name"]: stage["func"] for stage in stages}
+# src/core/context.py
 
-    def dispatch(self, stage_name, context):
-        if stage_name not in self.stages:
-            raise Exception(f"Stage {stage_name} not found in workflow")
+class Context:
+    def __init__(self):
+        self.data = {}
 
-        return self.stages[stage_name](context)
+    def set(self, key, value):
+        self.data[key] = value
+
+    def get(self, key, default=None):
+        return self.data.get(key, default)
+
+    def update(self, new_data: dict):
+        self.data.update(new_data)
