@@ -1,8 +1,8 @@
-# src/core/engine.py
+#ssr/core/engine.py
 
 from src.core.function_registry import FUNCTION_REGISTRY
 from src.core.workflow_loader import load_workflow
-from src.core.router import choose_next_steps
+from src.core.memory import memory  # if you're using learning system
 
 class WorkflowEngine:
     def __init__(self):
@@ -13,30 +13,26 @@ class WorkflowEngine:
 
     def run_workflow(self, workflow_name):
         workflow = load_workflow(workflow_name)
-        base_steps = workflow["basic_design"]
+        steps = workflow["basic_design"]
 
         result = None
 
-        i = 0
-        while i < len(base_steps):
-
-            step = base_steps[i]
+        for step in steps:
             name = step["name"]
 
-            # execute step
-            if name in FUNCTION_REGISTRY:
-                func = FUNCTION_REGISTRY[name]
-                self.context["last_result"] = result
-                result = func(self.context)
-                self.context[f"{name}_output"] = result
+            if name not in FUNCTION_REGISTRY:
+                raise ValueError(f"Step '{name}' not found in registry")
 
-            # 🧠 ask router AFTER key steps
-            new_steps = choose_next_steps(self.context)
+            func = FUNCTION_REGISTRY[name]
 
-            for ns in new_steps:
-                if ns not in [s["name"] for s in base_steps]:
-                    base_steps.insert(i + 1, {"name": ns})
+            self.context["last_result"] = result
+            result = func(self.context)
+            self.context[f"{name}_output"] = result
 
-            i += 1
+            # 🧠 optional learning hook (only if memory exists)
+            try:
+                memory.record(name, True)
+            except Exception:
+                pass
 
         return result
