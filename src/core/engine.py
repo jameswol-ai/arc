@@ -1,27 +1,26 @@
-#src/core/engine.py
+# src/core/engine.py
 
-def run_workflow(self, workflow_name):
-    if workflow_name not in self.workflow:
-        raise ValueError(f"Workflow '{workflow_name}' not found")
+class WorkflowEngine:
+    def __init__(self, workflows, context=None):
+        self.workflows = workflows
+        self.context = context or {}
 
-    stages = self.workflow[workflow_name]
-    result = None
+    def set_context(self, key, value):
+        self.context[key] = value
 
-    for stage in stages:
-        stage_func = stage["func"]
-        stage_name = stage.get("name", stage_func.__name__)
-        condition = stage.get("condition", None)
+    def run_workflow(self, workflow_name):
+        workflow = self.workflows.get(workflow_name)
 
-        # 🧠 check condition (if any)
-        if condition:
-            should_run = condition(self.context)
-            if not should_run:
-                print(f"⏭️ Skipping stage: {stage_name}")
-                continue
+        if not workflow:
+            raise ValueError(f"Workflow '{workflow_name}' not found")
 
-        print(f"⚙️ Running stage: {stage_name}")
+        for stage in workflow:
+            stage_fn = stage["function"]
 
-        result = stage_func(self.context)
-        self.context[stage_name] = result
+            # run stage with shared context
+            result = stage_fn(self.context)
 
-    return result
+            # optionally store result back into context
+            self.context[stage["name"]] = result
+
+        return self.context
