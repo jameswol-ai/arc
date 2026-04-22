@@ -3,32 +3,40 @@
 import streamlit as st
 
 from src.core.engine import WorkflowEngine
-from src.stages.sample_stages import (
+from src.stages.basic_stages import (
     concept_stage,
     compliance_stage,
-    output_stage,
+    output_stage
 )
+
+# Register functions
+functions = {
+    "concept_stage": concept_stage,
+    "compliance_stage": compliance_stage,
+    "output_stage": output_stage,
+}
 
 # Define workflow
 workflow = {
     "basic_design": [
-        {"name": "concept", "function": concept_stage},
-        {"name": "compliance", "function": compliance_stage},
-        {"name": "output", "function": output_stage},
+        {"name": "concept_stage"},
+        {"name": "compliance_stage"},
+        {"name": "output_stage"},
     ]
 }
 
-# UI
+# Streamlit UI
 st.title("🏗️ AI Architecture Bot")
 
-user_input = st.text_input("Enter project idea:")
+user_input = st.text_input("Enter your project idea:")
 
 if st.button("Run Workflow"):
-    engine = WorkflowEngine(workflow)
+    engine = WorkflowEngine(workflow, functions)
     engine.set_context("input", user_input)
 
-    results = engine.run_workflow("basic_design")
+    result = engine.run_workflow("basic_design")
 
     st.subheader("Results:")
-    for r in results:
-        st.write(r)
+    for step in result:
+        for k, v in step.items():
+            st.write(f"**{k}**: {v}")
