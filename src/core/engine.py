@@ -1,40 +1,26 @@
 # src/core/engine.py
 
-from src.core.reflection import ReflectionEngine
-from src.core.evolver import WorkflowEvolver
-
 class WorkflowEngine:
-    def __init__(self, registry, memory):
-        self.registry = registry
-        self.memory = memory
-        self.reflector = ReflectionEngine()
-        self.evolver = WorkflowEvolver()
+    def __init__(self):
+        self.stages = [
+            self.analyze,
+            self.plan,
+            self.generate
+        ]
 
-    def run(self, workflow, context):
-        trace = []
+    def run_workflow(self, context):
+        for stage in self.stages:
+            context = stage(context)
+        return context
 
-        for stage_name in workflow["stages"]:
-            stage = self.registry.get_stage(stage_name)
+    def analyze(self, context):
+        context["analysis"] = f"Analyzed: {context['input']}"
+        return context
 
-            try:
-                context = stage.run(context, self.memory)
-            except Exception as e:
-                context.add_error(e)
+    def plan(self, context):
+        context["plan"] = "Basic plan created"
+        return context
 
-            trace.append({
-                "stage": stage_name,
-                "output": context.data.copy()
-            })
-
-        # 🧠 REFLECTION PHASE
-        insights = self.reflector.analyze(trace)
-
-        # 🔁 EVOLUTION PHASE
-        changes = self.reflector.suggest_changes(insights)
-        workflow = self.evolver.apply(workflow, changes)
-
-        # 💾 SAVE LEARNING
-        self.memory.update("last_insights", insights)
-        self.memory.update("last_workflow", workflow)
-
-        return context, trace, insights
+    def generate(self, context):
+        context["output"] = "Architecture generated"
+        return context
