@@ -1,5 +1,6 @@
 # src/core/engine.py
 
+from core.engine import WorkflowEngine
 from core.context import Context
 
 class WorkflowEngine:
