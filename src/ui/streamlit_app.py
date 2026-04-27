@@ -32,3 +32,9 @@ st.write(insights)
 
 st.subheader("🔁 Evolved Workflow")
 st.json(memory.load().get("last_workflow", {}))
+
+st.subheader("🧠 Reflection")
+st.info(result["summary"]["reflection"])
+
+st.subheader("🧬 Memory Depth")
+st.metric("Runs remembered", result["memory_depth"])
