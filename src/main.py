@@ -1,16 +1,19 @@
+#random/src/main.py
+
+import sys, os
+sys.path.append(os.path.abspath("src"))
+
 from core.engine import WorkflowEngine
-from stages.concept_stage import ConceptStage
-from utils.logger import log
+import json
 
-engine = WorkflowEngine()
+if __name__ == "__main__":
+    with open("../workflows/basic_design.json") as f:
+        config = json.load(f)
 
-engine.set_context(
-    "input",
-    "Eco-friendly school in tropical climate"
-)
+    engine = WorkflowEngine(config)
 
-result = engine.run_workflow("basic_design")
+    result = engine.run_workflow({
+        "input": "Design a tropical eco house"
+    })
 
-print("\n".join(result["results"]))
-print("\nFINAL OUTPUT:")
-print(result["final"])
+    print(result)
