@@ -83,3 +83,75 @@ class WorkflowEngine:
             return "System stable. Dual-layer coherence maintained."
 
         return "Partial divergence detected between stages. System remains functional but uneven."
+
+# =========================================================
+# 🧭 INTENT ENGINE (PREFERENCE FORMATION LAYER)
+# =========================================================
+
+class IntentEngine:
+    def __init__(self, memory):
+        self.memory = memory
+
+    def derive_intent(self):
+        scores = self.memory.get("node_scores", {})
+        traffic = self.memory.get("traffic", {})
+
+        if not scores:
+            return {"intent": "explore", "confidence": 0.1}
+
+        # 🧠 dominant behavior direction
+        dominant_node = max(scores.items(), key=lambda x: x[1])[0]
+
+        # 🚦 most reinforced transition
+        strongest_route = None
+        max_count = 0
+
+        for a, paths in traffic.items():
+            for b, count in paths.items():
+                if count > max_count:
+                    max_count = count
+                    strongest_route = (a, b)
+
+        # 🌱 system tendency inference
+        avg = sum(scores.values()) / len(scores)
+
+        if avg > 1.6:
+            intent = "expand"
+            confidence = 0.85
+        elif avg > 1.2:
+            intent = "stabilize"
+            confidence = 0.7
+        elif avg > 0.9:
+            intent = "explore"
+            confidence = 0.6
+        else:
+            intent = "repair"
+            confidence = 0.8
+
+        return {
+            "intent": intent,
+            "confidence": confidence,
+            "dominant_node": dominant_node,
+            "preferred_route": strongest_route
+        }
+
+    def bias_next_step(self, current, roads):
+        """
+        Slightly biases routing toward preferred behavior.
+        """
+        intent = self.derive_intent()
+
+        if intent["intent"] == "expand":
+            # prefer switching paths randomly (growth behavior)
+            return None
+
+        if intent["intent"] == "stabilize":
+            # reinforce existing route
+            return roads.get(current)
+
+        if intent["intent"] == "repair":
+            # avoid weak nodes
+            weak = min(self.memory["node_scores"], key=self.memory["node_scores"].get)
+            return weak if weak in roads else roads.get(current)
+
+        return roads.get(current)
