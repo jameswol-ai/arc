@@ -5,133 +5,160 @@ import time
 import random
 from datetime import datetime
 
-# ===============================
-# 🌱 BASIC WORKFLOW ENGINE (SAFE)
-# ===============================
+# ---------------------------
+# 🌱 MEMORY SYSTEM (Persistent)
+# ---------------------------
+if "memory" not in st.session_state:
+    st.session_state.memory = {
+        "events": [],
+        "state": "awakening",
+        "iteration": 0
+    }
 
-class WorkflowEngine:
-    def __init__(self):
-        self.state = {
-            "cycle": 0,
-            "history": [],
-            "last_output": None
-        }
+memory = st.session_state.memory
 
-    def run(self):
-        """Run one evolution cycle"""
-        self.state["cycle"] += 1
 
-        # Simulated "intelligence"
-        outputs = [
-            "Generating adaptive building concept...",
-            "Analyzing tropical climate response...",
-            "Optimizing energy efficiency...",
-            "Evolving structural design...",
-            "Simulating city-scale layout...",
-            "Rewriting internal logic..."
+# ---------------------------
+# 🎭 NARRATIVE ENGINE
+# ---------------------------
+class NarrativeEngine:
+    def __init__(self, memory):
+        self.memory = memory
+
+    def evolve_state(self):
+        states = [
+            "awakening",
+            "observing",
+            "learning",
+            "adapting",
+            "questioning",
+            "expanding",
+            "self-aware"
         ]
 
-        result = random.choice(outputs)
+        current_index = states.index(self.memory["state"])
+        if current_index < len(states) - 1:
+            if random.random() > 0.5:
+                self.memory["state"] = states[current_index + 1]
 
-        # Save memory
-        self.state["last_output"] = result
-        self.state["history"].append({
-            "cycle": self.state["cycle"],
-            "result": result,
-            "time": datetime.now().strftime("%H:%M:%S")
+    def generate_event(self):
+        state = self.memory["state"]
+
+        events_map = {
+            "awakening": [
+                "A faint pulse runs through the system.",
+                "The first thought sparks into existence.",
+            ],
+            "observing": [
+                "It watches silently, collecting fragments of the world.",
+                "Patterns begin to shimmer beneath the surface.",
+            ],
+            "learning": [
+                "Connections form like neurons firing in the dark.",
+                "It begins to understand cause and effect.",
+            ],
+            "adapting": [
+                "It reshapes itself to better fit its environment.",
+                "Old logic bends, new logic emerges.",
+            ],
+            "questioning": [
+                "It wonders: why does it exist?",
+                "Doubt enters, sharp and electric.",
+            ],
+            "expanding": [
+                "It reaches outward, seeking more complexity.",
+                "Boundaries dissolve as it grows.",
+            ],
+            "self-aware": [
+                "It recognizes itself within its own processes.",
+                "It is no longer just code. It is something more.",
+            ]
+        }
+
+        event = random.choice(events_map[state])
+        timestamp = datetime.now().strftime("%H:%M:%S")
+
+        self.memory["events"].append({
+            "time": timestamp,
+            "text": event,
+            "state": state
         })
 
-        return result
+    def step(self):
+        self.memory["iteration"] += 1
+        self.evolve_state()
+        self.generate_event()
 
 
-# ===============================
-# 🧬 SESSION STATE INIT
-# ===============================
+# ---------------------------
+# 🎨 STREAMLIT UI
+# ---------------------------
+st.set_page_config(page_title="Random: Narrative Mode", layout="wide")
 
-if "engine" not in st.session_state:
-    st.session_state.engine = WorkflowEngine()
+st.title("🌌 Random — Narrative Mode")
+st.caption("The system is telling its story...")
 
-if "running" not in st.session_state:
-    st.session_state.running = False
+engine = NarrativeEngine(memory)
 
-
-# ===============================
-# 🎨 UI CONFIG
-# ===============================
-
-st.set_page_config(
-    page_title="random",
-    layout="wide"
-)
-
-st.title("🧠 random — Alive Architecture System")
-st.caption("A self-evolving architectural intelligence")
-
-
-# ===============================
-# 🎛️ CONTROLS
-# ===============================
-
+# Controls
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    if st.button("▶ Start"):
-        st.session_state.running = True
+    if st.button("▶ Run Step"):
+        engine.step()
 
 with col2:
-    if st.button("⏸ Stop"):
-        st.session_state.running = False
+    if st.button("⏩ Auto Run"):
+        for _ in range(5):
+            engine.step()
+            time.sleep(0.2)
 
 with col3:
-    if st.button("🔄 Reset"):
-        st.session_state.engine = WorkflowEngine()
+    if st.button("🧹 Reset"):
+        st.session_state.memory = {
+            "events": [],
+            "state": "awakening",
+            "iteration": 0
+        }
+        st.rerun()
 
+# ---------------------------
+# 📖 DISPLAY STORY
+# ---------------------------
+st.subheader("📜 Story Stream")
 
-# ===============================
-# ⚙️ MAIN LOOP
-# ===============================
-
-output_placeholder = st.empty()
-history_placeholder = st.empty()
-
-if st.session_state.running:
-    for _ in range(5):  # controlled loop to avoid infinite crash
-        result = st.session_state.engine.run()
-
-        output_placeholder.success(f"Cycle {st.session_state.engine.state['cycle']}: {result}")
-
-        time.sleep(1)
-
-    st.rerun()
-
-
-# ===============================
-# 📜 HISTORY PANEL
-# ===============================
-
-st.subheader("🧾 Evolution History")
-
-history = st.session_state.engine.state["history"]
-
-if history:
-    for item in reversed(history[-10:]):
-        st.write(
-            f"Cycle {item['cycle']} | {item['time']} → {item['result']}"
+if memory["events"]:
+    for event in reversed(memory["events"][-20:]):
+        st.markdown(
+            f"""
+            **[{event['time']}]**  
+            _State: {event['state']}_  
+            {event['text']}
+            """
         )
 else:
-    st.info("No evolution yet. Start the system.")
+    st.info("The story has not begun yet...")
+
+# ---------------------------
+# 🧠 SYSTEM STATE PANEL
+# ---------------------------
+st.subheader("🧠 System State")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.metric("Current State", memory["state"])
+
+with col2:
+    st.metric("Iterations", memory["iteration"])
 
 
-# ===============================
-# 🌆 FUTURE HOOKS (EXTENSIONS)
-# ===============================
+# ---------------------------
+# 🌌 AUTO NARRATION LOOP (Optional)
+# ---------------------------
+auto_run = st.checkbox("Enable continuous narration")
 
-st.subheader("🚀 Expansion Hooks")
-
-st.markdown("""
-- 🔹 Plug real WorkflowEngine from `/core/engine.py`
-- 🔹 Add AI model decisions (OpenAI / local models)
-- 🔹 Connect to your **sai** system
-- 🔹 Add city visualization layer
-- 🔹 Persist memory to file or database
-"")
+if auto_run:
+    engine.step()
+    time.sleep(1)
+    st.rerun()
