@@ -26,3 +26,9 @@ if st.button("Run Random 🚀"):
 
     st.subheader("Memory Snapshot")
     st.json(memory.load())
+
+st.subheader("🧠 Insights (Self Reflection)")
+st.write(insights)
+
+st.subheader("🔁 Evolved Workflow")
+st.json(memory.load().get("last_workflow", {}))
