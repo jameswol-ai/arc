@@ -14,11 +14,11 @@ class WorkflowEngine:
         ]
 
     def run(self):
-        log = []
-        story = []
+        machine_log = []
+        narrative = []
         summary_points = []
 
-        story.append("🧠 Random wakes up. Workflow sequence begins.\n")
+        narrative.append("🧠 Random initializes dual-layer execution.\n")
 
         for name, stage_fn in self.workflow:
             try:
@@ -32,60 +32,54 @@ class WorkflowEngine:
 
                 summary_points.append(name)
 
-                line = self._narrate_success(name, result)
-                story.append(line)
-
-                log.append({
+                # ⚙️ MACHINE LAYER ENTRY
+                machine_log.append({
                     "stage": name,
                     "status": "ok",
-                    "output": result
+                    "data": result
                 })
 
-            except Exception as e:
-                line = self._narrate_failure(name, str(e))
-                story.append(line)
+                # 📖 NARRATIVE LAYER ENTRY
+                narrative.append(self._narrate(name, result))
 
-                log.append({
+            except Exception as e:
+                machine_log.append({
                     "stage": name,
                     "status": "failed",
                     "error": str(e)
                 })
 
+                narrative.append(f"⚠️ {name} encountered instability during execution.")
+
         reflection = self._reflect(summary_points)
 
-        story.append("\n🧠 System reflection: " + reflection)
-        story.append("📦 Workflow complete. Random returns to idle state.")
-
         return {
-            "story": story,
-            "summary": {
-                "reflection": reflection
+            "machine_layer": {
+                "context": self.context.data,
+                "log": machine_log
             },
-            "timeline": log,
-            "final_context": self.context.data
+            "narrative_layer": {
+                "story": narrative,
+                "reflection": reflection
+            }
         }
 
-    # 🎭 NARRATION LAYER
-    def _narrate_success(self, stage, result):
+    # 📖 HUMAN LAYER
+    def _narrate(self, stage, result):
         if stage == "concept_stage":
-            return f"📐 Concept phase stabilized: foundational architecture ideas formed."
+            return "📐 Concept layer formed: structural blueprint emerging from abstraction."
 
         if stage == "climate_check":
-            return f"🌍 Climate analysis completed: environmental compatibility assessed."
+            return "🌍 Environmental scan complete: system aligned with climate constraints."
 
         if stage == "eco_design":
-            return f"🌱 Eco-design resolved: sustainability metrics integrated into structure."
+            return "🌱 Sustainability layer integrated into architectural logic."
 
-        return f"⚙️ {stage} completed successfully."
+        return f"⚙️ {stage} processed successfully."
 
-    def _narrate_failure(self, stage, error):
-        return f"⚠️ {stage} encountered turbulence: {error}"
-
-    # 🧠 REFLECTION ENGINE
+    # 🧠 SYSTEM REFLECTION
     def _reflect(self, points):
-        success = len(points)
+        if len(points) == len(self.workflow):
+            return "System stable. Dual-layer coherence maintained."
 
-        if success == len(self.workflow):
-            return "System coherence maintained. No structural instability detected."
-
-        return "Partial instability detected. Workflow adapted but not fully optimized."
+        return "Partial divergence detected between stages. System remains functional but uneven."
