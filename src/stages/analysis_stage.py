@@ -1,15 +1,12 @@
 # src/stages/analysis_stage.py
 
-def analysis_stage(ctx):
-    input_data = ctx.get("input")
+class AnalysisStage:
+    def run(self, context):
+        layout = {
+            "rooms": ["living room", "2 bedrooms", "kitchen"],
+            "orientation": "east-west for airflow",
+            "ventilation": "cross ventilation"
+        }
 
-    analysis = f"""
-    Feasibility Analysis:
-    - Climate suitability: High (tropical adaptation recommended)
-    - Cost estimate: Medium range
-    - Material availability: Local + sustainable options viable
-    - Energy efficiency potential: Strong (solar + ventilation)
-    """
-
-    ctx.set("analysis", analysis)
-    return analysis
+        context.update_design("layout", layout)
+        return context
