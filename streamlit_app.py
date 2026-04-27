@@ -1,23 +1,27 @@
-#random/streamlit_app.py 
+# random/streamlit_app.py 
 
 import streamlit as st
 from core.engine import WorkflowEngine
 
-st.set_page_config(page_title="Random Engine", layout="centered")
+st.title("🧠 Random Engine")
 
-st.title("🧠 Random Autonomous Architect")
-
-st.write("A self-evolving workflow brain for architecture decisions.")
-
-if st.button("Run Random Engine 🚀"):
+if st.button("Run Random"):
     engine = WorkflowEngine()
     result = engine.run()
 
+    # 🧠 Summary (NEW)
+    st.subheader("🧠 Summary")
+    st.write(result["summary"]["title"])
+    st.info(result["summary"]["insight"])
+
+    # ⚙️ Timeline (cleaner view)
+    st.subheader("⚙️ Execution Timeline")
+    for step in result["timeline"]:
+        if step["status"] == "ok":
+            st.success(f"{step['stage']} → completed")
+        else:
+            st.error(f"{step['stage']} → failed")
+
+    # 📦 Context (raw brain state)
     st.subheader("📦 Final Context")
     st.json(result["final_context"])
-
-    st.subheader("🧾 Execution Log")
-
-    for step in result["log"]:
-        st.markdown(f"**{step['stage']}**")
-        st.json(step["output"])
