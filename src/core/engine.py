@@ -1,29 +1,16 @@
 # src/core/engine.py
 
-from core.engine import WorkflowEngine
 from core.context import Context
+from core.dispatcher import Dispatcher
 
 class WorkflowEngine:
-    def __init__(self):
-        self.stages = [
-            self.analyze,
-            self.plan,
-            self.generate
-        ]
+    def __init__(self, workflow_config):
+        self.dispatcher = Dispatcher(workflow_config)
 
-    def run_workflow(self, context):
-        for stage in self.stages:
-            context = stage(context)
-        return context
+    def run_workflow(self, input_data):
+        context = Context(input_data)
 
-    def analyze(self, context):
-        context["analysis"] = f"Analyzed: {context['input']}"
-        return context
+        for stage in self.dispatcher.get_stages():
+            context = stage.run(context)
 
-    def plan(self, context):
-        context["plan"] = "Basic plan created"
-        return context
-
-    def generate(self, context):
-        context["output"] = "Architecture generated"
-        return context
+        return context.data
