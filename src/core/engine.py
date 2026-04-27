@@ -1,56 +1,30 @@
 # src/core/engine.py
 
-from typing import Dict, List, Callable, Any
-
 class WorkflowEngine:
-    def __init__(self, workflow: Dict, function_registry: Dict[str, Callable]):
+    def __init__(self, workflow, function_registry):
         self.workflow = workflow
         self.function_registry = function_registry
         self.context = {}
 
-    def set_context(self, key: str, value: Any):
+    def set_context(self, key, value):
         self.context[key] = value
 
-    def get_context(self, key: str):
+    def get_context(self, key):
         return self.context.get(key)
 
-    def run_workflow(self, workflow_name: str):
+    def run_workflow(self, workflow_name):
         stages = self.workflow.get(workflow_name, [])
-        current_index = 0
 
-        while current_index < len(stages):
-            stage = stages[current_index]
+        for stage in stages:
+            func_name = stage.get("name")
+            func = self.function_registry.get(func_name)
 
-            # 🧠 Conditional execution
-            if "condition" in stage:
-                condition_fn = self.function_registry.get(stage["condition"])
-                if condition_fn and not condition_fn(self.context):
-                    current_index += 1
-                    continue
-
-            # ⚙️ Execute stage
-            func = self.function_registry.get(stage["name"])
             if not func:
-                raise ValueError(f"Stage function '{stage['name']}' not found")
+                raise ValueError(f"Function '{func_name}' not found")
 
             result = func(self.context)
 
-            # 🧬 Store result
             if "output_key" in stage:
                 self.context[stage["output_key"]] = result
 
-            # 🔀 Dynamic routing
-            if "next" in stage:
-                next_stage_name = stage["next"]
-                current_index = self._find_stage_index(stages, next_stage_name)
-                continue
-
-            current_index += 1
-
         return self.context
-
-    def _find_stage_index(self, stages: List[Dict], name: str):
-        for i, stage in enumerate(stages):
-            if stage["name"] == name:
-                return i
-        raise ValueError(f"Stage '{name}' not found")
