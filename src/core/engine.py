@@ -1,45 +1,54 @@
 # src/core/engine.py
 
-from core.context import Context
-import core.stages as stages
+ def run(self):
+    log = []
+    summary_points = []
 
-class WorkflowEngine:
-    def __init__(self):
-        self.context = Context()
+    for name, stage_fn in self.workflow:
+        try:
+            result = stage_fn(self.context)
 
-        self.workflow = [
-            ("concept_stage", stages.concept_stage),
-            ("climate_check", stages.climate_check),
-            ("eco_design", stages.eco_design),
-        ]
+            if not isinstance(result, dict):
+                result = {"output": result}
 
-    def run(self):
-        log = []
+            for k, v in result.items():
+                self.context.set(k, v)
 
-        for name, stage_fn in self.workflow:
-            try:
-                result = stage_fn(self.context)
+            summary_points.append(f"{name} completed successfully")
 
-                if not isinstance(result, dict):
-                    result = {"output": result}
+            log.append({
+                "stage": name,
+                "status": "ok",
+                "output": result
+            })
 
-                for k, v in result.items():
-                    self.context.set(k, v)
+        except Exception as e:
+            summary_points.append(f"{name} failed")
 
-                log.append({
-                    "stage": name,
-                    "output": result,
-                    "status": "ok"
-                })
+            log.append({
+                "stage": name,
+                "status": "failed",
+                "error": str(e)
+            })
 
-            except Exception as e:
-                log.append({
-                    "stage": name,
-                    "error": str(e),
-                    "status": "failed"
-                })
+    return {
+        "summary": {
+            "title": "Random Execution Report",
+            "insight": self._generate_insight(summary_points)
+        },
+        "timeline": log,
+        "final_context": self.context.data
+    }
 
-        return {
-            "final_context": self.context.data,
-            "log": log
-        }
+
+def _generate_insight(self, points):
+    if not points:
+        return "No execution data available."
+
+    success = len([p for p in points if "completed" in p])
+    failed = len([p for p in points if "failed" in p])
+
+    if failed == 0:
+        return f"All systems stable. {success} stages executed smoothly."
+
+    return f"{success} stages succeeded, {failed} encountered instability."
