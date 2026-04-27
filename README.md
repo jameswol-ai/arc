@@ -12,8 +12,6 @@ What It Does
 
 Repo Structure
 
-ai-architecture
-
 ├── docs/              (Regional building codes and standards references)
 ├── src/               (Core bot logic)
 ├── workflows/         (Predefined workflows (concepts, compliance, docs))
