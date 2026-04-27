@@ -1,14 +1,14 @@
 # src/core/context.py
 
 class Context:
-    def __init__(self):
+    def __init__(self, input_data):
+        self.input = input_data
         self.data = {}
+        self.history = []
+        self.errors = []
 
-    def set(self, key, value):
-        self.data[key] = value
+    def log(self, message):
+        self.history.append(message)
 
-    def get(self, key, default=None):
-        return self.data.get(key, default)
-
-    def to_dict(self):
-        return self.data
+    def add_error(self, error):
+        self.errors.append(str(error))
