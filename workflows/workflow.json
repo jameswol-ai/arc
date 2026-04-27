@@ -20,3 +20,46 @@ architectural_workflow = {
         }
     ]
 }
+
+
+def concept_stage(ctx):
+    return f"Designing: {ctx.get('input')}"
+
+def climate_check(ctx):
+    return "Applied tropical climate adaptations"
+
+def eco_design(ctx):
+    return "Added solar + rainwater systems"
+
+def final_output(ctx):
+    return f"""
+    FINAL DESIGN:
+    Concept: {ctx.get('concept')}
+    Climate: {ctx.get('climate_result')}
+    Eco: {ctx.get('eco_plan')}
+    """
+
+# Conditions
+def is_tropical(ctx):
+    return "tropical" in ctx.get("input", "").lower()
+
+def needs_sustainability(ctx):
+    return "eco" in ctx.get("input", "").lower()
+
+function_registry = {
+    "concept_stage": concept_stage,
+    "climate_check": climate_check,
+    "eco_design": eco_design,
+    "final_output": final_output,
+    "is_tropical": is_tropical,
+    "needs_sustainability": needs_sustainability,
+}
+
+
+engine = WorkflowEngine(architectural_workflow, function_registry)
+
+engine.set_context("input", "Eco-friendly school in tropical climate")
+
+result = engine.run_workflow("adaptive_design")
+
+print(result["result"])
