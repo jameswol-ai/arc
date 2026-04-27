@@ -1,181 +1,252 @@
 # random/streamlit_app.py 
 
 import streamlit as st
+import json
+import os
 import time
+import random
 import traceback
 
 # =========================================================
-# 🧠 ENGINE LAYER (PRIMARY OR FALLBACK)
+# 💾 WORLD PERSISTENCE
 # =========================================================
 
-try:
-    from src.core.engine import WorkflowEngine
-except Exception:
-    WorkflowEngine = None
+WORLD_FILE = "random_world_state.json"
 
 
-class AliveCore:
-    """
-    v2 Living System Core:
-    - memory stream
-    - heartbeat ticks
-    - event log evolution
-    """
+def load_world():
+    if os.path.exists(WORLD_FILE):
+        with open(WORLD_FILE, "r") as f:
+            return json.load(f)
 
-    def __init__(self):
-        self.state = {
-            "life": "stable",
-            "tick": 0,
-            "memory": [],
-            "events": [],
-            "last_input": None
-        }
+    return {
+        "tick": 0,
+        "cities": {
+            "architecture_city": 0,
+            "repair_city": 0,
+            "innovation_city": 0,
+            "general_city": 0
+        },
+        "events": [],
+        "narrative": [],
+        "energy": 50  # world vitality
+    }
 
-    def ingest(self, data):
-        self.state["last_input"] = data
+
+def save_world(world):
+    with open(WORLD_FILE, "w") as f:
+        json.dump(world, f, indent=2)
+
+
+# =========================================================
+# 🌍 AUTONOMOUS WORLD CORE
+# =========================================================
+
+class AutonomousWorld:
+
+    def __init__(self, world):
+        self.world = world
+
+    # -------------------------
+    # 🫀 WORLD PULSE (AUTONOMY ENGINE)
+    # -------------------------
+    def pulse(self):
+        self.world["tick"] += 1
+
+        # energy drift simulation
+        drift = random.randint(-3, 5)
+        self.world["energy"] = max(0, min(100, self.world["energy"] + drift))
+
+        # spontaneous city activity
+        city = random.choice(list(self.world["cities"].keys()))
+        self.world["cities"][city] += 1
+
         event = {
-            "type": "input",
-            "payload": data,
-            "tick": self.state["tick"]
+            "type": "pulse",
+            "tick": self.world["tick"],
+            "city": city,
+            "energy": self.world["energy"]
         }
-        self.state["events"].append(event)
-        self.state["memory"].append(f"ingested: {data}")
+
+        self.world["events"].append(event)
+
+        self._narrate(event)
+        save_world(self.world)
+
         return event
 
-    def tick(self):
-        self.state["tick"] += 1
+    # -------------------------
+    # 🌐 USER INPUT INTERACTION
+    # -------------------------
+    def interact(self, data):
 
-        # simulated evolution logic
-        if self.state["tick"] % 5 == 0:
-            self.state["life"] = "unstable_flux"
+        city = self._route(data)
+
+        self.world["cities"][city] += 2  # stronger impact than pulse
+
+        event = {
+            "type": "interaction",
+            "tick": self.world["tick"],
+            "city": city,
+            "data": data
+        }
+
+        self.world["events"].append(event)
+
+        self._narrate(event)
+        save_world(self.world)
+
+        return event
+
+    def _route(self, data):
+        d = str(data).lower()
+
+        if "design" in d:
+            return "architecture_city"
+        elif "error" in d:
+            return "repair_city"
+        elif "idea" in d:
+            return "innovation_city"
         else:
-            self.state["life"] = "stable"
+            return "general_city"
 
-        event = {
-            "type": "tick",
-            "tick": self.state["tick"],
-            "state": self.state["life"]
-        }
+    # -------------------------
+    # 📖 NARRATIVE GENERATION
+    # -------------------------
+    def _narrate(self, event):
 
-        self.state["events"].append(event)
-        self.state["memory"].append(f"tick {self.state['tick']} → {self.state['life']}")
+        if event["type"] == "pulse":
+            text = (
+                f"World pulse {event['tick']} stirred {event['city']} "
+                f"under energy level {event['energy']}."
+            )
+        else:
+            text = (
+                f"External signal reshaped {event['city']} at tick {event['tick']}."
+            )
 
-        return event
+        self.world["narrative"].append(text)
 
-    def run(self, input_data):
-        self.ingest(input_data)
+    # -------------------------
+    # 🧠 AUTONOMOUS BEHAVIOR MODEL
+    # -------------------------
+    def auto_decay_or_growth(self):
+
+        if self.world["energy"] < 30:
+            self.world["narrative"].append("The world grows unstable, entropy rising.")
+            self.world["cities"]["repair_city"] += 1
+
+        elif self.world["energy"] > 80:
+            self.world["narrative"].append("The world enters expansion bloom.")
+            self.world["cities"]["innovation_city"] += 1
+
+    # -------------------------
+    # 🔄 FULL AUTONOMOUS STEP
+    # -------------------------
+    def step(self, user_input=None):
+
+        # autonomous pulse always happens
+        pulse_event = self.pulse()
+
+        # optional user influence
+        interaction_event = None
+        if user_input:
+            interaction_event = self.interact(user_input)
+
+        self.auto_decay_or_growth()
+
+        save_world(self.world)
+
         return {
-            "result": f"processed: {input_data}",
-            "state": self.state["life"],
-            "tick": self.state["tick"]
+            "pulse": pulse_event,
+            "interaction": interaction_event
         }
 
 
 # =========================================================
-# 🧩 ENGINE SELECTOR
+# 🌍 LOAD WORLD
 # =========================================================
 
-if WorkflowEngine:
-    try:
-        engine = WorkflowEngine()
-        engine_mode = "primary_engine"
-    except Exception:
-        engine = AliveCore()
-        engine_mode = "alive_fallback_core"
-else:
-    engine = AliveCore()
-    engine_mode = "alive_core_only"
+if "world" not in st.session_state:
+    st.session_state.world = load_world()
+
+world = AutonomousWorld(st.session_state.world)
 
 
 # =========================================================
-# 🌐 STREAMLIT CONFIG
+# 🌐 UI
 # =========================================================
 
-st.set_page_config(page_title="Random Alive v2", layout="wide")
+st.set_page_config(page_title="Random Autonomous World", layout="wide")
 
-st.title("🌱 Random — Alive System v2")
-st.caption(f"Mode: {engine_mode}")
-
-
-# =========================================================
-# 🧠 SESSION STATE INIT
-# =========================================================
-
-if "alive" not in st.session_state:
-    st.session_state.alive = engine
+st.title("🌍 Random — Autonomous World Simulation")
+st.caption("The world evolves even when you do nothing.")
 
 
 # =========================================================
-# 🎛 UI CONTROL PANEL
+# 🎛 CONTROLS
 # =========================================================
 
-user_input = st.text_input("Inject input into system", "")
+user_input = st.text_input("Inject influence into world", "")
 
 col1, col2, col3 = st.columns(3)
 
-run_btn = col1.button("Run")
-tick_btn = col2.button("Tick Life")
-burst_btn = col3.button("Burst Cycle (x5 ticks)")
+step_btn = col1.button("Step World (Pulse + Input)")
+auto_btn = col2.button("Auto Run (5 Steps)")
+save_btn = col3.button("Save World")
 
 
 # =========================================================
-# ⚙️ EXECUTION LOGIC
+# ⚙️ EXECUTION
 # =========================================================
 
-engine = st.session_state.alive
-
-if run_btn:
+if step_btn:
     try:
-        result = engine.run(user_input)
-        st.success("Run complete")
+        result = world.step(user_input if user_input else None)
+        st.success("World stepped forward")
         st.json(result)
     except Exception:
-        st.error("Run failed")
+        st.error("World step failed")
         st.code(traceback.format_exc())
 
 
-if tick_btn:
+if auto_btn:
     try:
-        event = engine.tick()
-        st.info(f"Tick: {event}")
-    except Exception:
-        st.error("Tick failed")
-        st.code(traceback.format_exc())
-
-
-if burst_btn:
-    try:
-        burst = []
+        history = []
         for _ in range(5):
-            burst.append(engine.tick())
+            history.append(world.step())
             time.sleep(0.1)
 
-        st.warning("Burst cycle complete")
-        st.json(burst)
+        st.warning("Autonomous sequence complete")
+        st.json(history)
 
     except Exception:
-        st.error("Burst failed")
+        st.error("Auto run failed")
         st.code(traceback.format_exc())
+
+
+if save_btn:
+    save_world(world.world)
+    st.success("World saved")
 
 
 # =========================================================
-# 📊 SYSTEM VIEW
+# 🧠 WORLD VIEW
 # =========================================================
 
 st.divider()
 
-st.subheader("🧠 System State")
-
-st.json(engine.state)
+st.subheader("🌍 World State")
+st.json(world.world)
 
 
 # =========================================================
-# 📜 EVENT TRACE
+# 📖 NARRATIVE STREAM
 # =========================================================
 
-with st.expander("Event Stream"):
-    for e in engine.state["events"][-20:]:
-        st.write(e)
+with st.expander("📜 World Narrative"):
+    for line in world.world["narrative"][-40:]:
+        st.write(line)
 
 
 # =========================================================
@@ -183,7 +254,6 @@ with st.expander("Event Stream"):
 # =========================================================
 
 with st.expander("Debug Layer"):
-    st.write("Engine Type:", type(engine).__name__)
-    st.write("Mode:", engine_mode)
-    st.write("Tick Count:", engine.state["tick"])
-    st.write("Memory Size:", len(engine.state["memory"]))
+    st.write("Tick:", world.world["tick"])
+    st.write("Energy:", world.world["energy"])
+    st.write("Total Events:", len(world.world["events"]))
