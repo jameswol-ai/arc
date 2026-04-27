@@ -11,7 +11,7 @@ import json
 from src.core.engine import WorkflowEngine
 
 # Stages
-from src.stages.concept_stage import concept_stage
+from core.context import Context import concept_stage
 from src.stages.compliance_stage import compliance_stage
 from src.stages.output_stage import output_stage
 from src.stages.recovery_stage import recovery_stage
