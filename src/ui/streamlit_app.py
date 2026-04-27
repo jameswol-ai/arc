@@ -22,3 +22,17 @@ if st.button("Run Engine"):
 
     st.subheader("📦 Final Context")
     st.json(result["machine_layer"]["context"])
+
+observer = MetaObserver(city.memory)
+
+st.subheader("👁 Meta Observer Report")
+
+report = observer.analyze()
+
+st.write("🧠 Dominant District:", report["dominant_district"])
+st.write("⚠ Weakest District:", report["weak_district"])
+st.write("🚦 Most Used Route:", report["dominant_route"])
+st.write("🌐 System Tendency:", report["system_tendency"])
+
+st.subheader("📜 Recent System Events")
+st.write(report["recent_events"])
