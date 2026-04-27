@@ -3,6 +3,14 @@ import sys
 import os
 import traceback
 
+import os
+
+st.write("Files in src/core:", os.listdir("src/core"))
+
+import streamlit as st
+from core.engine import WorkflowEngine
+
+st.write("Import successful ✅")
 # 🛠 Ensure correct module path (fixes import issues in Streamlit Cloud)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SRC_PATH = os.path.join(BASE_DIR, "src")
