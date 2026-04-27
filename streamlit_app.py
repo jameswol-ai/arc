@@ -1,142 +1,189 @@
 # random/streamlit_app.py 
 
 import streamlit as st
+import time
 import traceback
 
-# -----------------------------
-# SAFE IMPORT LAYER
-# -----------------------------
+# =========================================================
+# 🧠 ENGINE LAYER (PRIMARY OR FALLBACK)
+# =========================================================
 
 try:
-    # preferred import path (your project version)
     from src.core.engine import WorkflowEngine
 except Exception:
     WorkflowEngine = None
 
 
-# -----------------------------
-# FALLBACK ENGINE (CRASH-PROOF)
-# -----------------------------
+class AliveCore:
+    """
+    v2 Living System Core:
+    - memory stream
+    - heartbeat ticks
+    - event log evolution
+    """
 
-class FallbackWorkflowEngine:
     def __init__(self):
         self.state = {
-            "status": "fallback_active",
+            "life": "stable",
+            "tick": 0,
             "memory": [],
-            "ticks": 0
+            "events": [],
+            "last_input": None
         }
 
-    def run(self, input_data=None):
-        self.state["ticks"] += 1
-
-        result = {
-            "message": "Fallback engine is running",
-            "input": input_data,
-            "tick": self.state["ticks"]
+    def ingest(self, data):
+        self.state["last_input"] = data
+        event = {
+            "type": "input",
+            "payload": data,
+            "tick": self.state["tick"]
         }
-
-        self.state["memory"].append(result)
-        return result
+        self.state["events"].append(event)
+        self.state["memory"].append(f"ingested: {data}")
+        return event
 
     def tick(self):
-        self.state["ticks"] += 1
-        return self.state["ticks"]
+        self.state["tick"] += 1
+
+        # simulated evolution logic
+        if self.state["tick"] % 5 == 0:
+            self.state["life"] = "unstable_flux"
+        else:
+            self.state["life"] = "stable"
+
+        event = {
+            "type": "tick",
+            "tick": self.state["tick"],
+            "state": self.state["life"]
+        }
+
+        self.state["events"].append(event)
+        self.state["memory"].append(f"tick {self.state['tick']} → {self.state['life']}")
+
+        return event
+
+    def run(self, input_data):
+        self.ingest(input_data)
+        return {
+            "result": f"processed: {input_data}",
+            "state": self.state["life"],
+            "tick": self.state["tick"]
+        }
 
 
-# -----------------------------
-# ENGINE INITIALIZATION
-# -----------------------------
+# =========================================================
+# 🧩 ENGINE SELECTOR
+# =========================================================
 
 if WorkflowEngine:
     try:
         engine = WorkflowEngine()
-        engine_mode = "primary"
+        engine_mode = "primary_engine"
     except Exception:
-        engine = FallbackWorkflowEngine()
-        engine_mode = "fallback_due_to_init_error"
+        engine = AliveCore()
+        engine_mode = "alive_fallback_core"
 else:
-    engine = FallbackWorkflowEngine()
-    engine_mode = "fallback_missing_engine"
+    engine = AliveCore()
+    engine_mode = "alive_core_only"
 
 
-# -----------------------------
-# STREAMLIT UI
-# -----------------------------
+# =========================================================
+# 🌐 STREAMLIT CONFIG
+# =========================================================
 
-st.set_page_config(page_title="Random Engine", layout="wide")
+st.set_page_config(page_title="Random Alive v2", layout="wide")
 
-st.title("Random Engine Control Center")
-
-st.caption(f"Engine mode: {engine_mode}")
-
-
-# -----------------------------
-# INPUT PANEL
-# -----------------------------
-
-user_input = st.text_input("Enter workflow input", "")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    run_button = st.button("Run Engine")
-
-with col2:
-    tick_button = st.button("Alive Tick")
+st.title("🌱 Random — Alive System v2")
+st.caption(f"Mode: {engine_mode}")
 
 
-# -----------------------------
-# EXECUTION AREA
-# -----------------------------
+# =========================================================
+# 🧠 SESSION STATE INIT
+# =========================================================
 
-if run_button:
+if "alive" not in st.session_state:
+    st.session_state.alive = engine
+
+
+# =========================================================
+# 🎛 UI CONTROL PANEL
+# =========================================================
+
+user_input = st.text_input("Inject input into system", "")
+
+col1, col2, col3 = st.columns(3)
+
+run_btn = col1.button("Run")
+tick_btn = col2.button("Tick Life")
+burst_btn = col3.button("Burst Cycle (x5 ticks)")
+
+
+# =========================================================
+# ⚙️ EXECUTION LOGIC
+# =========================================================
+
+engine = st.session_state.alive
+
+if run_btn:
     try:
-        if hasattr(engine, "run"):
-            result = engine.run(user_input)
-        else:
-            result = {"error": "Engine has no run() method"}
-
-        st.success("Execution complete")
+        result = engine.run(user_input)
+        st.success("Run complete")
         st.json(result)
-
-    except Exception as e:
-        st.error("Engine execution failed")
+    except Exception:
+        st.error("Run failed")
         st.code(traceback.format_exc())
 
 
-if tick_button:
+if tick_btn:
     try:
-        if hasattr(engine, "tick"):
-            t = engine.tick()
-            st.info(f"Alive tick: {t}")
-        else:
-            st.warning("Tick not supported in this engine")
+        event = engine.tick()
+        st.info(f"Tick: {event}")
+    except Exception:
+        st.error("Tick failed")
+        st.code(traceback.format_exc())
+
+
+if burst_btn:
+    try:
+        burst = []
+        for _ in range(5):
+            burst.append(engine.tick())
+            time.sleep(0.1)
+
+        st.warning("Burst cycle complete")
+        st.json(burst)
 
     except Exception:
-        st.error("Tick system failed")
+        st.error("Burst failed")
         st.code(traceback.format_exc())
 
 
-# -----------------------------
-# STATE VIEWER
-# -----------------------------
+# =========================================================
+# 📊 SYSTEM VIEW
+# =========================================================
 
 st.divider()
 
-st.subheader("Engine State")
+st.subheader("🧠 System State")
 
-if hasattr(engine, "state"):
-    st.json(engine.state)
-else:
-    st.write("No state available")
+st.json(engine.state)
 
 
-# -----------------------------
-# DEBUG PANEL
-# -----------------------------
+# =========================================================
+# 📜 EVENT TRACE
+# =========================================================
 
-with st.expander("Debug Panel"):
+with st.expander("Event Stream"):
+    for e in engine.state["events"][-20:]:
+        st.write(e)
+
+
+# =========================================================
+# 🧪 DEBUG PANEL
+# =========================================================
+
+with st.expander("Debug Layer"):
     st.write("Engine Type:", type(engine).__name__)
-    st.write("Engine Mode:", engine_mode)
-    st.write("Has run():", hasattr(engine, "run"))
-    st.write("Has tick():", hasattr(engine, "tick"))
+    st.write("Mode:", engine_mode)
+    st.write("Tick Count:", engine.state["tick"])
+    st.write("Memory Size:", len(engine.state["memory"]))
