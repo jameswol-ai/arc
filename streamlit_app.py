@@ -1,164 +1,108 @@
+import streamlit as st
 import sys
 import os
+import traceback
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
+# 🛠 Ensure correct module path (fixes import issues in Streamlit Cloud)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SRC_PATH = os.path.join(BASE_DIR, "src")
 
+if SRC_PATH not in sys.path:
+    sys.path.insert(0, SRC_PATH)
 
-import streamlit as st
-import json
-
-# Core engine
-from src.core.engine import WorkflowEngine
-
-# Stages
-from core.context import Context import concept_stage
-from src.stages.compliance_stage import compliance_stage
-from src.stages.output_stage import output_stage
-from src.stages.recovery_stage import recovery_stage
-
-
-# -------------------------------
-# 🔧 Setup Page Config
-# -------------------------------
+# 🎛 Page config
 st.set_page_config(
     page_title="AI Architecture Bot",
-    page_icon="🏗️",
     layout="wide"
 )
 
-st.title("🏗️ AI Architecture Workflow Engine")
-st.caption("Adaptive AI system for architectural design & compliance")
+# 🏗 UI Header
+st.title("🏗️ AI Architecture Bot")
+st.caption("Adaptive Workflow Engine for Smart Building Design")
 
+# 📦 Debug panel toggle
+with st.expander("⚙️ Debug Console", expanded=False):
+    st.write("Python version:", sys.version)
+    st.write("Working directory:", BASE_DIR)
+    st.write("Sys path:", sys.path)
 
-# -------------------------------
-# 🧠 Initialize Workflow Engine
-# -------------------------------
-@st.cache_resource
-def load_engine():
-    stages = {
-        "concept_stage": concept_stage,
-        "compliance_stage": compliance_stage,
-        "output_stage": output_stage,
-        "recovery_stage": recovery_stage,
-    }
-    return WorkflowEngine(stages)
+# 🧠 Safe import loader
+def safe_import():
+    try:
+        from core.engine import WorkflowEngine
+        return WorkflowEngine, None
+    except Exception as e:
+        return None, traceback.format_exc()
 
+WorkflowEngine, import_error = safe_import()
 
-engine = load_engine()
+# 🚨 Show import errors clearly
+if import_error:
+    st.error("❌ Failed to import WorkflowEngine")
+    st.code(import_error)
+    st.stop()
 
+# 🧩 Define fallback functions (prevents crash if registry missing)
+def concept_stage(ctx):
+    return f"Concept based on: {ctx.get('input')}"
 
-# -------------------------------
-# 📂 Sidebar Controls
-# -------------------------------
-st.sidebar.header("⚙️ Workflow Controls")
+def final_output(ctx):
+    return f"Final Output:\n{ctx.get('concept')}"
 
-workflow_type = st.sidebar.selectbox(
-    "Select Workflow",
-    ["basic_design", "eco_design", "custom"]
-)
+# 🧠 Minimal function registry (safe default)
+function_registry = {
+    "concept_stage": concept_stage,
+    "final_output": final_output,
+}
 
-start_stage = st.sidebar.selectbox(
-    "Start Stage",
-    ["concept_stage", "compliance_stage", "output_stage"]
-)
+# 🗺 Minimal workflow (safe default)
+workflow = {
+    "basic_design": [
+        {"name": "concept_stage", "output_key": "concept"},
+        {"name": "final_output", "output_key": "result"},
+    ]
+}
 
-run_button = st.sidebar.button("🚀 Run Workflow")
+# ⚙️ Initialize engine safely
+def init_engine():
+    try:
+        engine = WorkflowEngine(workflow, function_registry)
+        return engine, None
+    except Exception:
+        return None, traceback.format_exc()
 
+engine, engine_error = init_engine()
 
-# -------------------------------
-# 🧾 Input Section
-# -------------------------------
-st.subheader("📥 Project Input")
+if engine_error:
+    st.error("❌ Engine initialization failed")
+    st.code(engine_error)
+    st.stop()
 
+# 🎯 User Input
 user_input = st.text_area(
-    "Describe your architectural project",
-    placeholder="e.g. Eco-friendly school in tropical climate...",
-    height=150
+    "Describe your architectural project:",
+    placeholder="e.g. Eco-friendly school in tropical climate"
 )
 
-col1, col2 = st.columns(2)
+# ▶️ Run button
+if st.button("Generate Design"):
+    if not user_input.strip():
+        st.warning("Please enter a project description.")
+    else:
+        try:
+            engine.set_context("input", user_input)
 
-with col1:
-    uploaded_file = st.file_uploader(
-        "Upload JSON Input (optional)",
-        type=["json"]
-    )
+            result_context = engine.run_workflow("basic_design")
 
-with col2:
-    use_sample = st.checkbox("Use Sample Input")
+            st.success("✅ Design Generated Successfully")
 
+            st.subheader("📄 Output")
+            st.code(result_context.get("result", "No result generated"))
 
-# -------------------------------
-# 📦 Load Input Logic
-# -------------------------------
-def get_input_data():
-    if uploaded_file:
-        return json.load(uploaded_file)
+            # 🧬 Show full context (for debugging)
+            with st.expander("🧠 Full Context"):
+                st.json(result_context)
 
-    if use_sample:
-        return {
-            "input": "Eco-friendly school in tropical climate",
-            "location": "Tropical",
-            "priority": "sustainability"
-        }
-
-    return {"input": user_input}
-
-
-# -------------------------------
-# ▶️ Run Workflow
-# -------------------------------
-if run_button:
-    if not user_input and not uploaded_file and not use_sample:
-        st.warning("⚠️ Please provide input before running.")
-        st.stop()
-
-    input_data = get_input_data()
-
-    # Reset engine context
-    engine.context.data.clear()
-
-    # Load input into context
-    for key, value in input_data.items():
-        engine.set_context(key, value)
-
-    # Run workflow
-    with st.spinner("🧠 AI is designing..."):
-        result = engine.run(start_stage)
-
-    st.success("✅ Workflow completed!")
-
-
-    # -------------------------------
-    # 📊 Results Display
-    # -------------------------------
-    st.subheader("📊 Workflow Results")
-
-    tab1, tab2, tab3 = st.tabs([
-        "🧾 Final Context",
-        "📜 Execution History",
-        "🔍 Debug View"
-    ])
-
-    # 🧾 Final Context
-    with tab1:
-        st.json(result["final_context"])
-
-    # 📜 Execution History
-    with tab2:
-        for stage, output in result["history"]:
-            with st.expander(f"🔹 {stage}"):
-                st.write(output)
-
-    # 🔍 Debug View
-    with tab3:
-        st.write("### Raw Data")
-        st.write(result)
-
-
-# -------------------------------
-# 📈 Optional: Workflow Visualization
-# -------------------------------
-st.subheader("🗺️ Workflow Map (Conceptual)")
-
-st.markdown("""# random/streamlit_app.py 
+        except Exception:
+            st.error("❌ Error during workflow execution")
+            st.code(traceback.format_exc())
