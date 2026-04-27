@@ -1,8 +1,10 @@
 #random/streamlit_app.py 
 
 import streamlit as st
-import sys
-import os
+import sys, os
+sys.path.append(os.path.abspath("src"))
+
+from core.engine import WorkflowEngine
 
 # 🔧 Fix import paths
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "src")))
