@@ -5,6 +5,8 @@ import sys, os
 sys.path.append(os.path.abspath("src"))
 
 from core.engine import WorkflowEngine
+from stages.concept_stage import ConceptStage
+from utils.logger import log
 
 # 🔧 Fix import paths
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "src")))
