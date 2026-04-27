@@ -1,30 +1,29 @@
 # src/core/engine.py
 
+from src.core.registry import StageRegistry
+
 class WorkflowEngine:
-    def __init__(self, workflow, function_registry):
-        self.workflow = workflow
-        self.function_registry = function_registry
-        self.context = {}
+    def __init__(self, memory=None):
+        self.registry = StageRegistry()
+        self.memory = memory
 
-    def set_context(self, key, value):
-        self.context[key] = value
+    def run(self, workflow_name, context):
+        workflow = self.registry.get_workflow(workflow_name)
 
-    def get_context(self, key):
-        return self.context.get(key)
+        current_stage = workflow["start"]
 
-    def run_workflow(self, workflow_name):
-        stages = self.workflow.get(workflow_name, [])
+        trace = []
 
-        for stage in stages:
-            func_name = stage.get("name")
-            func = self.function_registry.get(func_name)
+        while current_stage:
+            stage = self.registry.get_stage(current_stage)
 
-            if not func:
-                raise ValueError(f"Function '{func_name}' not found")
+            context = stage.run(context, self.memory)
 
-            result = func(self.context)
+            trace.append({
+                "stage": current_stage,
+                "output": context.data
+            })
 
-            if "output_key" in stage:
-                self.context[stage["output_key"]] = result
+            current_stage = stage.next(context)
 
-        return self.context
+        return context, trace
