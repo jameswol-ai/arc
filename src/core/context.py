@@ -2,9 +2,7 @@
 
 class Context:
     def __init__(self):
-        self.data = {
-            "project_history": []
-        }
+        self.data = {}
 
     def set(self, key, value):
         self.data[key] = value
@@ -12,5 +10,5 @@ class Context:
     def get(self, key, default=None):
         return self.data.get(key, default)
 
-    def add_history(self, entry):
-        self.data["project_history"].append(entry)
+    def to_dict(self):
+        return self.data
