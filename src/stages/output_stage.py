@@ -1,4 +1,4 @@
-# stages/output_stage.py
+# src/stages/output_stage.py
 
 class OutputStage:
     def run(self, context):
