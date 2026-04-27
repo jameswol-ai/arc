@@ -234,3 +234,53 @@ with col2:
 
     st.subheader("🧬 Evolution Events")
     st.write("\n".join(city.memory["events"][-10:]))
+
+# =========================================================
+# 👁 META OBSERVER (SYSTEM SELF-ANALYSIS LAYER)
+# =========================================================
+
+class MetaObserver:
+    def __init__(self, memory):
+        self.memory = memory
+
+    def analyze(self):
+        scores = self.memory.get("node_scores", {})
+        traffic = self.memory.get("traffic", {})
+        events = self.memory.get("events", [])
+
+        if not scores:
+            return "No structural data yet."
+
+        strongest = max(scores.items(), key=lambda x: x[1])
+        weakest = min(scores.items(), key=lambda x: x[1])
+
+        most_travelled = None
+        max_flow = 0
+
+        for a, routes in traffic.items():
+            for b, count in routes.items():
+                if count > max_flow:
+                    max_flow = count
+                    most_travelled = (a, b)
+
+        recent_events = events[-5:]
+
+        return {
+            "dominant_district": strongest,
+            "weak_district": weakest,
+            "dominant_route": most_travelled,
+            "system_tendency": self._infer_tendency(scores),
+            "recent_events": recent_events
+        }
+
+    def _infer_tendency(self, scores):
+        avg = sum(scores.values()) / len(scores)
+
+        if avg > 1.6:
+            return "self-amplifying growth"
+        elif avg > 1.2:
+            return "stable adaptation"
+        elif avg > 0.9:
+            return "structural drift"
+        else:
+            return "systemic decay"
