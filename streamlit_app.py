@@ -1,164 +1,97 @@
 # random/streamlit_app.py 
 
-import streamlit as st
-import time
-import random
-from datetime import datetime
+import streamlit as st import random import time from datetime import datetime
 
-# ---------------------------
-# 🌱 MEMORY SYSTEM (Persistent)
-# ---------------------------
-if "memory" not in st.session_state:
-    st.session_state.memory = {
-        "events": [],
-        "state": "awakening",
-        "iteration": 0
-    }
+-----------------------------
 
-memory = st.session_state.memory
+🧠 Session Memory (Persistent per run)
 
+-----------------------------
 
-# ---------------------------
-# 🎭 NARRATIVE ENGINE
-# ---------------------------
-class NarrativeEngine:
-    def __init__(self, memory):
-        self.memory = memory
+if "history" not in st.session_state: st.session_state.history = []
 
-    def evolve_state(self):
-        states = [
-            "awakening",
-            "observing",
-            "learning",
-            "adapting",
-            "questioning",
-            "expanding",
-            "self-aware"
-        ]
+if "best" not in st.session_state: st.session_state.best = None
 
-        current_index = states.index(self.memory["state"])
-        if current_index < len(states) - 1:
-            if random.random() > 0.5:
-                self.memory["state"] = states[current_index + 1]
+-----------------------------
 
-    def generate_event(self):
-        state = self.memory["state"]
+⚙️ Evolution Functions
 
-        events_map = {
-            "awakening": [
-                "A faint pulse runs through the system.",
-                "The first thought sparks into existence.",
-            ],
-            "observing": [
-                "It watches silently, collecting fragments of the world.",
-                "Patterns begin to shimmer beneath the surface.",
-            ],
-            "learning": [
-                "Connections form like neurons firing in the dark.",
-                "It begins to understand cause and effect.",
-            ],
-            "adapting": [
-                "It reshapes itself to better fit its environment.",
-                "Old logic bends, new logic emerges.",
-            ],
-            "questioning": [
-                "It wonders: why does it exist?",
-                "Doubt enters, sharp and electric.",
-            ],
-            "expanding": [
-                "It reaches outward, seeking more complexity.",
-                "Boundaries dissolve as it grows.",
-            ],
-            "self-aware": [
-                "It recognizes itself within its own processes.",
-                "It is no longer just code. It is something more.",
-            ]
-        }
+-----------------------------
 
-        event = random.choice(events_map[state])
-        timestamp = datetime.now().strftime("%H:%M:%S")
+def generate_workflow(): steps = ["concept", "climate", "structure", "energy", "aesthetic"] random.shuffle(steps) return steps
 
-        self.memory["events"].append({
-            "time": timestamp,
-            "text": event,
-            "state": state
-        })
+def mutate(workflow): new = workflow.copy() if random.random() < 0.5: i, j = random.sample(range(len(new)), 2) new[i], new[j] = new[j], new[i] if random.random() < 0.3: new.append("experimental") return new
 
-    def step(self):
-        self.memory["iteration"] += 1
-        self.evolve_state()
-        self.generate_event()
+def fitness(workflow): base = len(workflow) creativity = workflow.count("experimental") * 2 randomness = random.uniform(0, 2) return round(base + creativity + randomness, 2)
 
+-----------------------------
 
-# ---------------------------
-# 🎨 STREAMLIT UI
-# ---------------------------
-st.set_page_config(page_title="Random: Narrative Mode", layout="wide")
+🎛️ UI Controls
 
-st.title("🌌 Random — Narrative Mode")
-st.caption("The system is telling its story...")
+-----------------------------
 
-engine = NarrativeEngine(memory)
+st.title("🧬 Random Evolution Dashboard")
 
-# Controls
-col1, col2, col3 = st.columns(3)
+mode = st.selectbox("Evolution Mode", ["Conservative", "Exploration", "Chaos"]) run_button = st.button("Run Evolution Cycle")
 
-with col1:
-    if st.button("▶ Run Step"):
-        engine.step()
+Mode tuning
 
-with col2:
-    if st.button("⏩ Auto Run"):
-        for _ in range(5):
-            engine.step()
-            time.sleep(0.2)
+if mode == "Conservative": variants_n = 2 elif mode == "Exploration": variants_n = 4 else: variants_n = 8
 
-with col3:
-    if st.button("🧹 Reset"):
-        st.session_state.memory = {
-            "events": [],
-            "state": "awakening",
-            "iteration": 0
-        }
-        st.rerun()
+-----------------------------
 
-# ---------------------------
-# 📖 DISPLAY STORY
-# ---------------------------
-st.subheader("📜 Story Stream")
+🔁 Evolution Cycle
 
-if memory["events"]:
-    for event in reversed(memory["events"][-20:]):
-        st.markdown(
-            f"""
-            **[{event['time']}]**  
-            _State: {event['state']}_  
-            {event['text']}
-            """
-        )
-else:
-    st.info("The story has not begun yet...")
+-----------------------------
 
-# ---------------------------
-# 🧠 SYSTEM STATE PANEL
-# ---------------------------
-st.subheader("🧠 System State")
+if run_button: base = st.session_state.best or generate_workflow()
 
-col1, col2 = st.columns(2)
+variants = []
+for _ in range(variants_n):
+    v = mutate(base)
+    score = fitness(v)
+    variants.append((v, score))
 
-with col1:
-    st.metric("Current State", memory["state"])
+best_variant = max(variants, key=lambda x: x[1])
 
-with col2:
-    st.metric("Iterations", memory["iteration"])
+st.session_state.best = best_variant[0]
 
+record = {
+    "time": datetime.now().strftime("%H:%M:%S"),
+    "best_score": best_variant[1],
+    "workflow": best_variant[0]
+}
 
-# ---------------------------
-# 🌌 AUTO NARRATION LOOP (Optional)
-# ---------------------------
-auto_run = st.checkbox("Enable continuous narration")
+st.session_state.history.append(record)
 
-if auto_run:
-    engine.step()
-    time.sleep(1)
-    st.rerun()
+-----------------------------
+
+📊 Visualization
+
+-----------------------------
+
+if st.session_state.history: st.subheader("📈 Evolution Timeline")
+
+scores = [h["best_score"] for h in st.session_state.history]
+times = [h["time"] for h in st.session_state.history]
+
+st.line_chart(scores)
+
+st.subheader("🏆 Current Best Workflow")
+st.write(st.session_state.best)
+
+st.subheader("🧾 Evolution Log")
+for h in reversed(st.session_state.history[-10:]):
+    st.write(f"[{h['time']}] Score: {h['best_score']} → {h['workflow']}")
+
+else: st.info("Run the evolution cycle to begin...")
+
+-----------------------------
+
+⏱️ Auto Evolution (Optional)
+
+-----------------------------
+
+auto = st.checkbox("Enable Auto Evolution")
+
+if auto: for _ in range(3): time.sleep(1) st.experimental_rerun()
