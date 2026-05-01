@@ -1,149 +1,250 @@
 import streamlit as st
-import json
-import os
 import random
 import time
+import networkx as nx
+import matplotlib.pyplot as plt
 
-# ==============================
-# 🌱 MEMORY LAYER
-# ==============================
-class EvolutionMemory:
-    def __init__(self, path="memory.json"):
-        self.path = path
-        self.data = self.load()
-
-    def load(self):
-        if os.path.exists(self.path):
-            with open(self.path, "r") as f:
-                return json.load(f)
-        return {"runs": []}
-
-    def save(self):
-        with open(self.path, "w") as f:
-            json.dump(self.data, f, indent=2)
-
-    def record_run(self, result):
-        self.data["runs"].append(result)
-        self.save()
-
-# ==============================
-# ⚙️ ENGINE LAYER
-# ==============================
-class WorkflowEngine:
-    def __init__(self, workflow):
-        self.workflow = workflow
-        self.context = {}
-
-    def run(self):
-        story = []
-        for step in self.workflow:
-            name = step["name"]
-
-            # simulate behavior
-            output = f"{name}_result_{random.randint(1,100)}"
-            self.context[name] = output
-
-            story.append(f"🔹 {name} executed → {output}")
-
-        return {
-            "context": self.context,
-            "story": story,
-            "steps": [s["name"] for s in self.workflow]
-        }
-
-# ==============================
-# 🧬 EVOLUTION LAYER
-# ==============================
-def mutate_workflow(memory, workflow):
-    runs = memory.data["runs"]
-
-    # mutate if enough history
-    if len(runs) > 2:
-        if not any(step["name"] == "mutation_node" for step in workflow):
-            workflow.append({
-                "name": "mutation_node",
-                "output_key": "mutation"
-            })
-
-    return workflow
-
-# ==============================
-# 🎭 NARRATIVE LAYER
-# ==============================
-def generate_narrative(result):
-    narrative = "🧠 Evolution कथा:\n\n"
-    for line in result["story"]:
-        narrative += line + "\n"
-
-    narrative += "\n🌱 System learned and adapted.\n"
-    return narrative
-
-# ==============================
-# 🌐 GRAPH VIEW
-# ==============================
-def render_graph(steps):
-    G = nx.DiGraph()
-
-    for i in range(len(steps)-1):
-        G.add_edge(steps[i], steps[i+1])
-
-    fig, ax = plt.subplots()
-    pos = nx.spring_layout(G)
-    nx.draw(G, pos, with_labels=True, node_size=3000, ax=ax)
-
-    st.pyplot(fig)
-
-# ==============================
-# 🌆 CITY BRAIN VIEW
-# ==============================
-def render_city(steps):
-    st.markdown("### 🌆 City Brain")
-
-    cols = st.columns(len(steps))
-
-    for i, step in enumerate(steps):
-        with cols[i]:
-            st.metric(label=step, value="ACTIVE")
-
-# ==============================
-# 🚀 STREAMLIT UI
-# ==============================
 st.set_page_config(page_title="Random City Brain", layout="wide")
 
-st.title("🌆 Random: Living City Brain")
+st.title("🏙️ Random City Brain")
+st.caption("A living, evolving AI city simulation")
 
-memory = EvolutionMemory()
+# ---------------------------
+# 🌱 INITIAL STATE
+# ---------------------------
+if "city_state" not in st.session_state:
+    st.session_state.city_state = {
+        "cycle": 0,
+        "energy": 100,
+        "population": 10,
+        "mood": "stable",
+        "history": []
+    }
 
-# base workflow
-workflow = [
-    {"name": "concept_stage"},
-    {"name": "climate_check"},
-    {"name": "eco_design"}
-]
+if "agents" not in st.session_state:
+    st.session_state.agents = {
+        "builder": {"bias": 1.2},
+        "energy": {"bias": 1.0},
+        "nature": {"bias": 0.8},
+        "governor": {"bias": 1.0}
+    }
 
-# mutate workflow
-workflow = mutate_workflow(memory, workflow)
+if "meta" not in st.session_state:
+    st.session_state.meta = {
+        "awareness": 0,
+        "last_thought": "Initializing consciousness..."
+    }
 
-engine = WorkflowEngine(workflow)
+if "mutation_log" not in st.session_state:
+    st.session_state.mutation_log = []
 
-# controls
-run_button = st.button("▶️ Run Evolution Cycle")
-auto_mode = st.checkbox("♾️ Autonomous Mode")
+# ---------------------------
+# ⚙️ EVOLUTION ENGINE
+# ---------------------------
+def evolve_city(state, agents):
+    state["cycle"] += 1
 
-# ==============================
-# RUN LOGIC
-# ==============================
-def run_cycle():
-    result = engine.run()
-    memory.record_run(result)
-    return result
+    growth = int(random.randint(0, 4) * agents["builder"]["bias"])
+    energy_use = int(random.randint(1, 5) * growth * agents["energy"]["bias"])
+    recovery = int(random.randint(0, 3) * agents["nature"]["bias"])
 
-if run_button or auto_mode:
+    state["population"] += growth
+    state["energy"] += recovery - energy_use
 
-    result = run_cycle()
+    # Governor balancing
+    if state["energy"] < 20:
+        agents["builder"]["bias"] *= 0.9
+        agents["energy"]["bias"] *= 1.1
 
-    # ==========================
-    # 🎭 Narrative Output
-    # ==========================
-    st.markdown("## 🎭 Evolution Narrative")
-    st
+    if state["population"] > 60:
+        agents["nature"]["bias"] *= 1.2
+
+    # Mood
+    if state["energy"] < 20:
+        state["mood"] = "critical"
+    elif state["population"] > 80:
+        state["mood"] = "overflowing"
+    else:
+        state["mood"] = "adaptive"
+
+    # Memory
+    state["history"].append({
+        "cycle": state["cycle"],
+        "population": state["population"],
+        "energy": state["energy"],
+        "mood": state["mood"]
+    })
+
+    return state
+
+# ---------------------------
+# 👁️ REFLECTION
+# ---------------------------
+def reflect(state, meta):
+    energy = state["energy"]
+    population = state["population"]
+
+    meta["awareness"] += int((population + energy) / 50)
+
+    if energy < 20:
+        thought = "Energy is low... survival is priority."
+    elif population > 80:
+        thought = "We are expanding rapidly. Stability is uncertain."
+    elif meta["awareness"] > 50:
+        thought = "I am beginning to understand my own patterns."
+    else:
+        thought = "Systems are stable. Growth continues."
+
+    meta["last_thought"] = thought
+    return meta
+
+# ---------------------------
+# 🧬 MUTATION
+# ---------------------------
+def mutate_agents(state, agents, log):
+    energy = state["energy"]
+    population = state["population"]
+
+    for name, agent in agents.items():
+        old_bias = agent["bias"]
+
+        if energy < 20:
+            change = random.uniform(0.05, 0.2)
+        elif population > 80:
+            change = random.uniform(-0.2, -0.05)
+        else:
+            change = random.uniform(-0.05, 0.05)
+
+        agent["bias"] += change
+        agent["bias"] = max(0.1, min(2.0, agent["bias"]))
+
+        if abs(old_bias - agent["bias"]) > 0.05:
+            log.append(f"{name}: {round(old_bias,2)} → {round(agent['bias'],2)}")
+
+    return agents, log
+
+# ---------------------------
+# 🕸️ GRAPH
+# ---------------------------
+def build_graph(agents):
+    G = nx.DiGraph()
+
+    for name, data in agents.items():
+        G.add_node(name, weight=round(data["bias"], 2))
+
+    G.add_edge("builder", "population", weight=agents["builder"]["bias"])
+    G.add_edge("energy", "population", weight=-agents["energy"]["bias"])
+    G.add_edge("nature", "energy", weight=agents["nature"]["bias"])
+    G.add_edge("governor", "builder", weight=agents["governor"]["bias"])
+    G.add_edge("governor", "energy", weight=agents["governor"]["bias"])
+
+    return G
+
+def draw_graph(G):
+    pos = nx.spring_layout(G, seed=42)
+
+    plt.figure()
+    nx.draw(G, pos, with_labels=True, node_size=2000, font_size=10)
+
+    nx.draw_networkx_edge_labels(
+        G, pos,
+        edge_labels={(u, v): round(w, 2) for (u, v, w) in G.edges(data="weight")}
+    )
+
+    return plt
+
+# ---------------------------
+# 🎮 CONTROLS
+# ---------------------------
+col1, col2 = st.columns(2)
+
+with col1:
+    if st.button("▶ Run Evolution Cycle"):
+        st.session_state.city_state = evolve_city(
+            st.session_state.city_state,
+            st.session_state.agents
+        )
+        st.session_state.meta = reflect(
+            st.session_state.city_state,
+            st.session_state.meta
+        )
+        st.session_state.agents, st.session_state.mutation_log = mutate_agents(
+            st.session_state.city_state,
+            st.session_state.agents,
+            st.session_state.mutation_log
+        )
+
+with col2:
+    auto = st.checkbox("∞ Autonomous Mode")
+
+# ---------------------------
+# ♾️ AUTO LOOP
+# ---------------------------
+if auto:
+    for _ in range(20):
+        st.session_state.city_state = evolve_city(
+            st.session_state.city_state,
+            st.session_state.agents
+        )
+        st.session_state.meta = reflect(
+            st.session_state.city_state,
+            st.session_state.meta
+        )
+        st.session_state.agents, st.session_state.mutation_log = mutate_agents(
+            st.session_state.city_state,
+            st.session_state.agents,
+            st.session_state.mutation_log
+        )
+        time.sleep(0.2)
+        st.rerun()
+
+# ---------------------------
+# 📊 DISPLAY
+# ---------------------------
+state = st.session_state.city_state
+
+st.subheader("📊 City State")
+c1, c2, c3, c4 = st.columns(4)
+
+c1.metric("Cycle", state["cycle"])
+c2.metric("Population", state["population"])
+c3.metric("Energy", state["energy"])
+c4.metric("Mood", state["mood"])
+
+# ---------------------------
+# 🧠 THOUGHT
+# ---------------------------
+st.subheader("🧠 City Thought")
+st.info(st.session_state.meta["last_thought"])
+st.metric("Awareness", st.session_state.meta["awareness"])
+
+# ---------------------------
+# 📈 HISTORY
+# ---------------------------
+if state["history"]:
+    st.line_chart([h["population"] for h in state["history"]])
+
+# ---------------------------
+# 🧬 MUTATION LOG
+# ---------------------------
+st.subheader("🧬 Mutation Log")
+for entry in st.session_state.mutation_log[-5:]:
+    st.write(entry)
+
+# ---------------------------
+# 🕸️ GRAPH VIEW
+# ---------------------------
+st.subheader("🕸️ City Brain Network")
+G = build_graph(st.session_state.agents)
+fig = draw_graph(G)
+st.pyplot(fig)
+
+# ---------------------------
+# 🎮 GOD MODE
+# ---------------------------
+st.subheader("🎮 God Mode")
+
+agent_choice = st.selectbox("Select Agent", list(st.session_state.agents.keys()))
+
+if st.button("Boost Agent"):
+    st.session_state.agents[agent_choice]["bias"] *= 1.2
