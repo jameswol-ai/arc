@@ -1,7 +1,6 @@
 import streamlit as st
 import random
 import time
-import networkx as nx
 import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Random City Brain", layout="wide")
