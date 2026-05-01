@@ -1,175 +1,220 @@
 import streamlit as st
 import random
 import time
-import numpy as np
 
-# ---------------------------
-# PAGE CONFIG (MUST BE FIRST)
-# ---------------------------
-st.set_page_config(page_title="Random City Brain", layout="wide")
+# =========================================================
+# 🧬 RANDOM AI v4 — DESIGN CIVILIZATION SIMULATOR
+# =========================================================
 
-# ---------------------------
-# HEADER
-# ---------------------------
-st.title("🏙️ Random City Brain")
-st.caption("A living, evolving AI city simulation (dependency-safe edition)")
+st.set_page_config(page_title="Architecture Civilization AI", layout="wide")
 
-# ---------------------------
-# SAFE DATA GENERATOR
-# ---------------------------
-def generate_data(n=50):
-    x = np.linspace(0, 10, n)
-    y = np.sin(x) + np.random.normal(0, 0.15, n)
-    return x, y
+st.title("🏗️🧬 Random AI v4 — Architecture Civilization")
+st.caption("Competing, surviving, and reproducing architectural design ideas")
 
-# ---------------------------
-# INITIAL STATE
-# ---------------------------
-if "state" not in st.session_state:
-    st.session_state.state = {
-        "cycle": 0,
-        "population": 10,
-        "energy": 100,
-        "mood": "stable",
-        "history": []
-    }
+# =========================================================
+# POPULATION INITIALIZATION
+# =========================================================
 
-if "agents" not in st.session_state:
-    st.session_state.agents = {
-        "builder": 1.2,
-        "energy": 1.0,
-        "nature": 0.8,
-        "governor": 1.0
-    }
+if "population" not in st.session_state:
+    st.session_state.population = []
 
-# ---------------------------
-# EVOLUTION ENGINE
-# ---------------------------
-def evolve(state, agents):
-    state["cycle"] += 1
+    # seed initial "species" of designs
+    for i in range(5):
+        st.session_state.population.append({
+            "id": f"design_{i}",
+            "dna": {
+                "stability": random.uniform(0.8, 1.5),
+                "efficiency": random.uniform(0.8, 1.5),
+                "growth": random.uniform(0.8, 1.5),
+                "adaptation": random.uniform(0.8, 1.5),
+            },
+            "age": 0,
+            "fitness": 1.0,
+            "alive": True
+        })
 
-    growth = int(random.randint(0, 4) * agents["builder"])
-    usage = int(random.randint(1, 5) * agents["energy"])
-    regen = int(random.randint(0, 3) * agents["nature"])
+if "cycle" not in st.session_state:
+    st.session_state.cycle = 0
 
-    state["population"] += growth
-    state["energy"] += regen - usage
+# =========================================================
+# FITNESS FUNCTION (SURVIVAL RULES)
+# =========================================================
 
-    # mood system
-    if state["energy"] < 20:
-        state["mood"] = "critical"
-    elif state["population"] > 80:
-        state["mood"] = "overflow"
-    else:
-        state["mood"] = "stable"
+def calculate_fitness(individual):
+    dna = individual["dna"]
 
-    state["history"].append(state["population"])
+    # weighted survival pressure
+    fitness = (
+        dna["stability"] * 0.35 +
+        dna["efficiency"] * 0.25 +
+        dna["adaptation"] * 0.25 +
+        dna["growth"] * 0.15
+    )
 
-    return state
+    # randomness (environment chaos)
+    fitness += random.uniform(-0.2, 0.2)
 
-# ---------------------------
-# REFRESH BUTTON
-# ---------------------------
-col1, col2 = st.columns(2)
+    return max(0, fitness)
+
+# =========================================================
+# MUTATION ENGINE
+# =========================================================
+
+def mutate(parent_dna):
+    child = {}
+
+    for gene, value in parent_dna.items():
+        mutation = random.uniform(-0.15, 0.15)
+        child[gene] = max(0.3, min(2.0, value + mutation))
+
+    return child
+
+# =========================================================
+# REPRODUCTION (CROSSOVER SYSTEM)
+# =========================================================
+
+def reproduce(population):
+    new_population = []
+
+    # sort by fitness
+    sorted_pop = sorted(population, key=lambda x: x["fitness"], reverse=True)
+
+    # top survivors
+    survivors = sorted_pop[:3]
+
+    # survival pass
+    for s in survivors:
+        s["age"] += 1
+        new_population.append(s)
+
+    # reproduction phase
+    while len(new_population) < 6:
+        parent_a = random.choice(survivors)
+        parent_b = random.choice(survivors)
+
+        child_dna = {}
+
+        for gene in parent_a["dna"]:
+            child_dna[gene] = random.choice([
+                parent_a["dna"][gene],
+                parent_b["dna"][gene]
+            ])
+
+        # mutation step
+        if random.random() < 0.4:
+            child_dna = mutate(child_dna)
+
+        new_population.append({
+            "id": f"child_{random.randint(1000,9999)}",
+            "dna": child_dna,
+            "age": 0,
+            "fitness": 1.0,
+            "alive": True
+        })
+
+    return new_population
+
+# =========================================================
+# SIMULATION STEP
+# =========================================================
+
+def simulate():
+    st.session_state.cycle += 1
+
+    # evaluate fitness
+    for individual in st.session_state.population:
+        individual["fitness"] = calculate_fitness(individual)
+
+        # death condition
+        if individual["fitness"] < 0.8 and random.random() < 0.5:
+            individual["alive"] = False
+
+    # remove dead designs
+    st.session_state.population = [
+        p for p in st.session_state.population if p["alive"]
+    ]
+
+    # reproduction phase
+    st.session_state.population = reproduce(st.session_state.population)
+
+# =========================================================
+# CONTROLS
+# =========================================================
+
+col1, col2, col3 = st.columns(3)
 
 with col1:
     if st.button("▶ Run Evolution Cycle"):
-        st.session_state.state = evolve(
-            st.session_state.state,
-            st.session_state.agents
-        )
+        simulate()
         st.rerun()
 
 with col2:
-    auto = st.checkbox("∞ Autonomous Mode")
+    auto = st.checkbox("∞ Autonomous Civilization Mode")
 
-# ---------------------------
-# AUTO LOOP (SAFE)
-# ---------------------------
+with col3:
+    if st.button("💥 Environmental Collapse Event"):
+        # wipe weakest half
+        st.session_state.population = sorted(
+            st.session_state.population,
+            key=lambda x: x["fitness"]
+        )[2:]
+        st.warning("Collapse event reduced population")
+
 if auto:
-    for _ in range(5):
-        st.session_state.state = evolve(
-            st.session_state.state,
-            st.session_state.agents
-        )
-        time.sleep(0.15)
+    simulate()
+    time.sleep(0.3)
     st.rerun()
 
-# ---------------------------
-# DASHBOARD
-# ---------------------------
-state = st.session_state.state
+# =========================================================
+# DISPLAY POPULATION
+# =========================================================
 
-st.subheader("📊 System State")
+st.subheader("🌍 Architecture Population")
 
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("Cycle", state["cycle"])
-c2.metric("Population", state["population"])
-c3.metric("Energy", state["energy"])
-c4.metric("Mood", state["mood"])
+for ind in st.session_state.population:
+    st.write(f"### {ind['id']}")
+    st.json({
+        "dna": ind["dna"],
+        "fitness": round(ind["fitness"], 2),
+        "age": ind["age"]
+    })
 
-# ---------------------------
-# VISUALIZATION (NO MATPLOTLIB NEEDED)
-# ---------------------------
-st.subheader("📈 Population Flow")
+# =========================================================
+# GLOBAL METRICS
+# =========================================================
 
-if len(state["history"]) > 2:
-    st.line_chart(state["history"])
-else:
-    st.info("Run cycles to generate evolution data.")
+st.subheader("📊 Civilization Metrics")
 
-# ---------------------------
-# CITY INTELLIGENCE (TEXT SIMULATION)
-# ---------------------------
-st.subheader("🧠 City Thought Engine")
+if st.session_state.population:
+    avg_fitness = sum(p["fitness"] for p in st.session_state.population) / len(st.session_state.population)
+    avg_age = sum(p["age"] for p in st.session_state.population) / len(st.session_state.population)
 
-thoughts = [
-    "Patterns are forming in the population flow.",
-    "Energy fluctuations detected across cycles.",
-    "Stability is being negotiated between systems.",
-    "Growth is outpacing regulation mechanisms.",
-    "Entropy rising… but still within bounds."
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Cycle", st.session_state.cycle)
+    c2.metric("Population", len(st.session_state.population))
+    c3.metric("Avg Fitness", round(avg_fitness, 2))
+
+# =========================================================
+# EVOLUTION INSIGHT ENGINE
+# =========================================================
+
+st.subheader("🧠 Civilization Observation")
+
+insights = [
+    "Design traits are converging toward stability dominance.",
+    "High-efficiency architectures are outcompeting others.",
+    "Mutation events are increasing structural diversity.",
+    "Environmental pressure is shaping architectural evolution.",
+    "Survival favors balanced DNA profiles over extremes."
 ]
 
-st.info(random.choice(thoughts))
+st.info(random.choice(insights))
 
-# ---------------------------
-# SIMPLE GRAPH VIEW (NO NETWORKX)
-# ---------------------------
-st.subheader("🕸️ City Network (Simplified)")
+# =========================================================
+# LINEAGE TRACKING (SIMPLIFIED HISTORY)
+# =========================================================
 
-nodes = list(st.session_state.agents.keys())
-edges = [
-    ("builder", "population"),
-    ("energy", "population"),
-    ("nature", "energy"),
-    ("governor", "builder")
-]
+st.subheader("📈 Evolution Trend")
 
-graph_text = "digraph city {\n"
-
-for n in nodes:
-    graph_text += f'  {n} [label="{n}\\n{st.session_state.agents[n]:.2f}"];\n'
-
-for a, b in edges:
-    graph_text += f"  {a} -> {b};\n"
-
-graph_text += "}"
-
-st.graphviz_chart(graph_text)
-
-# ---------------------------
-# AGENT CONTROL
-# ---------------------------
-st.subheader("🎮 Agent Control Panel")
-
-agent = st.selectbox("Select Agent", list(st.session_state.agents.keys()))
-
-if st.button("Boost Agent"):
-    st.session_state.agents[agent] *= 1.2
-    st.success(f"{agent} amplified.")
-
-if st.button("Stabilize System"):
-    for k in st.session_state.agents:
-        st.session_state.agents[k] = 1.0
-    st.info("System reset to equilibrium.")
+if st.session_state.population:
+    st.line_chart([p["fitness"] for p in st.session_state.population])
