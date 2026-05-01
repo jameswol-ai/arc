@@ -1,7 +1,65 @@
 import streamlit as st
 import random
 import time
+import streamlit as st
+
+# --- IMPORTANT: Fix matplotlib backend BEFORE pyplot import ---
+import matplotlib
+matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
+import numpy as np
+
+
+# ---------------------------
+# App Title
+# ---------------------------
+st.title("Random System Dashboard")
+
+st.write("Live visualization layer active.")
+
+# ---------------------------
+# Safe Data Generator
+# ---------------------------
+def generate_data(n=50):
+    x = np.linspace(0, 10, n)
+    y = np.sin(x) + np.random.normal(0, 0.1, n)
+    return x, y
+
+
+# ---------------------------
+# Plot Section (Matplotlib safe mode)
+# ---------------------------
+x, y = generate_data()
+
+fig, ax = plt.subplots()
+ax.plot(x, y)
+ax.set_title("Evolving Signal (Random Flow)")
+ax.set_xlabel("Time")
+ax.set_ylabel("State")
+
+st.pyplot(fig)
+
+
+# ---------------------------
+# Simple “alive system” panel
+# ---------------------------
+st.subheader("System State")
+
+state = {
+    "nodes": 12,
+    "connections": 34,
+    "entropy": round(np.random.random(), 3)
+}
+
+st.json(state)
+
+
+# ---------------------------
+# Optional rerun trigger (simulates evolution)
+# ---------------------------
+if st.button("Evolve system"):
+    st.experimental_rerun()
 
 st.set_page_config(page_title="Random City Brain", layout="wide")
 
