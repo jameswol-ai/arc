@@ -4,21 +4,19 @@ import json
 import os
 from uuid import uuid4
 
-# =========================================================
+# =========================
 # CONFIG
-# =========================================================
+# =========================
+st.set_page_config(page_title="Random Civilization", layout="wide")
 
-st.set_page_config(page_title="Random Zero Civilization", layout="wide")
+st.title("🧬 RANDOM — Living Civilization (Simple Mode)")
+st.caption("Pure Python evolution + AI brain + persistence")
 
-st.title("🧬 RANDOM — Zero Dependency Civilization")
-st.caption("Pure Python. Persistent. Evolving. Alive.")
+SAVE_FILE = "memory.json"
 
-SAVE_FILE = "civilization_memory.json"
-
-# =========================================================
+# =========================
 # MEMORY
-# =========================================================
-
+# =========================
 def load_memory():
     if os.path.exists(SAVE_FILE):
         try:
@@ -26,6 +24,7 @@ def load_memory():
                 return json.load(f)
         except:
             pass
+
     return {
         "generation": 0,
         "population": [],
@@ -39,23 +38,21 @@ def save_memory(mem):
 
 memory = load_memory()
 
-# =========================================================
+# =========================
 # GENOME
-# =========================================================
-
+# =========================
 def create_genome():
     return {
-        "id": uuid4().hex[:8],
+        "id": uuid4().hex[:6],
         "height": random.uniform(10, 200),
         "density": random.uniform(0.1, 1.0),
         "complexity": random.uniform(0, 10),
         "fitness": 0
     }
 
-# =========================================================
-# ENVIRONMENT (GOD CONTROL)
-# =========================================================
-
+# =========================
+# WORLD SETTINGS
+# =========================
 st.sidebar.header("🌍 World")
 
 env = {
@@ -64,10 +61,9 @@ env = {
     "innovation": st.sidebar.slider("Innovation", 0.1, 3.0, 1.0),
 }
 
-# =========================================================
-# FITNESS
-# =========================================================
-
+# =========================
+# FITNESS FUNCTION
+# =========================
 def fitness(g):
     return (
         g["height"] * env["wind"]
@@ -75,43 +71,33 @@ def fitness(g):
         + g["complexity"] * env["innovation"]
     )
 
-# =========================================================
-# EVOLUTION ENGINE
-# =========================================================
-
+# =========================
+# EVOLUTION
+# =========================
 def evolve(mem):
     pop = mem["population"]
 
     if not pop:
-        pop = [create_genome() for _ in range(20)]
+        pop = [create_genome() for _ in range(15)]
 
-    # Evaluate
     for g in pop:
         g["fitness"] = fitness(g)
 
-    # Sort by fitness
     pop.sort(key=lambda x: x["fitness"], reverse=True)
 
-    survivors = pop[:10]
-
-    # Reproduce
+    survivors = pop[:7]
     new_pop = survivors[:]
 
-    while len(new_pop) < 20:
+    while len(new_pop) < 15:
         p1, p2 = random.sample(survivors, 2)
-        child = {}
 
-        for k in ["height", "density", "complexity"]:
-            val = random.choice([p1[k], p2[k]])
-
-            # mutation
-            if random.random() < 0.2:
-                val *= random.uniform(0.8, 1.2)
-
-            child[k] = val
-
-        child["id"] = uuid4().hex[:8]
-        child["fitness"] = 0
+        child = {
+            "id": uuid4().hex[:6],
+            "height": random.choice([p1["height"], p2["height"]]) * random.uniform(0.9, 1.1),
+            "density": random.choice([p1["density"], p2["density"]]) * random.uniform(0.9, 1.1),
+            "complexity": random.choice([p1["complexity"], p2["complexity"]]) * random.uniform(0.9, 1.1),
+            "fitness": 0
+        }
 
         new_pop.append(child)
 
@@ -121,90 +107,90 @@ def evolve(mem):
     best = new_pop[0]
 
     mem["history"].append({
-        "generation": mem["generation"],
+        "gen": mem["generation"],
         "fitness": best["fitness"]
     })
 
-    # Narrative
-    if best["fitness"] > 150:
-        event = f"Gen {mem['generation']}: A towering dominant form emerged."
-    elif best["fitness"] < 20:
-        event = f"Gen {mem['generation']}: Collapse. Weak designs failed."
-    else:
-        event = f"Gen {mem['generation']}: Slow adaptation continues."
-
-    mem["events"].append(event)
+    mem["events"].append(f"Gen {mem['generation']} evolved")
 
     return mem
 
-# =========================================================
-# GOD CONSOLE
-# =========================================================
+# =========================
+# AI BRAIN
+# =========================
+def brain(mem):
+    if len(mem["history"]) < 3:
+        return mem
 
-st.sidebar.header("👁️ Control")
+    recent = mem["history"][-3:]
+    avg = sum(h["fitness"] for h in recent) / 3
+
+    # Decision logic
+    if avg > 120:
+        # too stable → chaos
+        for g in mem["population"]:
+            g["fitness"] *= random.uniform(0.5, 0.9)
+        mem["events"].append("🧠 Brain: instability injected")
+
+    elif avg < 40:
+        # collapse → boost evolution
+        mem = evolve(mem)
+        mem["events"].append("🧠 Brain: forced evolution recovery")
+
+    else:
+        # normal evolution
+        if random.random() < 0.7:
+            mem = evolve(mem)
+            mem["events"].append("🧠 Brain: natural evolution step")
+
+    return mem
+
+# =========================
+# CONTROLS
+# =========================
+st.sidebar.header("⚙️ Control")
 
 if st.sidebar.button("⚡ Evolve"):
     memory = evolve(memory)
 
+if st.sidebar.button("🧠 Brain Step"):
+    memory = brain(memory)
+
 if st.sidebar.button("🌋 Catastrophe"):
     for g in memory["population"]:
-        g["fitness"] *= random.uniform(0.1, 0.5)
-    memory["events"].append("A catastrophe reshaped the world.")
+        g["fitness"] *= random.uniform(0.2, 0.6)
+    memory["events"].append("🌋 catastrophe triggered")
 
-if st.sidebar.button("🧬 Inject"):
-    memory["population"].append({
-        "id": uuid4().hex[:8],
-        "height": 300,
-        "density": 0.2,
-        "complexity": 15,
-        "fitness": 0
-    })
-    memory["events"].append("A powerful entity entered the world.")
+if st.sidebar.button("🧬 Inject Life"):
+    memory["population"].append(create_genome())
+    memory["events"].append("🧬 new entity injected")
 
-if st.sidebar.button("☠️ Purge"):
-    memory["population"].sort(key=lambda x: x["fitness"])
-    memory["population"] = memory["population"][5:]
-    memory["events"].append("The weakest were erased.")
-
-# =========================================================
-# SIMPLE VISUALIZATION (ASCII STYLE)
-# =========================================================
-
-st.subheader("🌆 Civilization View (Text Mode)")
+# =========================
+# VISUALIZATION (TEXT ONLY)
+# =========================
+st.subheader("🌆 Civilization")
 
 for g in memory["population"]:
-    bar = "█" * int(g["height"] / 5)
-    st.text(f"{g['id']} | {bar}")
+    bar = "█" * int(g["height"] / 10)
+    st.write(f"{g['id']} | {bar} | fit={round(g['fitness'],2)}")
 
-# =========================================================
-# METRICS
-# =========================================================
+# =========================
+# HISTORY
+# =========================
+st.subheader("📊 History")
 
-st.subheader("📊 Evolution Trend")
+for h in memory["history"][-10:]:
+    st.write(f"Gen {h['gen']} → {round(h['fitness'],2)}")
 
-if memory["history"]:
-    for h in memory["history"][-10:]:
-        st.write(f"Gen {h['generation']} → Fitness: {round(h['fitness'],2)}")
-
-# =========================================================
-# POPULATION TABLE
-# =========================================================
-
-st.subheader("🧬 Population")
-
-st.write(memory["population"])
-
-# =========================================================
+# =========================
 # LOG
-# =========================================================
-
-st.subheader("📖 Civilization Log")
+# =========================
+st.subheader("📖 Events")
 
 for e in reversed(memory["events"][-10:]):
     st.write(e)
 
-# =========================================================
+# =========================
 # SAVE
-# =========================================================
-
+# =========================
 save_memory(memory)
