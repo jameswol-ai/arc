@@ -1,280 +1,190 @@
 import streamlit as st
 import random
-import time
-import pandas as pd
 import json
 import os
+from uuid import uuid4
+import pandas as pd
 
 # =========================================================
-# 🧬 RANDOM AI v6 — PERSISTENT CIVILIZATION ENGINE
+# 🧬 RANDOM V6 — GOD CONSOLE
 # =========================================================
 
-st.set_page_config(page_title="Architecture Civilization AI", layout="wide")
+st.set_page_config(page_title="Random V6 God Console", layout="wide")
 
-st.title("🏗️🧬 Random AI v6 — Persistent Living Civilization")
-st.caption("Designs evolve, survive, and now REMEMBER their past worlds")
+st.title("👁️ RANDOM V6 — GOD CONSOLE")
+st.caption("Control evolution. Bend reality. Interfere with civilization.")
 
-SAVE_FILE = "civilization_world.json"
+SAVE_FILE = "civilization_memory.json"
 
 # =========================================================
-# SIDEBAR — WORLD SETTINGS
+# 🧠 LOAD / SAVE MEMORY
+# =========================================================
+
+def load_memory():
+    if os.path.exists(SAVE_FILE):
+        with open(SAVE_FILE, "r") as f:
+            return json.load(f)
+    return {
+        "generation": 0,
+        "population": [],
+        "history": [],
+        "events": []
+    }
+
+def save_memory(mem):
+    with open(SAVE_FILE, "w") as f:
+        json.dump(mem, f, indent=2)
+
+memory = load_memory()
+
+# =========================================================
+# 🧬 GENOME
+# =========================================================
+
+def create_genome():
+    return {
+        "id": uuid4().hex,
+        "height": random.uniform(10, 200),
+        "density": random.uniform(0.1, 1.0),
+        "complexity": random.uniform(0, 10),
+        "fitness": 0
+    }
+
+# =========================================================
+# 🌍 ENVIRONMENT (GOD EDITABLE)
 # =========================================================
 
 st.sidebar.header("🌍 World Controls")
 
-POP_SIZE = st.sidebar.slider("Population Size", 4, 20, 8)
-MUTATION_RATE = st.sidebar.slider("Mutation Rate", 0.0, 1.0, 0.35)
-ENV_CHAOS = st.sidebar.slider("Environmental Chaos", 0.0, 1.0, 0.2)
-SURVIVAL_PRESSURE = st.sidebar.slider("Survival Pressure", 0.0, 2.0, 1.0)
+wind = st.sidebar.slider("Wind Force", 0.1, 3.0, 1.0)
+resources = st.sidebar.slider("Resource Scarcity", 0.1, 3.0, 1.0)
+innovation = st.sidebar.slider("Innovation Reward", 0.1, 3.0, 1.0)
 
-AUTO_MODE = st.sidebar.checkbox("∞ Autonomous Evolution Mode")
-
-st.sidebar.markdown("---")
-
-# =========================================================
-# MEMORY SYSTEM
-# =========================================================
-
-def save_world():
-    world = {
-        "cycle": st.session_state.cycle,
-        "population": st.session_state.population,
-        "history": st.session_state.history,
-        "world_id": st.session_state.world_id
-    }
-
-    with open(SAVE_FILE, "w") as f:
-        json.dump(world, f)
-
-def load_world():
-    if os.path.exists(SAVE_FILE):
-        with open(SAVE_FILE, "r") as f:
-            data = json.load(f)
-
-        st.session_state.cycle = data["cycle"]
-        st.session_state.population = data["population"]
-        st.session_state.history = data["history"]
-        st.session_state.world_id = data["world_id"]
+environment = {
+    "wind": wind,
+    "resources": resources,
+    "innovation": innovation
+}
 
 # =========================================================
-# STATE INIT
+# ⚔️ FITNESS
 # =========================================================
 
-if "population" not in st.session_state:
-    st.session_state.population = []
-    st.session_state.history = []
-    st.session_state.cycle = 0
-    st.session_state.world_id = f"world_{random.randint(1000,9999)}"
-
-    for i in range(POP_SIZE):
-        st.session_state.population.append({
-            "id": f"genesis_{i}",
-            "dna": {
-                "stability": random.uniform(0.6, 1.6),
-                "efficiency": random.uniform(0.6, 1.6),
-                "growth": random.uniform(0.6, 1.6),
-                "adaptation": random.uniform(0.6, 1.6),
-            },
-            "age": 0,
-            "fitness": 1.0,
-            "alive": True,
-            "lineage": "genesis"
-        })
-
-# =========================================================
-# FITNESS FUNCTION
-# =========================================================
-
-def calculate_fitness(ind):
-    d = ind["dna"]
-
-    base = (
-        d["stability"] * 0.35 +
-        d["efficiency"] * 0.25 +
-        d["adaptation"] * 0.25 +
-        d["growth"] * 0.15
+def fitness(g):
+    return (
+        g["height"] * environment["wind"]
+        - g["density"] * environment["resources"]
+        + g["complexity"] * environment["innovation"]
     )
 
-    noise = random.uniform(-ENV_CHAOS, ENV_CHAOS)
-
-    return max(0.0, base * SURVIVAL_PRESSURE + noise)
-
 # =========================================================
-# MUTATION ENGINE
+# 🧬 EVOLUTION STEP
 # =========================================================
 
-def mutate(dna):
-    new = {}
-    for k, v in dna.items():
-        delta = random.uniform(-0.2, 0.2) * MUTATION_RATE
-        new[k] = max(0.2, min(2.5, v + delta))
-    return new
+def evolve(mem):
+    pop = mem["population"]
 
-# =========================================================
-# REPRODUCTION ENGINE
-# =========================================================
+    # Create initial population
+    if not pop:
+        pop = [create_genome() for _ in range(20)]
 
-def reproduce(pop):
+    # Evaluate
+    for g in pop:
+        g["fitness"] = fitness(g)
+
+    # Sort
     pop = sorted(pop, key=lambda x: x["fitness"], reverse=True)
 
-    survivors = pop[: max(2, len(pop)//2)]
-    new_pop = []
+    # Selection
+    survivors = pop[:10]
 
-    for s in survivors:
-        s["age"] += 1
-        new_pop.append(s)
+    # Reproduce
+    new_pop = survivors.copy()
+    while len(new_pop) < 20:
+        p1, p2 = random.sample(survivors, 2)
+        child = {}
+        for k in ["height", "density", "complexity"]:
+            child[k] = random.choice([p1[k], p2[k]])
+            if random.random() < 0.2:
+                child[k] *= random.uniform(0.8, 1.2)
 
-    while len(new_pop) < POP_SIZE:
-        a, b = random.sample(survivors, 2)
+        child["id"] = uuid4().hex
+        child["fitness"] = 0
+        new_pop.append(child)
 
-        child_dna = {}
-        for g in a["dna"]:
-            child_dna[g] = random.choice([a["dna"][g], b["dna"][g]])
+    mem["population"] = new_pop
+    mem["generation"] += 1
 
-        if random.random() < MUTATION_RATE:
-            child_dna = mutate(child_dna)
-
-        new_pop.append({
-            "id": f"evo_{random.randint(1000,9999)}",
-            "dna": child_dna,
-            "age": 0,
-            "fitness": 1.0,
-            "alive": True,
-            "lineage": f"{a['id']}+{b['id']}"
-        })
-
-    return new_pop
-
-# =========================================================
-# SIMULATION STEP
-# =========================================================
-
-def simulate():
-    st.session_state.cycle += 1
-
-    for ind in st.session_state.population:
-        ind["fitness"] = calculate_fitness(ind)
-
-        if ind["fitness"] < 0.5 and random.random() < 0.4:
-            ind["alive"] = False
-
-    st.session_state.population = [
-        p for p in st.session_state.population if p["alive"]
-    ]
-
-    st.session_state.population = reproduce(st.session_state.population)
-
-    avg_fit = sum(p["fitness"] for p in st.session_state.population) / len(st.session_state.population)
-
-    st.session_state.history.append({
-        "cycle": st.session_state.cycle,
-        "avg_fitness": avg_fit,
-        "population": len(st.session_state.population)
+    # Record history
+    best = new_pop[0]
+    mem["history"].append({
+        "generation": mem["generation"],
+        "fitness": best["fitness"],
+        "height": best["height"]
     })
 
-# =========================================================
-# CONTROLS
-# =========================================================
-
-c1, c2, c3, c4 = st.columns(4)
-
-with c1:
-    if st.button("▶ Run Cycle"):
-        simulate()
-        st.rerun()
-
-with c2:
-    if st.button("💥 Collapse Event"):
-        st.session_state.population = sorted(
-            st.session_state.population,
-            key=lambda x: x["fitness"],
-            reverse=True
-        )[: max(2, len(st.session_state.population)//2)]
-
-with c3:
-    if st.button("💾 Save World"):
-        save_world()
-        st.success("Civilization saved")
-
-with c4:
-    if st.button("📂 Load World"):
-        load_world()
-        st.success("Civilization restored")
-        st.rerun()
+    return mem
 
 # =========================================================
-# AUTONOMOUS MODE
+# 👁️ GOD ACTIONS
 # =========================================================
 
-if AUTO_MODE:
-    time.sleep(0.3)
-    simulate()
-    st.rerun()
+st.sidebar.header("👁️ God Actions")
+
+if st.sidebar.button("⚡ Force Evolution"):
+    memory = evolve(memory)
+    memory["events"].append(f"Gen {memory['generation']}: God forced evolution.")
+
+if st.sidebar.button("🌋 Catastrophe"):
+    for g in memory["population"]:
+        g["fitness"] *= random.uniform(0.1, 0.5)
+    memory["events"].append(f"Gen {memory['generation']}: Catastrophe struck.")
+
+if st.sidebar.button("🧬 Inject Super Genome"):
+    super_g = {
+        "id": uuid4().hex,
+        "height": 300,
+        "density": 0.2,
+        "complexity": 15,
+        "fitness": 0
+    }
+    memory["population"].append(super_g)
+    memory["events"].append(f"Gen {memory['generation']}: God injected a superior being.")
+
+if st.sidebar.button("☠️ Kill Weakest"):
+    memory["population"] = sorted(memory["population"], key=lambda x: x["fitness"])[:-5]
+    memory["events"].append(f"Gen {memory['generation']}: Weak purged.")
 
 # =========================================================
-# WORLD INFO
+# 📊 DASHBOARD
 # =========================================================
 
-st.subheader("🌍 World Identity")
-st.write(f"World ID: **{st.session_state.world_id}**")
-st.write(f"Cycle: **{st.session_state.cycle}**")
+st.subheader("📊 Evolution Metrics")
+
+if memory["history"]:
+    df = pd.DataFrame(memory["history"])
+    st.line_chart(df.set_index("generation"))
 
 # =========================================================
-# POPULATION VIEW
+# 🧬 POPULATION VIEW
 # =========================================================
 
-st.subheader("🧬 Living Population")
+st.subheader("🧬 Population")
 
-df = [{
-    "ID": p["id"],
-    "Fitness": round(p["fitness"], 3),
-    "Age": p["age"],
-    "Lineage": p["lineage"]
-} for p in st.session_state.population]
-
-st.dataframe(pd.DataFrame(df), use_container_width=True)
-
-with st.expander("Genome Inspector"):
-    for p in st.session_state.population:
-        st.write(p["id"])
-        st.json(p["dna"])
+df_pop = pd.DataFrame(memory["population"])
+st.dataframe(df_pop)
 
 # =========================================================
-# METRICS
+# 📖 EVENT LOG (THE WORLD REMEMBERS YOU)
 # =========================================================
 
-st.subheader("📊 Civilization Metrics")
+st.subheader("📖 Civilization Log")
 
-if st.session_state.population:
-    avg_fit = sum(p["fitness"] for p in st.session_state.population) / len(st.session_state.population)
-
-    a, b, c = st.columns(3)
-    a.metric("Cycle", st.session_state.cycle)
-    b.metric("Population", len(st.session_state.population))
-    c.metric("Avg Fitness", round(avg_fit, 3))
+for e in reversed(memory["events"][-10:]):
+    st.write(e)
 
 # =========================================================
-# HISTORY
+# 💾 SAVE
 # =========================================================
 
-st.subheader("📈 Evolution Timeline")
-
-if st.session_state.history:
-    hist = pd.DataFrame(st.session_state.history)
-    st.line_chart(hist.set_index("cycle")[["avg_fitness", "population"]])
-
-# =========================================================
-# INSIGHTS
-# =========================================================
-
-st.subheader("🧠 Emergent Insight Layer")
-
-insights = [
-    "Lineages are forming persistent architectural families.",
-    "Environmental chaos is shaping divergent survival strategies.",
-    "Stable designs are slowly dominating the ecosystem.",
-    "Mutation pressure increases innovation but destabilizes averages.",
-    "Civilization memory allows recurring evolutionary patterns."
-]
-
-st.info(random.choice(insights))
+save_memory(memory)
