@@ -1,4 +1,3 @@
-# streamlit_app.py
 import streamlit as st
 import random
 import math
@@ -15,7 +14,22 @@ import matplotlib.pyplot as plt
 st.set_page_config(page_title="Random AI Architecture System", layout="wide")
 
 st.title("🏗️ Random AI — Architectural + Structural Intelligence Dashboard")
-st.caption("A living design system inspired by structural logic, evolution, and Eurocode-style constraints")
+st.caption("A living system evolving structural forms under simplified Eurocode-like logic")
+
+# =========================================================
+# SESSION STATE INIT (CRITICAL FOR EVOLUTION LOOP)
+# =========================================================
+if "running" not in st.session_state:
+    st.session_state.running = False
+
+if "stability" not in st.session_state:
+    st.session_state.stability = 0.6
+
+if "history" not in st.session_state:
+    st.session_state.history = []
+
+if "tick" not in st.session_state:
+    st.session_state.tick = 0
 
 # =========================================================
 # SIDEBAR PARAMETERS
@@ -27,17 +41,16 @@ width = st.sidebar.slider("Width (m)", 5, 120, 25)
 depth = st.sidebar.slider("Depth (m)", 5, 120, 18)
 
 material = st.sidebar.selectbox("Material", ["Concrete", "Steel", "Timber", "Hybrid"])
-importance = st.sidebar.selectbox("Importance Class (Eurocode-like)", ["Low", "Normal", "High"])
+importance = st.sidebar.selectbox("Importance Class", ["Low", "Normal", "High"])
 
 live_load = st.sidebar.slider("Live Load (kN/m²)", 1.0, 12.0, 3.0)
 dead_load_factor = st.sidebar.slider("Dead Load Factor", 0.5, 3.0, 1.2)
-
 mutation = st.sidebar.slider("Evolution Mutation Rate", 0.0, 1.0, 0.25)
 
 # =========================================================
-# EUROCODE-INSPIRED LOAD MODEL (SIMPLIFIED)
+# EUROCODE-INSPIRED STRUCTURAL MODEL (SIMPLIFIED)
 # =========================================================
-def structural_model(floors, width, depth, live_load, dead_load_factor, material, importance):
+def structural_model():
     area = width * depth
 
     material_strength = {
@@ -57,14 +70,12 @@ def structural_model(floors, width, depth, live_load, dead_load_factor, material
     live_load_total = area * floors * live_load * importance_factor
 
     total_load = dead_load + live_load_total
-
     capacity = area * material_strength * 1.1
 
     utilization = total_load / capacity
     stability = max(0.0, 1.0 - utilization)
 
     return {
-        "area": area,
         "dead_load": dead_load,
         "live_load": live_load_total,
         "total_load": total_load,
@@ -73,34 +84,61 @@ def structural_model(floors, width, depth, live_load, dead_load_factor, material
         "stability": stability
     }
 
-analysis = structural_model(
-    floors, width, depth, live_load,
-    dead_load_factor, material, importance
-)
+# =========================================================
+# EVOLUTION FUNCTION
+# =========================================================
+def evolve(value, mutation_rate):
+    drift = np.random.normal(0, mutation_rate)
+    return float(np.clip(value + drift, 0, 1))
 
 # =========================================================
-# DESIGN GENOME (EVOLUTION SYSTEM)
+# FLOORPLAN GENERATOR
 # =========================================================
-def evolve(score, mutation):
-    drift = np.random.normal(0, mutation)
-    return float(np.clip(score + drift, 0, 1))
-
-# =========================================================
-# FLOORPLAN GENERATOR (GRID-BASED)
-# =========================================================
-def generate_plan(floors):
+def generate_plan():
     symbols = ["■", "□", "▣", "▢"]
     return [
         [[random.choice(symbols) for _ in range(6)] for _ in range(6)]
         for _ in range(floors)
     ]
 
-floorplans = generate_plan(floors)
+# =========================================================
+# CONTROL PANEL (START / STOP LOOP)
+# =========================================================
+colA, colB = st.columns(2)
+
+with colA:
+    if st.button("🚀 Start Evolution Engine"):
+        st.session_state.running = True
+
+with colB:
+    if st.button("🛑 Stop Engine"):
+        st.session_state.running = False
 
 # =========================================================
-# STRUCTURAL PERFORMANCE HISTORY
+# CORE SIMULATION STEP
 # =========================================================
-history = [evolve(analysis["stability"], mutation) for _ in range(12)]
+def simulation_step():
+    analysis = structural_model()
+
+    # evolve stability
+    st.session_state.stability = evolve(
+        st.session_state.stability,
+        mutation
+    )
+
+    # combine physical model + evolution drift
+    st.session_state.stability = (st.session_state.stability + analysis["stability"]) / 2
+
+    # history tracking
+    st.session_state.history.append(st.session_state.stability)
+
+    if len(st.session_state.history) > 50:
+        st.session_state.history.pop(0)
+
+    return analysis
+
+analysis = structural_model()
+floorplans = generate_plan()
 
 # =========================================================
 # DASHBOARD LAYOUT
@@ -108,7 +146,7 @@ history = [evolve(analysis["stability"], mutation) for _ in range(12)]
 col1, col2, col3 = st.columns(3)
 
 # -------------------------
-# COLUMN 1 — STRUCTURAL CORE
+# STRUCTURAL CORE
 # -------------------------
 with col1:
     st.subheader("📐 Structural Intelligence")
@@ -119,17 +157,17 @@ with col1:
     st.metric("Stability Index", f"{analysis['stability']:.3f}")
 
     if analysis["stability"] > 0.75:
-        st.success("Structurally efficient system")
+        st.success("Stable structural regime")
     elif analysis["stability"] > 0.45:
-        st.warning("Moderate structural stress detected")
+        st.warning("Stress accumulation detected")
     else:
-        st.error("Critical instability zone")
+        st.error("Collapse risk zone")
 
 # -------------------------
-# COLUMN 2 — FLOORPLANS
+# FLOOR SYSTEM
 # -------------------------
 with col2:
-    st.subheader("🏗️ Floor System Map")
+    st.subheader("🏗️ Floor Geometry Field")
 
     for i, floor in enumerate(floorplans):
         st.text(f"Level {i+1}")
@@ -137,78 +175,55 @@ with col2:
             st.text(" ".join(row))
 
 # -------------------------
-# COLUMN 3 — EVOLUTION ENGINE
+# EVOLUTION CORE
 # -------------------------
 with col3:
-    st.subheader("🧬 Design Evolution Field")
+    st.subheader("🧬 Evolution Engine State")
 
-    current = analysis["stability"]
-    evolved = evolve(current, mutation)
+    st.write("Current Stability")
+    st.progress(st.session_state.stability)
 
-    st.write("Base Stability")
-    st.progress(current)
+    st.write("Environmental Stability (Eurocode-like)")
+    st.progress(analysis["stability"])
 
-    st.write("Evolved Stability")
-    st.progress(evolved)
-
-    if evolved > current:
-        st.success("Evolution improved structural harmony")
-    else:
-        st.info("Mutation introduced instability, exploring new geometry")
+    blended = (st.session_state.stability + analysis["stability"]) / 2
+    st.write("System Harmony")
+    st.progress(blended)
 
 # =========================================================
-# GRAPHICAL ANALYSIS LAYER
+# EVOLUTION LOOP EXECUTION
+# =========================================================
+if st.session_state.running:
+    st.info("🧬 Evolution engine active... generating architectural mutations")
+
+    analysis = simulation_step()
+    st.session_state.tick += 1
+
+    st.toast(f"Generation {st.session_state.tick} evolved")
+
+    time.sleep(0.3)
+    st.rerun()
+
+# =========================================================
+# HISTORY GRAPH
 # =========================================================
 st.divider()
-st.subheader("📊 Structural Evolution Graph")
+st.subheader("📊 Stability Evolution Timeline")
 
 fig, ax = plt.subplots()
-
-ax.plot(history)
-ax.set_title("Stability Evolution Over Iterations")
-ax.set_xlabel("Iteration")
-ax.set_ylabel("Stability Index")
+ax.plot(st.session_state.history)
+ax.set_title("Architectural Stability Drift")
+ax.set_xlabel("Generations")
+ax.set_ylabel("Stability")
 
 st.pyplot(fig)
 
 # =========================================================
-# LOAD BREAKDOWN VISUALIZATION
-# =========================================================
-st.subheader("⚖️ Load Composition")
-
-fig2, ax2 = plt.subplots()
-
-labels = ["Dead Load", "Live Load"]
-values = [analysis["dead_load"], analysis["live_load"]]
-
-ax2.bar(labels, values)
-
-ax2.set_title("Load Distribution (Simplified Eurocode Model)")
-
-st.pyplot(fig2)
-
-# =========================================================
-# SIMULATION ENGINE
+# MANUAL RUN BUTTON (ONE-SHOT SIMULATION)
 # =========================================================
 st.divider()
-st.subheader("🌍 Living Architecture Simulation")
+st.subheader("🌍 Manual Simulation Step")
 
-if st.button("Run Evolution Cycle"):
-    st.write("Running structural evolution cycle...")
-
-    progress = st.progress(0)
-    score = analysis["stability"]
-
-    for i in range(10):
-        time.sleep(0.2)
-        score = evolve(score, mutation)
-        progress.progress((i + 1) * 10)
-
-    st.metric("Final Evolved Stability", f"{score:.3f}")
-
-    if score > 0.8:
-        st.success("Highly stable architectural organism formed 🧬🏗️")
-    elif score > 0.5:
-        st.warning("Adaptive structure achieved with moderate resilience")
-    else:
-        st.error("System drifted into structural collapse regime")
+if st.button("Run Single Evolution Step"):
+    analysis = simulation_step()
+    st.success(f"Step complete — stability: {st.session_state.stability:.3f}")
