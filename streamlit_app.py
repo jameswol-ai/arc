@@ -1,218 +1,214 @@
+# streamlit_app.py
 import streamlit as st
 import random
 import math
+import time
+import numpy as np
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 # =========================================================
-# 🧠 RANDOM AI — RULE-CONSCIOUS EUROCODE ARCHITECT
+# 🏗️ RANDOM AI — ARCHITECTURE + EUROCODE SIMULATION CORE
 # =========================================================
 
-st.set_page_config(page_title="Random AI Rule-Conscious Engine", layout="wide")
+st.set_page_config(page_title="Random AI Architecture System", layout="wide")
 
-st.title("🏗️ Random AI — Rule-Conscious Architectural Intelligence")
-st.caption("Designs are now evaluated, explained, and filtered through Eurocode-inspired reasoning")
-
-# =========================================================
-# EUROCODE CORE (SIMPLIFIED LOGIC LAYERS)
-# =========================================================
-
-GAMMA_G = 1.35   # permanent load factor
-GAMMA_Q = 1.50   # variable load factor
+st.title("🏗️ Random AI — Architectural + Structural Intelligence Dashboard")
+st.caption("A living design system inspired by structural logic, evolution, and Eurocode-style constraints")
 
 # =========================================================
-# PARAMETERS
+# SIDEBAR PARAMETERS
 # =========================================================
+st.sidebar.header("Building Configuration")
 
-st.sidebar.header("🏢 Design Parameters")
+floors = st.sidebar.slider("Floors", 1, 60, 8)
+width = st.sidebar.slider("Width (m)", 5, 120, 25)
+depth = st.sidebar.slider("Depth (m)", 5, 120, 18)
 
-floors = st.sidebar.slider("Floors", 1, 25, 6)
-width = st.sidebar.slider("Width (m)", 10, 60, 25)
-length = st.sidebar.slider("Length (m)", 10, 100, 40)
+material = st.sidebar.selectbox("Material", ["Concrete", "Steel", "Timber", "Hybrid"])
+importance = st.sidebar.selectbox("Importance Class (Eurocode-like)", ["Low", "Normal", "High"])
 
-gk = st.sidebar.slider("Permanent load Gk", 2.0, 15.0, 5.0)
-qk = st.sidebar.slider("Variable load Qk", 1.0, 10.0, 3.0)
-strength = st.sidebar.slider("Material strength (MPa)", 10, 80, 30)
+live_load = st.sidebar.slider("Live Load (kN/m²)", 1.0, 12.0, 3.0)
+dead_load_factor = st.sidebar.slider("Dead Load Factor", 0.5, 3.0, 1.2)
 
-mutation = st.sidebar.checkbox("🧬 Enable Evolution Mode")
+mutation = st.sidebar.slider("Evolution Mutation Rate", 0.0, 1.0, 0.25)
 
 # =========================================================
-# ARCHITECTURE GENOME
+# EUROCODE-INSPIRED LOAD MODEL (SIMPLIFIED)
 # =========================================================
+def structural_model(floors, width, depth, live_load, dead_load_factor, material, importance):
+    area = width * depth
 
-def genome():
+    material_strength = {
+        "Concrete": 55,
+        "Steel": 120,
+        "Timber": 35,
+        "Hybrid": 80
+    }[material]
+
+    importance_factor = {
+        "Low": 0.9,
+        "Normal": 1.0,
+        "High": 1.2
+    }[importance]
+
+    dead_load = area * floors * dead_load_factor * importance_factor
+    live_load_total = area * floors * live_load * importance_factor
+
+    total_load = dead_load + live_load_total
+
+    capacity = area * material_strength * 1.1
+
+    utilization = total_load / capacity
+    stability = max(0.0, 1.0 - utilization)
+
     return {
-        "density": random.uniform(0.2, 0.6),
-        "core_strength": random.uniform(0.1, 0.5),
-        "void_ratio": random.uniform(0.0, 0.4),
-        "symmetry": random.uniform(0.0, 1.0)
+        "area": area,
+        "dead_load": dead_load,
+        "live_load": live_load_total,
+        "total_load": total_load,
+        "capacity": capacity,
+        "utilization": utilization,
+        "stability": stability
     }
 
-# =========================================================
-# FLOORPLAN GENERATION
-# =========================================================
-
-def build(gen):
-    plan = []
-    for f in range(floors):
-        floor = []
-        for i in range(width // 2):
-            row = []
-            for j in range(length // 2):
-                r = random.random()
-
-                # rule-influenced layout behavior
-                threshold = gen["density"]
-
-                if gen["symmetry"] > 0.7 and j < (length // 4):
-                    cell = "■"
-                else:
-                    cell = "■" if r < threshold else "□"
-
-                row.append(cell)
-            floor.append(row)
-        plan.append(floor)
-    return plan
+analysis = structural_model(
+    floors, width, depth, live_load,
+    dead_load_factor, material, importance
+)
 
 # =========================================================
-# 🧠 EUROCODE RULE ENGINE (CONSCIOUS LAYER)
+# DESIGN GENOME (EVOLUTION SYSTEM)
 # =========================================================
-
-def rule_engine(gen):
-    rules = []
-    score = 1.0
-
-    # RULE 1 — excessive void ratio weakens structure
-    if gen["void_ratio"] > 0.35:
-        rules.append("❌ Excessive void ratio → instability risk (EC stability concern)")
-        score -= 0.4
-
-    # RULE 2 — very high density increases load demand
-    if gen["density"] > 0.55:
-        rules.append("⚠ High density → increased load path demand (EC1 load amplification)")
-        score -= 0.2
-
-    # RULE 3 — low core strength = poor vertical load transfer
-    if gen["core_strength"] < 0.15:
-        rules.append("❌ Weak structural core → ULS risk in vertical load transfer")
-        score -= 0.5
-
-    # RULE 4 — symmetry improves load distribution
-    if gen["symmetry"] > 0.6:
-        rules.append("✔ Symmetry improves load distribution efficiency")
-        score += 0.2
-
-    return score, rules
+def evolve(score, mutation):
+    drift = np.random.normal(0, mutation)
+    return float(np.clip(score + drift, 0, 1))
 
 # =========================================================
-# STRUCTURAL ANALYSIS (EUROCODE-INSPIRED)
+# FLOORPLAN GENERATOR (GRID-BASED)
 # =========================================================
+def generate_plan(floors):
+    symbols = ["■", "□", "▣", "▢"]
+    return [
+        [[random.choice(symbols) for _ in range(6)] for _ in range(6)]
+        for _ in range(floors)
+    ]
 
-def structural(gen):
-    area = width * length
-
-    Ed = (GAMMA_G * gk + GAMMA_Q * qk) * area * floors
-
-    stress = Ed / (area * (1 - gen["void_ratio"] + 0.4))
-    stress_mpa = stress / 1000
-
-    safety = strength / max(stress_mpa, 0.0001)
-
-    # LIMIT STATES
-    ULS_ok = safety >= 1.5
-    SLS_ok = stress_mpa < (strength * 0.6)
-
-    return Ed, stress_mpa, safety, ULS_ok, SLS_ok
+floorplans = generate_plan(floors)
 
 # =========================================================
-# FITNESS + CONSCIOUS DECISION
+# STRUCTURAL PERFORMANCE HISTORY
 # =========================================================
-
-def evaluate(gen):
-    rule_score, rule_explanations = rule_engine(gen)
-    Ed, stress, safety, ULS, SLS = structural(gen)
-
-    fitness = rule_score * safety
-
-    decision = "APPROVED 🟢"
-
-    if not ULS:
-        decision = "REJECTED ❌ (ULS failure)"
-    elif not SLS:
-        decision = "WARNING 🟠 (SLS deformation limit)"
-    elif fitness < 0.8:
-        decision = "CONDITIONAL ⚠ (inefficient design)"
-
-    return fitness, rule_explanations, Ed, stress, safety, decision
+history = [evolve(analysis["stability"], mutation) for _ in range(12)]
 
 # =========================================================
-# EVOLUTION LOOP
+# DASHBOARD LAYOUT
 # =========================================================
+col1, col2, col3 = st.columns(3)
 
-def mutate(g):
-    return {
-        "density": min(max(g["density"] + random.uniform(-0.05, 0.05), 0.1), 0.8),
-        "core_strength": min(max(g["core_strength"] + random.uniform(-0.05, 0.05), 0.05), 0.6),
-        "void_ratio": min(max(g["void_ratio"] + random.uniform(-0.05, 0.05), 0.0), 0.6),
-        "symmetry": min(max(g["symmetry"] + random.uniform(-0.1, 0.1), 0.0), 1.0),
-    }
+# -------------------------
+# COLUMN 1 — STRUCTURAL CORE
+# -------------------------
+with col1:
+    st.subheader("📐 Structural Intelligence")
 
-# =========================================================
-# RUN
-# =========================================================
+    st.metric("Total Load", f"{analysis['total_load']:.1f}")
+    st.metric("Capacity", f"{analysis['capacity']:.1f}")
+    st.metric("Utilization", f"{analysis['utilization']:.3f}")
+    st.metric("Stability Index", f"{analysis['stability']:.3f}")
 
-if st.button("🧠 Generate Conscious Design"):
+    if analysis["stability"] > 0.75:
+        st.success("Structurally efficient system")
+    elif analysis["stability"] > 0.45:
+        st.warning("Moderate structural stress detected")
+    else:
+        st.error("Critical instability zone")
 
-    g = genome()
+# -------------------------
+# COLUMN 2 — FLOORPLANS
+# -------------------------
+with col2:
+    st.subheader("🏗️ Floor System Map")
 
-    fitness, rules, Ed, stress, safety, decision = evaluate(g)
-
-    st.subheader("🏗️ Architectural Decision")
-
-    st.write("### Decision:")
-    st.write(decision)
-
-    st.write("### Eurocode Structural Output")
-    st.write(f"Design Load Ed: {Ed:.2f} kN")
-    st.write(f"Stress (MPa): {stress:.3f}")
-    st.write(f"Safety Factor: {safety:.2f}")
-
-    st.write("### Rule Engine Reasoning")
-    for r in rules:
-        st.write(r)
-
-    st.subheader("🏢 Generated Floorplan")
-
-    plan = build(g)
-
-    for i, floor in enumerate(plan):
-        st.markdown(f"### Floor {i+1}")
+    for i, floor in enumerate(floorplans):
+        st.text(f"Level {i+1}")
         for row in floor:
             st.text(" ".join(row))
 
+# -------------------------
+# COLUMN 3 — EVOLUTION ENGINE
+# -------------------------
+with col3:
+    st.subheader("🧬 Design Evolution Field")
+
+    current = analysis["stability"]
+    evolved = evolve(current, mutation)
+
+    st.write("Base Stability")
+    st.progress(current)
+
+    st.write("Evolved Stability")
+    st.progress(evolved)
+
+    if evolved > current:
+        st.success("Evolution improved structural harmony")
+    else:
+        st.info("Mutation introduced instability, exploring new geometry")
+
 # =========================================================
-# EVOLUTION MODE
+# GRAPHICAL ANALYSIS LAYER
 # =========================================================
+st.divider()
+st.subheader("📊 Structural Evolution Graph")
 
-if mutation:
+fig, ax = plt.subplots()
 
-    st.subheader("🧬 Evolution Cycle (Rule-Conscious)")
+ax.plot(history)
+ax.set_title("Stability Evolution Over Iterations")
+ax.set_xlabel("Iteration")
+ax.set_ylabel("Stability Index")
 
-    population = [genome() for _ in range(8)]
-    history = []
+st.pyplot(fig)
 
-    for i in range(5):
-        scored = []
+# =========================================================
+# LOAD BREAKDOWN VISUALIZATION
+# =========================================================
+st.subheader("⚖️ Load Composition")
 
-        for g in population:
-            fitness, _, _, _, _, _ = evaluate(g)
-            scored.append((fitness, g))
+fig2, ax2 = plt.subplots()
 
-        scored.sort(reverse=True, key=lambda x: x[0])
+labels = ["Dead Load", "Live Load"]
+values = [analysis["dead_load"], analysis["live_load"]]
 
-        best = scored[0]
-        history.append(best)
+ax2.bar(labels, values)
 
-        survivors = [g for _, g in scored[:4]]
-        population = survivors + [mutate(s) for s in survivors]
+ax2.set_title("Load Distribution (Simplified Eurocode Model)")
 
-    for i, (fit, g) in enumerate(history):
-        st.write(f"Generation {i+1} → Fitness {fit:.3f}")
+st.pyplot(fig2)
+
+# =========================================================
+# SIMULATION ENGINE
+# =========================================================
+st.divider()
+st.subheader("🌍 Living Architecture Simulation")
+
+if st.button("Run Evolution Cycle"):
+    st.write("Running structural evolution cycle...")
+
+    progress = st.progress(0)
+    score = analysis["stability"]
+
+    for i in range(10):
+        time.sleep(0.2)
+        score = evolve(score, mutation)
+        progress.progress((i + 1) * 10)
+
+    st.metric("Final Evolved Stability", f"{score:.3f}")
+
+    if score > 0.8:
+        st.success("Highly stable architectural organism formed 🧬🏗️")
+    elif score > 0.5:
+        st.warning("Adaptive structure achieved with moderate resilience")
+    else:
+        st.error("System drifted into structural collapse regime")
