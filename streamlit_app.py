@@ -1,311 +1,139 @@
 import streamlit as st
 import random
-import json
-import time
+import math
 
 # =========================================================
-# 🏗️ RANDOM — ARCH + EUROCODE ENGINE (INTEGRATED)
+# 🧬 RANDOM AI — ARCHITECTURE + STRUCTURAL ENGINE
 # =========================================================
 
-st.set_page_config(page_title="Random Eurocode AI v6", layout="wide")
+st.set_page_config(page_title="Random Architecture AI", layout="wide")
 
-st.title("🏗️🧬 Random AI — Architectural + Eurocode System")
-st.caption("Geometry → Loads → Structure → Survival")
-
-# =========================================================
-# SIDEBAR INPUTS (ARCHITECTURE DRIVES STRUCTURE)
-# =========================================================
-
-st.sidebar.header("🏗️ Architectural Parameters")
-
-BASE_SPAN = st.sidebar.slider("Span (m)", 4, 30, 12)
-BASE_DEPTH = st.sidebar.slider("Depth (m)", 4, 30, 10)
-BASE_FLOORS = st.sidebar.slider("Floors", 1, 15, 4)
-
-material_bias = st.sidebar.selectbox("Material", ["Concrete", "Steel"])
-
-live_load = st.sidebar.slider("Live Load Q (kN/m²)", 1, 10, 5)
-wind_base = st.sidebar.slider("Base Wind (kN/m²)", 0, 5, 2)
-
-auto_mode = st.sidebar.checkbox("🔄 Auto Evolution", True)
-speed = st.sidebar.slider("Speed", 0.2, 2.0, 0.8)
-
-# Eurocode partial factors (EN 1990)
-gamma_G = 1.35
-gamma_Q = 1.5
+st.title("🏗️ Random AI — Living Architectural + Structural System")
+st.caption("Generates floorplans, applies simplified Eurocode-style checks, and evolves designs")
 
 # =========================================================
-# LOAD MODEL (EN 1991 — GEOMETRY DEPENDENT)
+# SIDEBAR — BUILD PARAMETERS
 # =========================================================
 
-def dead_load(material):
-    return 5.5 if material == "Concrete" else 3.0
+st.sidebar.header("🏢 Building Parameters")
 
-def wind_load(height):
-    # wind increases with height (simplified EN 1991 concept)
-    return wind_base * (1 + height / 30)
+floors = st.sidebar.slider("Number of floors", 1, 20, 3)
+width = st.sidebar.slider("Building width (m)", 5, 50, 20)
+length = st.sidebar.slider("Building length (m)", 5, 80, 30)
+load_per_floor = st.sidebar.slider("Live load per floor (kN/m²)", 1.0, 10.0, 3.0)
+material_strength = st.sidebar.slider("Material strength (MPa)", 10, 60, 25)
 
-def load_combinations(Gk, Qk, Wk):
-    ULS = gamma_G * Gk + gamma_Q * Qk + 1.5 * Wk
-    SLS = Gk + Qk + Wk
-    return ULS, SLS
+mutation_mode = st.sidebar.checkbox("🧬 Enable Random Evolution Mode", value=False)
 
 # =========================================================
-# STRUCTURAL ANALYSIS (EC2 / EC3 STYLE)
+# FLOORPLAN GENERATION
 # =========================================================
 
-def beam_analysis(span, depth, ULS, material):
-    q = ULS * depth
-    M = q * span**2 / 8  # kNm
+def generate_floorplan(width, length, floors):
+    plan = []
+    for f in range(floors):
+        grid = []
+        for x in range(int(width // 2)):
+            row = []
+            for y in range(int(length // 2)):
+                cell = random.choice(["□", "□", "□", "■"])  # walls vs space
+                row.append(cell)
+            grid.append(row)
+        plan.append(grid)
+    return plan
 
-    if material == "Steel":
-        fy = 355
-        W_req = M * 1e6 / fy
-        W_cap = 200e6
-    else:
-        fcd = 25
-        W_req = M * 1e6 / fcd
-        W_cap = 300e6
-
-    util = W_req / W_cap
-    return M, util
-
-def column_analysis(area, floors, ULS, material):
-    N = ULS * area * floors
-
-    capacity = 80000 if material == "Concrete" else 50000
-    util = N / capacity
-
-    return N, util
-
-def deflection_check(span, depth):
-    ratio = span / max(depth, 1)
-    if ratio > 3:
-        return 1.0
-    elif ratio > 2:
-        return 0.5
-    return 0.2
-
-def lateral_check(height, depth):
-    slender = height / max(depth, 1)
-    if slender > 6:
-        return 1.0
-    elif slender > 4:
-        return 0.5
-    return 0.2
+def mutate_floorplan(plan):
+    new_plan = []
+    for floor in plan:
+        new_floor = []
+        for row in floor:
+            new_row = []
+            for cell in row:
+                if random.random() < 0.1:
+                    new_row.append("■" if cell == "□" else "□")
+                else:
+                    new_row.append(cell)
+            new_floor.append(new_row)
+        new_plan.append(new_floor)
+    return new_plan
 
 # =========================================================
-# 🏗️ ARCHITECTURAL GENERATION (DRIVES EVERYTHING)
+# STRUCTURAL ANALYSIS (EUROCODE-INSPIRED SIMPLIFIED MODEL)
 # =========================================================
 
-def generate_building():
-    span = max(4, BASE_SPAN + random.randint(-3, 3))
-    depth = max(4, BASE_DEPTH + random.randint(-3, 3))
-    floors = max(1, BASE_FLOORS + random.randint(-2, 4))
+def structural_check(width, length, floors, load, strength):
+    area = width * length
+    total_load = load * area * floors
 
-    material = material_bias if random.random() > 0.3 else random.choice(["Concrete", "Steel"])
+    # Simplified stress model
+    stress = total_load / (area * 0.6)  # assumed load distribution factor
 
-    height = floors * 3
-    area = span * depth
+    safety_factor = strength / (stress / 1000)  # MPa conversion approximation
 
-    Gk = dead_load(material)
-    Qk = random.uniform(1, 10)
-    Wk = wind_load(height)
-
-    ULS, SLS = load_combinations(Gk, Qk, Wk)
+    status = "SAFE 🟢" if safety_factor > 1.5 else "WARNING 🟠" if safety_factor > 1.0 else "FAIL 🔴"
 
     return {
-        "span": span,
-        "depth": depth,
-        "floors": floors,
-        "height": height,
-        "area": area,
-        "material": material,
-        "loads": {
-            "Gk": Gk,
-            "Qk": Qk,
-            "Wk": Wk,
-            "ULS": ULS,
-            "SLS": SLS
-        }
+        "total_load": total_load,
+        "stress": stress,
+        "safety_factor": safety_factor,
+        "status": status
     }
 
 # =========================================================
-# 🧠 EVALUATION (EUROCODE DRIVEN)
+# DISPLAY FLOORPLAN
 # =========================================================
 
-def evaluate(b):
-    span = b["span"]
-    depth = b["depth"]
-    height = b["height"]
-    area = b["area"]
-    mat = b["material"]
-
-    ULS = b["loads"]["ULS"]
-    SLS = b["loads"]["SLS"]
-
-    # structural checks
-    M, beam_util = beam_analysis(span, depth, ULS, mat)
-    N, col_util = column_analysis(area, b["floors"], ULS, mat)
-
-    defl = deflection_check(span, depth)
-    lateral = lateral_check(height, depth)
-
-    # Eurocode logic: utilization > 1 = fail
-    beam_pen = 0 if beam_util > 1 else (1 - beam_util) * 10
-    col_pen = 0 if col_util > 1 else (1 - col_util) * 10
-
-    score = (
-        beam_pen * 0.3 +
-        col_pen * 0.3 +
-        (1 - defl) * 5 +
-        (1 - lateral) * 5
-    )
-
-    return {
-        "score": score,
-        "moment": M,
-        "beam_util": beam_util,
-        "col_util": col_util,
-        "deflection": defl,
-        "lateral": lateral
-    }
+def display_plan(plan):
+    for i, floor in enumerate(plan):
+        st.subheader(f"Floor {i + 1}")
+        for row in floor:
+            st.text(" ".join(row))
 
 # =========================================================
-# 🏗️ FLOORPLAN (ARCHITECTURE OUTPUT)
+# MAIN ENGINE
 # =========================================================
 
-def floorplan(span, depth):
-    grid = []
-    for y in range(depth):
-        row = ""
-        for x in range(span):
-            if x in [0, span-1] or y in [0, depth-1]:
-                row += "█"
-            elif x % 4 == 0 and y % 4 == 0:
-                row += "●"
-            elif x % 4 == 0 or y % 4 == 0:
-                row += "╬"
-            else:
-                row += " "
-        grid.append(row)
-    return "\n".join(grid)
+if "plan" not in st.session_state:
+    st.session_state.plan = generate_floorplan(width, length, floors)
+
+if st.sidebar.button("🏗️ Generate New Design"):
+    st.session_state.plan = generate_floorplan(width, length, floors)
+
+if mutation_mode:
+    if st.sidebar.button("🧬 Evolve Design"):
+        st.session_state.plan = mutate_floorplan(st.session_state.plan)
 
 # =========================================================
-# 🧬 EVOLUTION (SELECTION + MUTATION + CROSSOVER)
+# STRUCTURAL OUTPUT
 # =========================================================
 
-def crossover(a, b):
-    return {
-        "span": random.choice([a["span"], b["span"]]),
-        "depth": random.choice([a["depth"], b["depth"]]),
-        "floors": random.choice([a["floors"], b["floors"]]),
-        "height": random.choice([a["height"], b["height"]]),
-        "area": random.choice([a["area"], b["area"]]),
-        "material": random.choice([a["material"], b["material"]]),
-        "loads": a["loads"]
-    }
+result = structural_check(width, length, floors, load_per_floor, material_strength)
 
-def evolve(city):
-    new = []
-    best = []
+col1, col2, col3 = st.columns(3)
 
-    for b in city:
-        r = evaluate(b)
-        score = r["score"]
+with col1:
+    st.metric("Total Load (kN)", round(result["total_load"], 2))
 
-        if score > 5:
-            new.append(b)
+with col2:
+    st.metric("Stress Proxy", round(result["stress"], 2))
 
-            if score > 8:
-                # mutation
-                new.append(generate_building())
-                best.append((score, b))
+with col3:
+    st.metric("Safety Factor", round(result["safety_factor"], 2))
 
-                # crossover
-                if len(city) > 1:
-                    partner = random.choice(city)
-                    new.append(crossover(b, partner))
-        else:
-            new.append(generate_building())
-
-    return new, best
+st.subheader("🧪 Structural Status")
+st.write(result["status"])
 
 # =========================================================
-# STATE
+# FLOORPLAN VISUALIZATION
 # =========================================================
 
-if "city" not in st.session_state:
-    st.session_state.city = []
-if "memory" not in st.session_state:
-    st.session_state.memory = []
-if "tick" not in st.session_state:
-    st.session_state.tick = 0
+st.subheader("🏢 Generated Floorplan")
+
+display_plan(st.session_state.plan)
 
 # =========================================================
-# CONTROLS
+# RANDOM AI SIGNATURE
 # =========================================================
 
-c1, c2, c3 = st.columns(3)
-
-with c1:
-    if st.button("🏗️ Spawn"):
-        st.session_state.city.append(generate_building())
-
-with c2:
-    if st.button("▶ Evolve"):
-        new, best = evolve(st.session_state.city)
-        st.session_state.city = new
-        st.session_state.memory += best
-        st.session_state.tick += 1
-
-with c3:
-    if st.button("🧱 Reset"):
-        st.session_state.city = []
-        st.session_state.memory = []
-        st.session_state.tick = 0
-
-# =========================================================
-# AUTO LOOP
-# =========================================================
-
-if auto_mode and st.session_state.city:
-    new, best = evolve(st.session_state.city)
-    st.session_state.city = new
-    st.session_state.memory += best
-    st.session_state.tick += 1
-    time.sleep(speed)
-    st.rerun()
-
-# =========================================================
-# DISPLAY
-# =========================================================
-
-st.subheader(f"🏙️ Tick: {st.session_state.tick}")
-
-for i, b in enumerate(st.session_state.city):
-    r = evaluate(b)
-
-    status = "🟢 PASS"
-    if r["beam_util"] > 1 or r["col_util"] > 1:
-        status = "🔴 FAIL"
-
-    st.markdown(f"### Building {i+1} — {status}")
-
-    st.write(f"{b['material']} | {b['floors']} floors | {b['span']}m x {b['depth']}m")
-
-    st.write(f"Score: {round(r['score'],2)}")
-    st.write(f"Moment: {round(r['moment'],2)} kNm")
-    st.write(f"Beam Util: {round(r['beam_util'],2)} | Column Util: {round(r['col_util'],2)}")
-
-    st.text(floorplan(b["span"], b["depth"]))
-
-# =========================================================
-# EXPORT
-# =========================================================
-
-st.download_button(
-    "📦 Export City",
-    json.dumps(st.session_state.city, indent=2),
-    "city.json"
-)
+st.markdown("---")
+st.caption("Random AI: architecture is no longer static. It is evolving geometry.")
