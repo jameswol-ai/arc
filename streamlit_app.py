@@ -1,8 +1,17 @@
+import os
+st.write(os.getcwd())
+st.write(os.listdir())
 import streamlit as st
 import numpy as np
 import time
 import random
 import matplotlib.pyplot as plt
+import sys
+import os
+import os
+
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # IMPORTANT: keep imports at top
 from core.pipeline import run_pipeline
