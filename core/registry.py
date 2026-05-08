@@ -2,42 +2,35 @@
 
 PIPELINE_REGISTRY = {}
 
-def register_pipeline(name: str):
+def register_pipeline(name):
+
     def decorator(func):
+
+        if name in PIPELINE_REGISTRY:
+            raise ValueError(
+                f"Duplicate pipeline registration: {name}"
+            )
+
         PIPELINE_REGISTRY[name] = func
         return func
+
     return decorator
 
 
-def get_pipeline(name: str):
+def get_pipeline(name):
+
     if name not in PIPELINE_REGISTRY:
-        raise ValueError(f"Pipeline '{name}' not registered.")
+
+        available = list(PIPELINE_REGISTRY.keys())
+
+        raise ValueError(
+            f"Pipeline '{name}' not registered.\n"
+            f"Available pipelines: {available}"
+        )
+
     return PIPELINE_REGISTRY[name]
 
 
-def run_pipeline(name: str, *args, **kwargs):
-    return get_pipeline(name)(*args, **kwargs)
-
-# =========================================================
-# 🧠 RANDOM AUTO REGISTRY SYSTEM
-# Prevents import breakage by centralizing module access
-# =========================================================
-
-class Registry:
-    def __init__(self):
-        self._modules = {}
-
-    def register(self, name, module):
-        self._modules[name] = module
-
-    def get(self, name):
-        if name not in self._modules:
-            raise Exception(f"[REGISTRY ERROR] Module '{name}' not found")
-        return self._modules[name]
-
-    def list_modules(self):
-        return list(self._modules.keys())
-
-
-# GLOBAL REGISTRY INSTANCE
-registry = Registry()
+def run_pipeline(name, *args, **kwargs):
+    pipeline = get_pipeline(name)
+    return pipeline(*args, **kwargs)
