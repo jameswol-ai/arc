@@ -11,99 +11,20 @@ from architecture.floor_stack import stack_floors
 from structure.load_calculator import calculate_load
 from structure.eurocode_engine import structural_assessment
 
-
-def run_pipeline(user_input: str, site_area: float):
-
-    # 1. INTENT
-    intent = interpret_intent(user_input)
-    profile = generate_design_profile(intent)
-    intent["design_profile"] = profile
-
-    # 2. ARCHITECTURE
-    floors = intent.get("floors", 3)
-
-    grid = generate_grid(floors)
-    rooms = generate_rooms(intent.get("building_type", "Residential"))
-    floor_stack = stack_floors(floors)
-
-    architecture = {
-        "grid": grid,
-        "rooms": rooms,
-        "floors": floor_stack,
-        "design_profile": profile
-    }
-
-    # 3. STRUCTURE
-    load = calculate_load(site_area, floors)
-
-    span = grid["spacing"] * 1.5
-    height = 3.2 * floors
-
-    structure = structural_assessment(
-        span=span,
-        dead=load["dead_load"],
-        live=load["live_load"],
-        height=height
-    )
-
-    # 4. SCORING
-    score = score_design(architecture, structure)
-
-    # 5. STORE DESIGN MEMORY
-    design_package = {
-        "intent": intent,
-        "architecture": architecture,
-        "structure": structure,
-        "score": score
-    }
-
-    stored = store_design(design_package)
-
-    # 6. EVOLUTION STEP (NEXT GENERATION IDEA)
-    next_intent = mutate_design(intent)
+def run_pipeline(intent_text, site_area):
+    # architecture generation
+    # structure analysis
+    # BIM creation
+    # parametric engine setup
 
     return {
-        "current_design": design_package,
-        "stored_id": stored["id"],
-        "next_generation_seed": next_intent
-                 }
-
-from core.bim_builder import build_bim_model
-from core.bim_relations import connect_rooms_to_structure
-
-
-def run_pipeline(user_input, site_area):
-
-    ...
-    # existing architecture + structure logic
-
-    bim_model = build_bim_model(architecture, structure)
-    connect_rooms_to_structure(bim_model)
-
-    return {
-        "architecture": architecture,
-        "structure": structure,
-        "bim": bim_model
-    }
-
-from core.parametric_engine import ParametricEngine
-
-
-def run_pipeline(user_input, site_area):
-
-    ...
-    bim_model = build_bim_model(architecture, structure)
-
-    # 🔥 PARAMETRIC LAYER ACTIVATION
-    param_engine = ParametricEngine(bim_model)
-
-    # Example automatic rules
-    param_engine.set_parameter("floor_height", 3.4)
-    param_engine.set_parameter("grid_spacing", 4.5)
-
-    return {
-        "architecture": architecture,
-        "structure": structure,
-        "bim": param_engine.get_model(),
-        "parametric_engine": param_engine
+        "current_design": {
+            "architecture": {},
+            "structure": {},
+            "score": {},
+            "intent": intent_text
+        },
+        "next_generation_seed": {},
+        "bim": None,
+        "parametric_engine": None
     }
