@@ -7,7 +7,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-=========================================================
+#=========================================================
 
 #RANDOM AI — ARCHITECTURE + STRUCTURAL EVOLUTION CORE v18 (UPGRADED)
 
@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
 #Repo-Driven Generative Engineering System
 
-=========================================================
+#=========================================================
 
 st.set_page_config(page_title="RANDOM", layout="wide")
 
