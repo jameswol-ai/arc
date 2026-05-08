@@ -1,6 +1,3 @@
-import os
-st.write(os.getcwd())
-st.write(os.listdir())
 import streamlit as st
 import numpy as np
 import time
