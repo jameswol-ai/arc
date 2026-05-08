@@ -18,6 +18,10 @@ st.session_state.result = run_pipeline(
 )
 #from export.bim_exporter import export_bim
 #from structure.eurocode_engine import structural_assessment
+from core.registry import registry
+
+if st.sidebar.checkbox("Show Registered Modules"):
+    st.json(registry.list_modules())
 
 
 # =========================================================
