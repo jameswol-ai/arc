@@ -38,6 +38,13 @@ mode = st.sidebar.selectbox(
 # =========================================================
 # AI BRAIN MODULE
 # =========================================================
+st.subheader("🧬 Evolution Output")
+
+st.json(result["current_design"]["score"])
+
+st.subheader("🧠 Next Generation Seed")
+st.json(result["next_generation_seed"])
+
 from core.pipeline import run_pipeline
 
 if mode == "AI Brain":
