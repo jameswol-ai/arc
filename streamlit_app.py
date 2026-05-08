@@ -5,11 +5,13 @@ import random
 import matplotlib.pyplot as plt
 import sys
 import os
-import run_pipeline
-import export_bim
-import structural_assessment
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+#imports
+from core.pipeline import run_pipeline
+from export.bim_exporter import export_bim
+from structure.eurocode_engine import structural_assessment
 
 # =========================================================
 # 🧠 APP CONFIG
