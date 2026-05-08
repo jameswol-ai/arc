@@ -1,3 +1,23 @@
+# core/registry.py
+
+PIPELINE_REGISTRY = {}
+
+def register_pipeline(name: str):
+    def decorator(func):
+        PIPELINE_REGISTRY[name] = func
+        return func
+    return decorator
+
+
+def get_pipeline(name: str):
+    if name not in PIPELINE_REGISTRY:
+        raise ValueError(f"Pipeline '{name}' not registered.")
+    return PIPELINE_REGISTRY[name]
+
+
+def run_pipeline(name: str, *args, **kwargs):
+    return get_pipeline(name)(*args, **kwargs)
+
 # =========================================================
 # 🧠 RANDOM AUTO REGISTRY SYSTEM
 # Prevents import breakage by centralizing module access
