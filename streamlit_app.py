@@ -1,214 +1,296 @@
 # =========================================================
-# 🏙️ RANDOM vNEXT — LEARNING & OPTIMIZING CITY ENGINE
-# Memory + Adaptive Planning + Structural Evolution
+# 🏗️ RANDOM AI — UNIFIED ARCHITECTURE + RL CITY ENGINE
+# Multi-Agent + Reinforcement Learning + 3D City Physics
 # =========================================================
 
 import streamlit as st
-import random
 import numpy as np
+import time
+import random
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+import sys
+import os
+
+# IMPORTANT: keep imports at top
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from core.loader import load_pipelines
+load_pipelines()
+
+from core.registry import run_pipeline
 
 # =========================================================
-# 🧠 CITY MEMORY (LEARNING LAYER)
+# 🧠 SESSION STATE SAFETY
 # =========================================================
-class CityMemory:
+if "result" not in st.session_state:
+    st.session_state.result = None
+
+if "intent_text" not in st.session_state:
+    st.session_state.intent_text = ""
+
+if "site_area" not in st.session_state:
+    st.session_state.site_area = 1000.0
+
+# =========================================================
+# 🏙️ RL CITY ENGINE (INTEGRATED)
+# =========================================================
+
+class CityPolicy:
     def __init__(self):
-        self.failure_heatmap = {}   # (x,y,z) → frequency
-        self.stability_history = []
+        self.risk_map = {}
+        self.lr = 0.2
 
-    def record_failures(self, failed_nodes):
-        for node in failed_nodes:
-            self.failure_heatmap[node] = self.failure_heatmap.get(node, 0) + 1
+    def choose_location(self):
+        x, y = random.randint(0, 25), random.randint(0, 25)
+        if self.risk_map.get((x, y), 0) > 2:
+            return self.choose_location()
+        return x, y
 
-    def risk_score(self, x, y):
-        score = 0
-        for (fx, fy, fz), freq in self.failure_heatmap.items():
-            dist = abs(x - fx) + abs(y - fy)
-            if dist < 5:
-                score += freq
-        return score
+    def update(self, failed_nodes):
+        for n in failed_nodes:
+            x, y, z = n
+            self.risk_map[(x, y)] = self.risk_map.get((x, y), 0) + self.lr
 
-    def stability_trend(self):
-        if not self.stability_history:
-            return 1.0
-        return sum(self.stability_history[-5:]) / min(5, len(self.stability_history))
 
-# =========================================================
-# 🧠 ADAPTIVE CITY PLANNER
-# =========================================================
-class AdaptivePlanner:
-    def __init__(self, memory):
-        self.memory = memory
-
-    def generate(self):
+class RLBuildingEngine:
+    def generate(self, policy):
         buildings = []
 
-        base_count = 5
-
-        for i in range(base_count):
-            x, y = random.randint(0, 25), random.randint(0, 25)
-
-            risk = self.memory.risk_score(x, y)
-
-            # 🧠 learning influence: reduce building density in risky zones
-            if risk > 3:
-                floors = random.randint(2, 5)
-                grid = random.choice([6, 8])  # safer smaller structures
-            else:
-                floors = random.randint(4, 10)
-                grid = random.choice([10, 12, 14])
-
+        for _ in range(5):
+            x, y = policy.choose_location()
             buildings.append({
-                "id": i,
-                "floors": floors,
-                "grid": grid,
-                "offset": (x, y)
+                "x": x,
+                "y": y,
+                "floors": random.randint(3, 10),
+                "grid": random.choice([6, 8, 10, 12])
             })
 
         return buildings
 
-# =========================================================
-# 🏗️ STRUCTURAL ENGINE
-# =========================================================
-class StructuralEngine:
-    def build(self, buildings):
+
+class RLPhysics:
+    def build_nodes(self, buildings):
         nodes = []
-
         for b in buildings:
-            ox, oy = b["offset"]
-
             for z in range(b["floors"]):
                 for x in range(0, b["grid"], 2):
                     for y in range(0, b["grid"], 2):
-                        nodes.append((x + ox, y + oy, z))
-
+                        nodes.append((x + b["x"], y + b["y"], z))
         return nodes
 
-# =========================================================
-# 🌊 LOAD + FAILURE ENGINE
-# =========================================================
-class PhysicsEngine:
-    def compute_loads(self, nodes):
-        loads = {n: 0 for n in nodes}
-
+    def loads(self, nodes):
+        load = {n: 0.0 for n in nodes}
         max_z = max(n[2] for n in nodes)
 
         for n in nodes:
             if n[2] == max_z:
-                loads[n] += 1.0
+                load[n] += 1.0
 
-        for _ in range(3):
-            for (x, y, z), l in list(loads.items()):
-                if l <= 0:
-                    continue
-
+        for _ in range(2):
+            for (x, y, z), l in list(load.items()):
                 below = (x, y, z - 1)
-                if below in loads:
-                    loads[below] += l * 0.7
+                if below in load:
+                    load[below] += l * 0.7
 
-        return loads
+        return load
 
-    def collapse(self, loads, threshold=2.0):
-        failed = set()
+    def collapse(self, load):
+        return {n for n, l in load.items() if l > 2.0}
 
-        for node, l in loads.items():
-            if l > threshold:
-                failed.add(node)
 
-        return failed
-
-# =========================================================
-# 🧪 SIMULATION ENGINE
-# =========================================================
-class SimEngine:
-    def evaluate(self, loads, failed):
-        stability = max(0, 1 - len(failed) / max(1, len(loads)))
-
-        return {
-            "stability": stability,
-            "failures": len(failed)
-        }
-
-# =========================================================
-# 🧠 CITY ENGINE (LEARNING LOOP)
-# =========================================================
-class CityEngine:
+class RLCityEngine:
     def __init__(self):
-        self.memory = CityMemory()
-        self.planner = AdaptivePlanner(self.memory)
-        self.structure = StructuralEngine()
-        self.physics = PhysicsEngine()
-        self.sim = SimEngine()
+        self.policy = CityPolicy()
+        self.builder = RLBuildingEngine()
+        self.physics = RLPhysics()
+        self.history = []
 
     def step(self):
-        buildings = self.planner.generate()
-
-        nodes = self.structure.build(buildings)
-        loads = self.physics.compute_loads(nodes)
+        buildings = self.builder.generate(self.policy)
+        nodes = self.physics.build_nodes(buildings)
+        loads = self.physics.loads(nodes)
         failed = self.physics.collapse(loads)
 
-        self.memory.record_failures(failed)
+        self.policy.update(failed)
 
-        sim = self.sim.evaluate(loads, failed)
-        self.memory.stability_history.append(sim["stability"])
+        stability = max(0, 1 - len(failed) / max(1, len(nodes)))
+        reward = stability - 0.3 * len(failed)
 
-        return buildings, nodes, loads, failed, sim, self.memory
+        self.history.append(reward)
+
+        return buildings, nodes, loads, failed, stability, reward
+
+
+rl_engine = RLCityEngine()
 
 # =========================================================
-# 🌐 STREAMLIT UI
+# 🖥️ APP CONFIG
 # =========================================================
-st.set_page_config(page_title="Learning City Engine", layout="wide")
+st.set_page_config(page_title="Random AI Unified System", layout="wide")
 
-st.title("🏙️ RANDOM vNEXT — Learning & Optimizing City")
-st.caption("A city that remembers its failures and adapts")
+st.title("🏗️ Random AI — Unified Architecture + RL City Engine")
 
-engine = CityEngine()
+user_input = st.text_input("Input", "hello")
 
-if st.button("🚀 Next Learning Generation"):
+if st.button("Run Core Pipeline"):
+    st.session_state.result = run_pipeline("main", user_input)
+    st.success("Pipeline executed")
 
-    buildings, nodes, loads, failed, sim, memory = engine.step()
+# =========================================================
+# SIDEBAR
+# =========================================================
+mode = st.sidebar.selectbox(
+    "SYSTEM MODULE",
+    [
+        "AI Brain",
+        "Architecture Generator",
+        "Structure Engine",
+        "MEP Systems",
+        "GIS & Site",
+        "Cost Engine",
+        "Rendering",
+        "Export Center",
+        "Parametric BIM",
+        "Full Pipeline Simulation",
+        "🏙️ RL City (NEW)",
+        "🌆 City Learning Visualizer"
+    ]
+)
 
-    st.subheader("🏗️ City State")
-    st.write(buildings)
+# =========================================================
+# 🧠 AI BRAIN
+# =========================================================
+if mode == "AI Brain":
 
-    c1, c2 = st.columns(2)
-    c1.metric("Stability", round(sim["stability"], 3))
-    c2.metric("Failures", sim["failures"])
+    st.header("🧠 Design Brain")
 
-    st.subheader("🧠 Learning Status")
-    st.write("Stability Trend:", round(memory.stability_trend(), 3))
-    st.write("Known Weak Zones:", len(memory.failure_heatmap))
+    st.session_state.intent_text = st.text_area(
+        "Describe building intent",
+        value=st.session_state.intent_text
+    )
 
-    # =====================================================
-    # 🌆 3D VISUALIZATION
-    # =====================================================
+    st.session_state.site_area = st.number_input(
+        "Site Area (m²)",
+        value=st.session_state.site_area
+    )
+
+    if st.button("RUN FULL GENERATION"):
+        try:
+            st.session_state.result = run_pipeline(
+                st.session_state.intent_text,
+                st.session_state.site_area
+            )
+            st.success("Pipeline executed successfully")
+        except Exception as e:
+            st.error(str(e))
+
+    if st.session_state.result:
+        st.json(st.session_state.result)
+
+# =========================================================
+# 🏗️ ARCHITECTURE
+# =========================================================
+elif mode == "Architecture Generator":
+    st.header("🏛️ Architecture Engine")
+    floors = st.slider("Floors", 1, 50, 5)
+
+    if st.button("Generate"):
+        st.write([f"Floor {i}" for i in range(floors)])
+
+# =========================================================
+# 🧱 STRUCTURE
+# =========================================================
+elif mode == "Structure Engine":
+    st.header("🏗️ Structural Check")
+    st.info("Connected to Eurocode module (external)")
+
+# =========================================================
+# ⚡ MEP
+# =========================================================
+elif mode == "MEP Systems":
+    st.header("MEP Systems")
+    st.metric("HVAC", f"{random.randint(70, 98)}%")
+
+# =========================================================
+# 🌍 GIS
+# =========================================================
+elif mode == "GIS & Site":
+    st.header("Terrain Analysis")
+
+    x = np.linspace(0, 10, 100)
+    y = np.sin(x)
+
+    fig, ax = plt.subplots()
+    ax.plot(x, y)
+    st.pyplot(fig)
+
+# =========================================================
+# 💰 COST
+# =========================================================
+elif mode == "Cost Engine":
+    st.header("Cost Engine")
+    area = st.number_input("Area", value=500.0)
+    st.metric("Cost", f"${area * random.randint(400, 1200):,.0f}")
+
+# =========================================================
+# 🧊 RENDERING
+# =========================================================
+elif mode == "Rendering":
+    st.header("3D Massing")
+
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(111, projection="3d")
 
-    xs, ys, zs, colors = [], [], [], []
-
-    for node in nodes:
-        x, y, z = node
-
-        xs.append(x)
-        ys.append(y)
-        zs.append(z)
-
-        if node in failed:
-            colors.append(5)
-        else:
-            colors.append(loads[node])
-
-    sc = ax.scatter(xs, ys, zs, c=colors, cmap='viridis', s=10)
-
-    ax.set_title("🏙️ Learning City Structural Field")
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    ax.set_zlabel("Height")
-
-    plt.colorbar(sc, ax=ax, shrink=0.5)
+    ax.scatter(
+        np.random.rand(50),
+        np.random.rand(50),
+        np.random.rand(50)
+    )
 
     st.pyplot(fig)
 
-    st.success("City has learned from its structural past 🧠🏙️")
+# =========================================================
+# 🚀 FULL PIPELINE
+# =========================================================
+elif mode == "Full Pipeline Simulation":
+    st.header("System Simulation")
+
+    steps = ["AI", "Architecture", "Structure", "MEP", "Cost", "Render", "Export"]
+    p = st.progress(0)
+
+    for i, s in enumerate(steps):
+        st.write(s)
+        time.sleep(0.2)
+        p.progress((i + 1) / len(steps))
+
+    st.success("Complete")
+
+# =========================================================
+# 🏙️ RL CITY MODULE (NEW CORE ADDITION)
+# =========================================================
+elif mode == "🏙️ RL City (NEW)":
+
+    st.header("🏙️ Reinforcement Learning City Engine")
+
+    if st.button("Run RL Step"):
+
+        buildings, nodes, loads, failed, stability, reward = rl_engine.step()
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Stability", round(stability, 3))
+        c2.metric("Failures", len(failed))
+        c3.metric("Reward", round(reward, 3))
+
+        st.json(buildings)
+
+# =========================================================
+# 🌆 CITY LEARNING VISUALIZER
+# =========================================================
+elif mode == "🌆 City Learning Visualizer":
+
+    st.header("Learning Curve")
+
+    if rl_engine.history:
+        st.line_chart(rl_engine.history)
+    else:
+        st.info("Run RL City first")
