@@ -61,3 +61,10 @@ class ColumnStack:
             "total_columns": len(self.columns),
             "sample": list(self.columns.keys())[:5]
         }
+
+    def generate_columns(grid_axes: int, floors: int):
+    return [
+        {"column_id": f"C{i}-{j}", "floors": floors}
+        for i in range(grid_axes)
+        for j in range(grid_axes)
+    ]
