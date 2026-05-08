@@ -9,6 +9,9 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # IMPORTANT: keep imports at top
+
+from core.loader import load_pipelines
+load_pipelines()
 #from core.safe_import import get_pipeline
 #run_pipeline = get_pipeline()
 
