@@ -1,3 +1,8 @@
+from structure.eurocode_engine import check_deflection
+
+def design_beam(span, load):
+    return check_deflection(span, load)
+
 class Beam:
     def __init__(self, start, end, depth=0.6):
         self.start = start
