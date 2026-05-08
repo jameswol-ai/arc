@@ -6,6 +6,13 @@ class StructuralGrid:
     Columns, beams, and rooms snap to this system.
     """
 
+    def generate_grid(floors: int):
+    return {
+        "grid_type": "orthogonal",
+        "spacing": 4.0,
+        "axes": floors * 2
+    }
+    
     def __init__(self, width, depth, spacing=6):
         self.width = width
         self.depth = depth
