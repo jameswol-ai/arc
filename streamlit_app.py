@@ -1,312 +1,187 @@
+# =========================================================
+# 🏗️ RANDOM vNEXT — AUTONOMOUS BUILDING GENERATOR ENGINE
+# Brain + Structural Genome + Spatial Logic + Evolution Loop
+# =========================================================
+
 import streamlit as st
-import numpy as np
-import time
 import random
+import time
 import matplotlib.pyplot as plt
-import sys
-import os
-
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-# IMPORTANT: keep imports at top
-
-from core.loader import load_pipelines
-load_pipelines()
-#from core.safe_import import get_pipeline
-#run_pipeline = get_pipeline()
-
-#st.session_state.result = run_pipeline{
-    #st.session_state.intent_text,
-    #st.session_state.site_area
-#}
-#from export.bim_exporter import export_bim
-#from structure.eurocode_engine import structural_assessment
-#from core.registry import registry
-
-#if st.sidebar.checkbox("Show Registered Modules"):
-    #st.json(registry.list_modules())
-
 
 # =========================================================
-# 🧠 APP CONFIG
+# 🧠 1. ARCHITECTURE BRAIN
 # =========================================================
-import streamlit as st
-import streamlit as st
-
-from core.loader import load_pipelines
-from core.registry import run_pipeline
-
-# LOAD ALL PIPELINES FIRST
-load_pipelines()
-
-st.set_page_config(page_title="Random AI", layout="wide")
-
-st.title("🏗️ Random AI")
-
-user_input = st.text_input("Input", "hello")
-
-if st.button("Run"):
-    result = run_pipeline("main", user_input)
-    st.json(result)
+class ArchitectureBrain:
+    def decide(self, context=None):
+        return {
+            "building_type": random.choice(["residential", "commercial", "industrial"]),
+            "floors": random.randint(1, 10),
+            "grid": random.choice(["orthogonal", "radial", "hybrid"]),
+            "density": round(random.uniform(0.3, 0.9), 2),
+        }
 
 # =========================================================
-# SESSION STATE SAFETY
+# 🧱 2. STRUCTURAL GENOME
 # =========================================================
-if "result" not in st.session_state:
-    st.session_state.result = None
+class StructuralGenome:
+    def generate_grid(self, floors, grid_type):
+        structure = []
+        for f in range(floors):
+            spacing = 3 + (f * 0.2)
 
-if "intent_text" not in st.session_state:
-    st.session_state.intent_text = ""
+            columns = []
+            for x in range(0, 20, max(2, int(spacing))):
+                for y in range(0, 20, max(2, int(spacing))):
+                    columns.append((x, y))
 
-if "site_area" not in st.session_state:
-    st.session_state.site_area = 1000.0
-
-
-# =========================================================
-# SIDEBAR
-# =========================================================
-mode = st.sidebar.selectbox(
-    "SYSTEM MODULE",
-    [
-        "AI Brain",
-        "Architecture Generator",
-        "Structure Engine",
-        "MEP Systems",
-        "GIS & Site",
-        "Cost Engine",
-        "Rendering",
-        "Export Center",
-        "Parametric BIM",
-        "Full Pipeline Simulation"
-    ]
-)
-
+            structure.append({
+                "floor": f,
+                "columns": columns
+            })
+        return structure
 
 # =========================================================
-# 🧠 AI BRAIN
+# 🧭 3. SPATIAL ENGINE (FLOOR PLAN LOGIC)
 # =========================================================
-if mode == "AI Brain":
+class SpatialEngine:
+    def generate_floor_plan(self, building_type, grid):
+        plans = []
 
-    st.header("🧠 Design Brain")
+        for floor in grid:
+            if building_type == "residential":
+                rooms = len(floor["columns"]) // 3
+            elif building_type == "commercial":
+                rooms = len(floor["columns"]) // 2
+            else:
+                rooms = len(floor["columns"]) // 4
 
-    st.session_state.intent_text = st.text_area(
-        "Describe building intent",
-        value=st.session_state.intent_text
-    )
+            plans.append({
+                "floor": floor["floor"],
+                "rooms": rooms,
+                "circulation": max(1, rooms // 3)
+            })
 
-    st.session_state.site_area = st.number_input(
-        "Site Area (m²)",
-        value=st.session_state.site_area
-    )
-
-    # SAFE PIPELINE EXECUTION
-    if st.button("RUN FULL GENERATION"):
-        try:
-            st.session_state.result = run_pipeline(
-                st.session_state.intent_text,
-                st.session_state.site_area
-            )
-            st.success("Pipeline executed successfully")
-
-        except Exception as e:
-            st.error(f"Pipeline failed: {str(e)}")
-
-
-    # OUTPUT DISPLAY
-    if st.session_state.result:
-
-        result = st.session_state.result
-
-        st.subheader("ARCHITECTURE")
-        st.json(result["current_design"]["architecture"])
-
-        st.subheader("STRUCTURE")
-        st.json(result["current_design"]["structure"])
-
-        st.subheader("SCORE")
-        st.json(result["current_design"]["score"])
-
-        st.subheader("NEXT EVOLUTION SEED")
-        st.json(result["next_generation_seed"])
-
+        return plans
 
 # =========================================================
-# 🏛️ ARCHITECTURE
+# 🧪 4. SIMULATION ENGINE (STABILITY MODEL)
 # =========================================================
-elif mode == "Architecture Generator":
+class SimulationEngine:
+    def evaluate(self, grid, floors):
+        column_count = sum(len(f["columns"]) for f in grid)
 
-    st.header("🏛️ Architecture Engine")
+        load_factor = column_count * floors
+        stability = max(0.0, 1.0 - (load_factor / 5000))
 
-    floors = st.slider("Number of Floors", 1, 50, 5)
+        efficiency = random.uniform(0.4, 0.95)
 
-    if st.button("Generate Floorplan"):
-        for i in range(floors):
-            st.write(f"Floor {i+1}: grid generated")
-
-        st.info("Zoning + circulation simulated")
-
-
-# =========================================================
-# 🏗️ STRUCTURE ENGINE
-# =========================================================
-elif mode == "Structure Engine":
-
-    st.header("🏗️ Eurocode Structural Analysis")
-
-    span = st.slider("Beam Span (m)", 2.0, 12.0, 6.0)
-    area = st.number_input("Floor Area (m²)", value=500.0)
-    height = st.slider("Column Height (m)", 2.5, 6.0, 3.2)
-
-    if st.button("Run Structural Check"):
-
-        load = area * 0.6
-
-        #result = structural_assessment(span, load, load * 0.6, height)
-
-        #st.json(result)
-
+        return {
+            "stability": round(stability, 3),
+            "efficiency": round(efficiency, 3),
+            "risk": round(1 - stability, 3)
+        }
 
 # =========================================================
-# ⚡ MEP
+# 🧬 5. EVOLUTION ENGINE
 # =========================================================
-elif mode == "MEP Systems":
-
-    st.header("MEP Systems")
-
-    st.metric("HVAC", f"{random.randint(70, 98)}%")
-    st.metric("Water Flow", f"{random.randint(60, 100)} L/s")
-    st.metric("Power Load", f"{random.randint(50, 120)} kW")
-
-
-# =========================================================
-# 🌍 GIS
-# =========================================================
-elif mode == "GIS & Site":
-
-    st.header("Terrain Analysis")
-
-    slope = random.uniform(0, 35)
-    st.write(f"Slope: {slope:.2f}°")
-
-    fig, ax = plt.subplots()
-    x = np.linspace(0, 10, 100)
-    y = np.sin(x) + slope / 10
-    ax.plot(x, y)
-
-    st.pyplot(fig)
-
-
-# =========================================================
-# 💰 COST
-# =========================================================
-elif mode == "Cost Engine":
-
-    st.header("Cost Estimation")
-
-    area = st.number_input("Area", value=500.0)
-
-    cost = area * random.randint(400, 1200)
-
-    st.metric("Total Cost", f"${cost:,.0f}")
-
-
-# =========================================================
-# 🧊 RENDERING
-# =========================================================
-elif mode == "Rendering":
-
-    st.header("3D Massing")
-
-    size = st.slider("Size", 1, 10, 5)
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection="3d")
-
-    ax.scatter(
-        np.random.rand(50) * size,
-        np.random.rand(50) * size,
-        np.random.rand(50) * size
-    )
-
-    st.pyplot(fig)
-
-
-# =========================================================
-# 📦 EXPORT
-# =========================================================
-elif mode == "Export Center":
-
-    st.header("BIM Export")
-
-    if st.session_state.result:
-
-        bim = st.session_state.result["bim"]
-
-        st.metric("Elements", len(bim.elements))
-
-        sample_id = list(bim.elements.keys())[0]
-        st.json(bim.elements[sample_id].__dict__)
-
-        st.download_button(
-            "Download BIM JSON",
-            data=export_bim(bim),
-            file_name="bim_model.json"
+class EvolutionEngine:
+    def score(self, sim):
+        return round(
+            sim["stability"] * 0.5 +
+            sim["efficiency"] * 0.5,
+            3
         )
 
-    else:
-        st.warning("Run AI Brain first")
-
-
-# =========================================================
-# 🧬 PARAMETRIC BIM
-# =========================================================
-elif mode == "Parametric BIM":
-
-    st.header("Parametric BIM")
-
-    if st.session_state.result:
-
-        engine = st.session_state.result["parametric_engine"]
-
-        fh = st.slider("Floor Height", 2.5, 5.0, 3.2)
-        gs = st.slider("Grid Spacing", 3.0, 8.0, 4.0)
-        wt = st.slider("Wall Thickness", 0.1, 0.5, 0.2)
-
-        if st.button("Update BIM"):
-            engine.set_parameter("floor_height", fh)
-            engine.set_parameter("grid_spacing", gs)
-            engine.set_parameter("wall_thickness", wt)
-
-            st.success("Updated")
-
-    else:
-        st.warning("Run AI Brain first")
-
+    def mutate(self, context):
+        context["floors"] = max(1, context["floors"] + random.choice([-1, 0, 1]))
+        context["density"] = min(1.0, max(0.2, context["density"] + random.uniform(-0.1, 0.1)))
+        return context
 
 # =========================================================
-# 🚀 FULL PIPELINE
+# 🧠 AUTONOMOUS ENGINE ORCHESTRATOR
 # =========================================================
-elif mode == "Full Pipeline Simulation":
+class RandomEngine:
+    def __init__(self):
+        self.brain = ArchitectureBrain()
+        self.structure = StructuralGenome()
+        self.spatial = SpatialEngine()
+        self.sim = SimulationEngine()
+        self.evo = EvolutionEngine()
 
-    st.header("System Simulation")
+    def run_cycle(self, iterations=3):
+        context = self.brain.decide()
 
-    if st.button("Run Simulation"):
+        history = []
 
-        steps = [
-            "AI",
-            "Architecture",
-            "Structure",
-            "MEP",
-            "Cost",
-            "Rendering",
-            "Export"
-        ]
+        for i in range(iterations):
+            grid = self.structure.generate_grid(context["floors"], context["grid"])
+            layout = self.spatial.generate_floor_plan(context["building_type"], grid)
+            sim = self.sim.evaluate(grid, context["floors"])
+            score = self.evo.score(sim)
 
-        p = st.progress(0)
+            result = {
+                "context": context.copy(),
+                "score": score,
+                "sim": sim,
+                "grid_size": sum(len(f["columns"]) for f in grid)
+            }
 
-        for i, s in enumerate(steps):
-            st.write(s)
-            time.sleep(0.3)
-            p.progress((i + 1) / len(steps))
+            history.append(result)
 
-        st.success("Complete")
+            if score > 0.75:
+                break
+
+            context = self.evo.mutate(context)
+
+        return history
+
+# =========================================================
+# 🖥️ STREAMLIT UI — CITY CONTROL ROOM
+# =========================================================
+st.set_page_config(page_title="Random Autonomous Engine", layout="wide")
+
+st.title("🏗️ RANDOM vNEXT — Autonomous Building Generator")
+st.caption("A self-evolving architectural intelligence system")
+
+engine = RandomEngine()
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    iterations = st.slider("Evolution Iterations", 1, 10, 3)
+
+with col2:
+    run = st.button("🚀 Generate Autonomous Building")
+
+with col3:
+    st.metric("System Status", "ONLINE 🟢")
+
+# =========================================================
+# EXECUTION
+# =========================================================
+if run:
+    st.subheader("🧬 Evolution Cycle Starting...")
+
+    history = engine.run_cycle(iterations)
+
+    for i, h in enumerate(history):
+        st.markdown(f"### Cycle {i+1}")
+
+        c1, c2, c3, c4 = st.columns(4)
+
+        c1.metric("Score", h["score"])
+        c2.metric("Stability", h["sim"]["stability"])
+        c3.metric("Efficiency", h["sim"]["efficiency"])
+        c4.metric("Risk", h["sim"]["risk"])
+
+        st.write("Context:", h["context"])
+
+        # Simple visualization of structural complexity
+        fig, ax = plt.subplots()
+        ax.bar(["Grid Complexity"], [h["grid_size"]])
+        ax.set_ylim(0, max(50, h["grid_size"] + 10))
+        st.pyplot(fig)
+
+        time.sleep(0.2)
+
+    st.success("Evolution cycle complete 🧠🏗️")
