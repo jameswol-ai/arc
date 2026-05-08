@@ -67,3 +67,21 @@ def run_pipeline(user_input: str, site_area: float):
         "stored_id": stored["id"],
         "next_generation_seed": next_intent
                  }
+
+from core.bim_builder import build_bim_model
+from core.bim_relations import connect_rooms_to_structure
+
+
+def run_pipeline(user_input, site_area):
+
+    ...
+    # existing architecture + structure logic
+
+    bim_model = build_bim_model(architecture, structure)
+    connect_rooms_to_structure(bim_model)
+
+    return {
+        "architecture": architecture,
+        "structure": structure,
+        "bim": bim_model
+    }
