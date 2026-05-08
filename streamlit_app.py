@@ -23,11 +23,11 @@ st.title("🏗️ Random")
 st.caption("A senior-level generative architecture system with evolving structural memory")
 
 
-=========================================================
+#=========================================================
 
 #APP CONFIG
 
-=========================================================
+#=========================================================
 
 st.set_page_config(page_title="Random AI Architecture System v18", layout="wide")
 
