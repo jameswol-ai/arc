@@ -1,3 +1,12 @@
+import streamlit as st
+import random
+import math
+import time
+import numpy as np
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
 =========================================================
 
 RANDOM AI — ARCHITECTURE + STRUCTURAL EVOLUTION CORE v18 (UPGRADED)
@@ -8,7 +17,7 @@ Repo-Driven Generative Engineering System
 
 =========================================================
 
-import streamlit as st import random import math import time import numpy as np import matplotlib matplotlib.use("Agg") import matplotlib.pyplot as plt
+
 
 =========================================================
 
