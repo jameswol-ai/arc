@@ -1,6 +1,6 @@
 # =========================================================
-# 🏗️ RANDOM vNEXT — 3D STRUCTURAL LOAD FLOW ENGINE
-# Multi-Agent + 3D Visualization + Load Propagation
+# 🏙️ RANDOM vNEXT — EVOLVING CITY + COLLAPSE PHYSICS ENGINE
+# Generational Growth + Failure Cascades + Load Dynamics
 # =========================================================
 
 import streamlit as st
@@ -10,175 +10,201 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 # =========================================================
-# 🧠 PLANNER AGENT
+# 🧠 CITY PLANNER (EVOLUTIONARY)
 # =========================================================
-class PlannerAgent:
-    def propose(self):
-        return {
-            "building_type": random.choice(["residential", "commercial", "industrial"]),
-            "floors": random.randint(3, 8),
-            "grid_size": random.choice([10, 12, 14]),
-        }
+class CityPlanner:
+    def generate(self, previous_city=None):
+        buildings = []
 
-# =========================================================
-# 🧱 STRUCTURAL AGENT (3D GRID)
-# =========================================================
-class StructuralAgent:
-    def build(self, floors, grid_size):
-        structure = []
+        base_count = 4 if not previous_city else len(previous_city)
 
-        for z in range(floors):
-            for x in range(0, grid_size, 2):
-                for y in range(0, grid_size, 2):
-                    structure.append((x, y, z))
+        for i in range(base_count + random.randint(-1, 2)):
+            buildings.append({
+                "id": i,
+                "type": random.choice(["residential", "commercial", "industrial"]),
+                "floors": random.randint(3, 10),
+                "grid": random.choice([8, 10, 12]),
+                "offset": (
+                    random.randint(0, 25),
+                    random.randint(0, 25)
+                )
+            })
 
-        return structure
+        return buildings
 
 # =========================================================
-# ⚡ LOAD FLOW ENGINE
+# 🏗️ STRUCTURAL ENGINE
 # =========================================================
-class LoadFlowEngine:
-    def compute_loads(self, structure, floors):
-        """
-        Load starts at top floor and flows downward.
-        Each node distributes load to supporting nodes below.
-        """
+class StructuralEngine:
+    def build(self, buildings):
+        nodes = []
 
-        loads = {node: 0 for node in structure}
+        for b in buildings:
+            ox, oy = b["offset"]
 
-        top_nodes = [n for n in structure if n[2] == floors - 1]
+            for z in range(b["floors"]):
+                for x in range(0, b["grid"], 2):
+                    for y in range(0, b["grid"], 2):
+                        nodes.append((x + ox, y + oy, z, b["id"]))
 
-        # initialize load at top
-        for node in top_nodes:
-            loads[node] = 1.0
-
-        # propagate downward
-        for z in reversed(range(floors)):
-            layer = [n for n in structure if n[2] == z]
-
-            for node in layer:
-                x, y, z = node
-                above_load = loads.get((x, y, z + 1), 0)
-
-                # distribute load
-                loads[node] += above_load * 0.8
-
-                # slight lateral diffusion
-                neighbors = [
-                    (x+2, y, z),
-                    (x-2, y, z),
-                    (x, y+2, z),
-                    (x, y-2, z),
-                ]
-
-                for n in neighbors:
-                    if n in loads:
-                        loads[n] += above_load * 0.05
-
-        return loads
+        return nodes
 
 # =========================================================
-# 🧪 SIMULATION AGENT
+# 🌊 LOAD + FAILURE ENGINE
 # =========================================================
-class SimulationAgent:
-    def evaluate(self, loads):
-        max_load = max(loads.values())
-        avg_load = sum(loads.values()) / len(loads)
+class PhysicsEngine:
+    def compute_loads(self, nodes):
+        load = {n: 0.0 for n in nodes}
 
-        stability = max(0, 1 - (max_load / 5))
-        efficiency = 1 - (avg_load / 2)
+        # top-down initialization
+        for n in nodes:
+            if n[2] == max(z for _, _, z, _ in nodes):
+                load[n] += 1.0
+
+        # propagate
+        for _ in range(3):
+            for (x, y, z, bid), l in list(load.items()):
+
+                if l <= 0:
+                    continue
+
+                below = (x, y, z - 1, bid)
+                if below in load:
+                    load[below] += l * 0.7
+
+                # lateral diffusion (city stress coupling)
+                for other in load:
+                    ox, oy, oz, obid = other
+                    if obid != bid and abs(x - ox) + abs(y - oy) < 3:
+                        load[other] += l * 0.03
+
+        return load
+
+    # =====================================================
+    # 🌊 COLLAPSE PROPAGATION
+    # =====================================================
+    def collapse(self, load_map, threshold=2.2):
+        failed = set()
+
+        # initial failures
+        for node, l in load_map.items():
+            if l > threshold:
+                failed.add(node)
+
+        # cascade propagation
+        for _ in range(2):
+            new_failures = set()
+
+            for node in failed:
+                x, y, z, bid = node
+
+                for other in load_map:
+                    ox, oy, oz, obid = other
+
+                    if other not in failed:
+                        dist = abs(x - ox) + abs(y - oy) + abs(z - oz)
+
+                        if dist <= 2:
+                            load_map[other] += 0.4
+                            if load_map[other] > threshold:
+                                new_failures.add(other)
+
+            failed |= new_failures
+
+        return failed
+
+# =========================================================
+# 🧪 CITY SIMULATION
+# =========================================================
+class CitySim:
+    def evaluate(self, load_map, failed):
+        loads = list(load_map.values())
+
+        stability = max(0, 1 - (len(failed) / max(1, len(load_map))))
+        congestion = min(1, sum(loads) / len(loads))
 
         return {
             "stability": round(stability, 3),
-            "efficiency": round(efficiency, 3),
-            "max_load": round(max_load, 3)
+            "congestion": round(congestion, 3),
+            "failures": len(failed)
         }
 
 # =========================================================
-# 🧬 CRITIC AGENT
+# 🧬 CITY EVOLUTION ENGINE
 # =========================================================
-class CriticAgent:
-    def score(self, sim):
-        return round(sim["stability"] * 0.7 + sim["efficiency"] * 0.3, 3)
-
-# =========================================================
-# 🤝 MULTI-AGENT ENGINE
-# =========================================================
-class Engine:
+class CityEngine:
     def __init__(self):
-        self.planner = PlannerAgent()
-        self.structure = StructuralAgent()
-        self.loadflow = LoadFlowEngine()
-        self.sim = SimulationAgent()
-        self.critic = CriticAgent()
+        self.planner = CityPlanner()
+        self.structure = StructuralEngine()
+        self.physics = PhysicsEngine()
+        self.sim = CitySim()
 
-    def run(self):
-        proposal = self.planner.propose()
+        self.city_state = None
 
-        structure = self.structure.build(
-            proposal["floors"],
-            proposal["grid_size"]
-        )
+    def step(self):
+        buildings = self.planner.generate(self.city_state)
 
-        loads = self.loadflow.compute_loads(structure, proposal["floors"])
-        sim = self.sim.evaluate(loads)
-        score = self.critic.score(sim)
+        nodes = self.structure.build(buildings)
+        loads = self.physics.compute_loads(nodes)
+        failed = self.physics.collapse(loads)
 
-        return proposal, structure, loads, sim, score
+        sim = self.sim.evaluate(loads, failed)
+
+        self.city_state = buildings
+
+        return buildings, nodes, loads, failed, sim
 
 # =========================================================
 # 🌐 STREAMLIT UI
 # =========================================================
-st.set_page_config(page_title="Random 3D Load Flow Engine", layout="wide")
+st.set_page_config(page_title="Random Evolving City", layout="wide")
 
-st.title("🏗️ RANDOM vNEXT — 3D Structural Load Flow System")
-st.caption("Multi-agent architecture + physics-inspired load propagation")
+st.title("🏙️ RANDOM vNEXT — Evolving City + Collapse Physics")
+st.caption("Generational urban growth with structural failure cascades")
 
-engine = Engine()
+engine = CityEngine()
 
-if st.button("🚀 Generate 3D Structure + Load Flow"):
+if st.button("🚀 Next City Generation"):
 
-    proposal, structure, loads, sim, score = engine.run()
+    buildings, nodes, loads, failed, sim = engine.step()
 
-    st.subheader("🧠 Building Proposal")
-    st.write(proposal)
-
-    st.subheader("📊 Simulation Results")
+    st.subheader("🏗️ City State")
+    st.write(buildings)
 
     c1, c2, c3 = st.columns(3)
     c1.metric("Stability", sim["stability"])
-    c2.metric("Efficiency", sim["efficiency"])
-    c3.metric("Score", score)
+    c2.metric("Congestion", sim["congestion"])
+    c3.metric("Failures", sim["failures"])
 
     # =====================================================
-    # 🧊 3D VISUALIZATION
+    # 🌆 3D VISUALIZATION
     # =====================================================
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-    xs, ys, zs = [], [], []
-    colors = []
+    xs, ys, zs, colors = [], [], [], []
 
-    for node in structure:
-        x, y, z = node
-        load = loads[node]
+    for node in nodes:
+        x, y, z, _ = node
 
         xs.append(x)
         ys.append(y)
         zs.append(z)
 
-        # intensity mapping (load → color strength)
-        colors.append(load)
+        if node in failed:
+            colors.append(5)  # collapse spike
+        else:
+            colors.append(loads[node])
 
-    sc = ax.scatter(xs, ys, zs, c=colors, cmap='hot', s=20)
+    sc = ax.scatter(xs, ys, zs, c=colors, cmap='plasma', s=12)
 
-    ax.set_title("3D Structural Grid with Load Flow Intensity")
-    ax.set_xlabel("X Grid")
-    ax.set_ylabel("Y Grid")
-    ax.set_zlabel("Floors")
+    ax.set_title("🏙️ City Load + Collapse Field")
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Height")
 
-    plt.colorbar(sc, ax=ax, shrink=0.5, label="Load Intensity")
+    plt.colorbar(sc, ax=ax, shrink=0.5, label="Load / Failure Intensity")
 
     st.pyplot(fig)
 
-    st.success("3D structural system generated with load propagation 🌊🏗️")
+    st.warning(f"⚠️ Structural failures detected: {len(failed)}")
