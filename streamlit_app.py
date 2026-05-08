@@ -9,6 +9,27 @@ import matplotlib.pyplot as plt
 # Architecture + Structure + MEP + Cost + Export
 # =========================================================
 
+if mode == "Export Center":
+    st.header("🏗️ BIM Digital Twin Viewer")
+
+    if st.button("Generate BIM Model"):
+        result = run_pipeline(intent_text, site_area)
+
+        bim = result["bim"]
+
+        st.write("### BIM ELEMENT COUNT")
+        st.metric("Elements", len(bim.elements))
+
+        st.write("### SAMPLE ELEMENT")
+        sample_id = list(bim.elements.keys())[0]
+        st.json(bim.get_element(sample_id).__dict__)
+
+        st.download_button(
+            "Download BIM JSON",
+            data=export_bim(bim),
+            file_name="bim_model.json"
+        )
+
 st.set_page_config(page_title="Random AI Control Center", layout="wide")
 
 # =========================
