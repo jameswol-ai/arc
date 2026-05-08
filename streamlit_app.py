@@ -47,11 +47,11 @@ if "history" not in st.session_state: st.session_state.history = []
 
 if "tick" not in st.session_state: st.session_state.tick = 0
 
-=========================================================
+#=========================================================
 
 #SIDEBAR — SYSTEM CONTROLS
 
-=========================================================
+#=========================================================
 
 st.sidebar.header("System Parameters")
 
@@ -63,11 +63,11 @@ load_factor = st.sidebar.slider("Live Load (kN/m²)", 1.0, 12.0, 3.0) dead_facto
 
 env_stress = st.sidebar.slider("Environmental Stress", 0.0, 1.0, 0.35)
 
-=========================================================
+#=========================================================
 
 STRUCTURAL ENGINE (EUROCODE-INSPIRED SIMPLIFIED)
 
-=========================================================
+#=========================================================
 
 def structural_model(): area = width * depth
 
@@ -107,15 +107,15 @@ return {
     "stability": stability
 }
 
-=========================================================
+#=========================================================
 
 #EVOLUTION ENGINE
 
-=========================================================
+#=========================================================
 
 def evolve(current, target, mutation_rate): noise = np.random.normal(0, mutation_rate * 0.1) blended = 0.85 * current + 0.15 * target + noise return float(np.clip(blended, 0, 1))
 
-=========================================================
+#=========================================================
 
 #FLOORPLAN GENERATOR
 
@@ -131,11 +131,11 @@ return [
     for _ in range(min(floors, 20))
 ]
 
-=========================================================
+#=========================================================
 
 #SIMULATION STEP
 
-=========================================================
+#=========================================================
 
 def simulation_step(): analysis = structural_model()
 
@@ -154,11 +154,11 @@ return analysis
 
 analysis = structural_model() floorplans = generate_plan()
 
-=========================================================
+#=========================================================
 
 #CONTROL PANEL
 
-=========================================================
+#=========================================================
 
 colA, colB = st.columns(2)
 
@@ -166,11 +166,11 @@ with colA: if st.button("🚀 Start Evolution Engine"): st.session_state.running
 
 with colB: if st.button("🛑 Stop Engine"): st.session_state.running = False
 
-=========================================================
+#=========================================================
 
 #DASHBOARD
 
-=========================================================
+#=========================================================
 
 col1, col2, col3 = st.columns(3)
 
@@ -212,29 +212,29 @@ harmony = (st.session_state.stability + analysis["stability"]) / 2
 st.write("System Harmony")
 st.progress(harmony)
 
-=========================================================
+#=========================================================
 
 #LOOP ENGINE
 
-=========================================================
+#=========================================================
 
 if st.session_state.running: analysis = simulation_step() st.session_state.tick += 1 st.toast(f"Generation {st.session_state.tick}") time.sleep(0.25) st.rerun()
 
-=========================================================
+#=========================================================
 
 #HISTORY GRAPH
 
-=========================================================
+#=========================================================
 
 st.divider() st.subheader("📊 Stability Evolution")
 
 if len(st.session_state.history) > 2: fig, ax = plt.subplots() ax.plot(st.session_state.history) ax.set_title("Structural Stability Over Time") ax.set_xlabel("Steps") ax.set_ylabel("Stability") st.pyplot(fig)
 
-=========================================================
+#=========================================================
 
 #MANUAL STEP
 
-=========================================================
+#=========================================================
 
 st.divider() st.subheader("⚙️ Manual Simulation Step")
 
