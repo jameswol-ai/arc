@@ -31,20 +31,23 @@ load_pipelines()
 # 🧠 APP CONFIG
 # =========================================================
 import streamlit as st
+import streamlit as st
+
+from core.loader import load_pipelines
 from core.registry import run_pipeline
+
+# LOAD ALL PIPELINES FIRST
+load_pipelines()
 
 st.set_page_config(page_title="Random AI", layout="wide")
 
-st.title("🏗️ Random AI — Stable Pipeline Engine")
+st.title("🏗️ Random AI")
 
-input_data = st.text_input("Enter input for pipeline", "hello world")
+user_input = st.text_input("Input", "hello")
 
-if st.button("Run Pipeline"):
-    try:
-        result = run_pipeline("main", input_data)
-        st.json(result)
-    except Exception as e:
-        st.error(str(e))
+if st.button("Run"):
+    result = run_pipeline("main", user_input)
+    st.json(result)
 
 # =========================================================
 # SESSION STATE SAFETY
