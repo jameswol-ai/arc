@@ -1,312 +1,193 @@
 # =========================================================
-# RANDOM AI v23 — FULL ARCHITECTURE + STRUCTURE + BIM CORE
-# Architecture → Structure → MEP → Cost → Export → AI Evolution
+# 🏗️ RANDOM AI v20 — STRUCTURAL DESIGN CORE
+# Architecture + Eurocode-inspired logic + 3D extrusion
 # =========================================================
 
 import streamlit as st
 import numpy as np
 import random
-import time
 import matplotlib.pyplot as plt
 
-# =========================================================
-# OPTIONAL MODULE INTEGRATION (your repo system)
-# =========================================================
-try:
-    from architecture.floorplan_engine import generate_floorplan
-    from architecture.zoning_engine import zone_building
-    from architecture.room_generator import generate_rooms
-except:
-    generate_floorplan = None
-    zone_building = None
-    generate_rooms = None
-
-try:
-    from structure.eurocode_engine import eurocode_check
-    from structure.grid_generator import generate_grid
-    from structure.beam_design import beam_capacity
-    from structure.column_design import column_capacity
-except:
-    eurocode_check = None
-    generate_grid = None
-    beam_capacity = None
-    column_capacity = None
+from mpl_toolkits.mplot3d import Axes3D
 
 # =========================================================
-# APP CONFIG
+# PAGE CONFIG
 # =========================================================
-st.set_page_config(page_title="Random AI BIM Core v23", layout="wide")
 
-st.title("🏗️ Random AI v23 — Full Structural + Architectural Engine")
-st.caption("Architecture → Structure → Loads → Deformation → Evolution → Export Pipeline")
+st.set_page_config(page_title="Random AI v20", layout="wide")
 
-# =========================================================
-# STATE
-# =========================================================
-if "running" not in st.session_state:
-    st.session_state.running = False
-
-if "history" not in st.session_state:
-    st.session_state.history = []
-
-if "stability" not in st.session_state:
-    st.session_state.stability = 0.7
-
-if "tick" not in st.session_state:
-    st.session_state.tick = 0
+st.title("🏗️ Random AI v20 — Structural Design Core")
+st.caption("Procedural architecture with simplified Eurocode-inspired logic and structural awareness")
 
 # =========================================================
-# SIDEBAR INPUTS
+# BUILDING TYPES
 # =========================================================
-st.sidebar.header("Design Controls")
 
-floors = st.sidebar.slider("Floors", 1, 80, 12)
-width = st.sidebar.slider("Width (m)", 10, 120, 40)
-depth = st.sidebar.slider("Depth (m)", 10, 120, 30)
+BUILDING_TYPES = ["Residential", "Commercial", "Industrial"]
 
-grid = st.sidebar.slider("Grid Density", 3, 10, 6)
-material = st.sidebar.selectbox("Material", ["Concrete", "Steel", "Hybrid"])
-wind = st.sidebar.slider("Wind Load", 0.0, 1.0, 0.3)
-mutation = st.sidebar.slider("Evolution Rate", 0.0, 1.0, 0.25)
-
-# =========================================================
-# ARCHITECTURE LAYER (floor + zoning + rooms)
-# =========================================================
-def architecture_engine():
-
-    if generate_floorplan:
-        return generate_floorplan(width, depth, floors)
-
-    # fallback procedural zoning
-    zones = ["PUBLIC", "PRIVATE", "CORE", "SERVICE"]
-
-    return [
-        [
-            [random.choice(zones) for _ in range(grid)]
-            for _ in range(grid)
-        ]
-        for _ in range(min(floors, 15))
-    ]
+# Structural load assumptions (simplified kN/m2)
+LIVE_LOADS = {
+    "Residential": 2.0,
+    "Commercial": 4.0,
+    "Industrial": 7.5
+}
 
 # =========================================================
-# STRUCTURAL GRID (nodes + beams)
+# STRUCTURAL GRID ENGINE
 # =========================================================
-def build_grid():
 
-    nodes = []
-    fixed = set()
-
-    dx = width / grid
-    dy = depth / grid
-
-    for i in range(grid):
-        for j in range(grid):
-            nodes.append({
-                "pos": np.array([i * dx, j * dy], dtype=float),
-                "disp": np.zeros(2),
-                "force": np.zeros(2)
-            })
-
-            if j == 0:
-                fixed.add(len(nodes) - 1)
-
-    springs = []
-
-    for i in range(grid):
-        for j in range(grid):
-            idx = i * grid + j
-
-            if i < grid - 1:
-                springs.append((idx, idx + grid))
-            if j < grid - 1:
-                springs.append((idx, idx + 1))
-
-    return nodes, springs, fixed
+def generate_grid(width, depth, spacing=4):
+    x_lines = np.arange(0, width + spacing, spacing)
+    y_lines = np.arange(0, depth + spacing, spacing)
+    return x_lines, y_lines
 
 # =========================================================
-# LOAD MODEL (simplified Eurocode-style)
+# FLOOR PLAN GENERATOR
 # =========================================================
-def structural_load():
 
-    area = width * depth
+def generate_floor_plan(building_type, width, depth, floors):
+    plan = []
 
-    strength = {
-        "Concrete": 55,
-        "Steel": 120,
-        "Hybrid": 85
-    }[material]
+    for f in range(floors):
+        if building_type == "Residential":
+            rooms = random.randint(2, 5)
+        elif building_type == "Commercial":
+            rooms = random.randint(4, 10)
+        else:
+            rooms = random.randint(1, 3)
 
-    gravity = area * floors * 5.0
-    wind_load = gravity * wind * (floors / 12)
+        floor = {
+            "floor": f + 1,
+            "rooms": rooms,
+            "core": "central" if building_type != "Industrial" else "offset"
+        }
+        plan.append(floor)
 
-    total = gravity + wind_load
-    capacity = area * strength
-
-    utilization = total / max(capacity, 1e-6)
-    stability = max(0.0, 1.0 - utilization)
-
-    return total, capacity, utilization, stability
-
-# =========================================================
-# FEM-LITE SOLVER (SPRING MASS SYSTEM)
-# =========================================================
-def solve(nodes, springs, fixed):
-
-    k = 0.05
-
-    for _ in range(20):
-        for i, j in springs:
-
-            ni = nodes[i]
-            nj = nodes[j]
-
-            delta = (nj["pos"] + nj["disp"]) - (ni["pos"] + ni["disp"])
-            dist = np.linalg.norm(delta) + 1e-6
-            direction = delta / dist
-
-            force = k * (dist - 1.0)
-
-            if i not in fixed:
-                ni["disp"] += force * direction * 0.5
-            if j not in fixed:
-                nj["disp"] -= force * direction * 0.5
-
-    return nodes
+    return plan
 
 # =========================================================
-# STABILITY METRIC
+# STRUCTURAL CHECK (SIMPLIFIED EUROCODE STYLE)
 # =========================================================
-def stability_metric(nodes):
 
-    total = sum(np.linalg.norm(n["disp"]) for n in nodes)
-    avg = total / len(nodes)
+def structural_check(spans, load_type, beam_capacity=30):
+    """
+    Simplified logic:
+    - higher load + longer span reduces safety margin
+    """
 
-    return 1 / (1 + avg), avg
+    load = LIVE_LOADS[load_type]
+    results = []
 
-# =========================================================
-# EVOLUTION ENGINE
-# =========================================================
-def evolve(current, target):
+    for span in spans:
+        demand = load * span
+        utilization = demand / beam_capacity
 
-    noise = np.random.normal(0, mutation * 0.05)
-    return float(np.clip(0.85 * current + 0.15 * target + noise, 0, 1))
+        status = "OK" if utilization < 1 else "OVERSTRESSED"
 
-# =========================================================
-# SIMULATION STEP
-# =========================================================
-def step():
+        results.append({
+            "span": span,
+            "load": load,
+            "utilization": round(utilization, 2),
+            "status": status
+        })
 
-    nodes, springs, fixed = build_grid()
-
-    nodes = solve(nodes, springs, fixed)
-
-    _, _, _, stability = structural_load()
-
-    st.session_state.stability = evolve(
-        st.session_state.stability,
-        stability
-    )
-
-    st.session_state.history.append(st.session_state.stability)
-
-    if len(st.session_state.history) > 100:
-        st.session_state.history.pop(0)
-
-    return nodes, springs, stability
+    return results
 
 # =========================================================
-# INIT SYSTEMS
+# 3D BUILDING EXTRUSION
 # =========================================================
-floorplan = architecture_engine()
-nodes, springs, stability = step()
+
+def plot_building_3d(width, depth, floors, grid_spacing=4):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    x_lines, y_lines = generate_grid(width, depth, grid_spacing)
+
+    # Draw grid
+    for x in x_lines:
+        ax.plot([x, x], [0, depth], [0, 0], color="gray", linewidth=0.5)
+    for y in y_lines:
+        ax.plot([0, width], [y, y], [0, 0], color="gray", linewidth=0.5)
+
+    # Extrude floors
+    floor_height = 3
+
+    for f in range(floors + 1):
+        z = f * floor_height
+
+        # perimeter slab
+        ax.plot([0, width, width, 0, 0],
+                [0, 0, depth, depth, 0],
+                [z, z, z, z, z],
+                color="black")
+
+        # vertical columns
+        for x in x_lines:
+            for y in y_lines:
+                ax.plot([x, x], [y, y], [0, z], color="lightblue", linewidth=0.3)
+
+    ax.set_xlabel("Width")
+    ax.set_ylabel("Depth")
+    ax.set_zlabel("Height")
+
+    return fig
 
 # =========================================================
-# CONTROLS
+# UI CONTROLS
 # =========================================================
-c1, c2 = st.columns(2)
-
-with c1:
-    if st.button("🚀 Start BIM Solver"):
-        st.session_state.running = True
-
-with c2:
-    if st.button("⛔ Stop"):
-        st.session_state.running = False
-
-# =========================================================
-# STRUCTURAL VISUALIZATION
-# =========================================================
-st.subheader("🏗️ Structural Deformation Field")
-
-fig, ax = plt.subplots()
-
-for n in nodes:
-    x, y = n["pos"]
-    dx, dy = n["disp"]
-
-    ax.plot(x, y, "bo")
-    ax.plot(x + dx, y + dy, "ro")
-    ax.plot([x, x + dx], [y, y + dy], "gray", alpha=0.4)
-
-ax.set_title("Undeformed → Deformed Structure")
-st.pyplot(fig)
-
-# =========================================================
-# METRICS
-# =========================================================
-load, capacity, util, stability_val = structural_load()
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.metric("Load", f"{load:.1f}")
+    building_type = st.selectbox("Building Type", BUILDING_TYPES)
 
 with col2:
-    st.metric("Utilization", f"{util:.3f}")
+    floors = st.slider("Number of Floors", 1, 20, 5)
 
 with col3:
-    st.metric("Stability", f"{st.session_state.stability:.3f}")
+    grid_spacing = st.slider("Structural Grid Spacing", 2, 8, 4)
+
+width = st.slider("Building Width", 10, 60, 30)
+depth = st.slider("Building Depth", 10, 60, 25)
 
 # =========================================================
-# FLOORPLAN
+# GENERATE SYSTEM
 # =========================================================
-st.subheader("🏛️ Architectural Floorplan")
 
-for f in floorplan[:3]:
-    for row in f:
-        st.text(" ".join(str(x) for x in row))
-    st.text("---")
+if st.button("Generate Structure"):
 
-# =========================================================
-# LOOP ENGINE
-# =========================================================
-if st.session_state.running:
+    st.subheader("🏢 Floor Plan Logic")
 
-    nodes, springs, stability = step()
+    plan = generate_floor_plan(building_type, width, depth, floors)
+    st.json(plan)
 
-    st.session_state.tick += 1
-    st.toast(f"Cycle {st.session_state.tick}")
+    st.subheader("🧱 Structural Grid")
 
-    time.sleep(0.25)
-    st.rerun()
+    xg, yg = generate_grid(width, depth, grid_spacing)
 
-# =========================================================
-# HISTORY
-# =========================================================
-st.divider()
-st.subheader("📈 Stability Evolution")
-
-if len(st.session_state.history) > 2:
     fig, ax = plt.subplots()
-    ax.plot(st.session_state.history)
-    ax.set_title("System Stability Over Time")
+    for x in xg:
+        ax.plot([x, x], [0, depth])
+    for y in yg:
+        ax.plot([0, width], [y, y])
+
+    ax.set_title("Structural Grid Layout")
     st.pyplot(fig)
 
-# =========================================================
-# MANUAL STEP
-# =========================================================
-st.divider()
+    st.subheader("⚙️ Eurocode-Inspired Structural Check")
 
-if st.button("Run Single Simulation Step"):
-    step()
-    st.success("Step executed")
+    spans = [grid_spacing for _ in range(len(xg) - 1)]
+    results = structural_check(spans, building_type)
+
+    st.dataframe(results)
+
+    st.subheader("🏗️ 3D Structural Model")
+
+    fig3d = plot_building_3d(width, depth, floors, grid_spacing)
+    st.pyplot(fig3d)
+
+# =========================================================
+# FOOTER
+# =========================================================
+
+st.caption("Random AI v20 — structural logic layer active. Geometry now carries intent.")
