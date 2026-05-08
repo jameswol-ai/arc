@@ -27,11 +27,21 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 # =========================================================
 # 🧠 APP CONFIG
 # =========================================================
-st.set_page_config(page_title="Random AI Control Center", layout="wide")
+import streamlit as st
+from core.registry import run_pipeline
 
-st.title("🏗️ RANDOM AI — CONTROL CENTER")
-st.caption("Generative Architecture + Structure + BIM + Parametric System")
+st.set_page_config(page_title="Random AI", layout="wide")
 
+st.title("🏗️ Random AI — Stable Pipeline Engine")
+
+input_data = st.text_input("Enter input for pipeline", "hello world")
+
+if st.button("Run Pipeline"):
+    try:
+        result = run_pipeline("main", input_data)
+        st.json(result)
+    except Exception as e:
+        st.error(str(e))
 
 # =========================================================
 # SESSION STATE SAFETY
