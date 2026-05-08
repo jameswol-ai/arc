@@ -85,3 +85,25 @@ def run_pipeline(user_input, site_area):
         "structure": structure,
         "bim": bim_model
     }
+
+from core.parametric_engine import ParametricEngine
+
+
+def run_pipeline(user_input, site_area):
+
+    ...
+    bim_model = build_bim_model(architecture, structure)
+
+    # 🔥 PARAMETRIC LAYER ACTIVATION
+    param_engine = ParametricEngine(bim_model)
+
+    # Example automatic rules
+    param_engine.set_parameter("floor_height", 3.4)
+    param_engine.set_parameter("grid_spacing", 4.5)
+
+    return {
+        "architecture": architecture,
+        "structure": structure,
+        "bim": param_engine.get_model(),
+        "parametric_engine": param_engine
+    }
