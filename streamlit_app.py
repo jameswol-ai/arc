@@ -1,3 +1,7 @@
+from core.pipeline import run_pipeline
+from export.bim_exporter import export_bim
+from structure.eurocode_engine import structural_assessment
+
 import streamlit as st
 import numpy as np
 import time
@@ -65,12 +69,15 @@ if mode == "AI Brain":
     )
 
     if st.button("RUN FULL GENERATION"):
+    try:
         st.session_state.result = run_pipeline(
             st.session_state.intent_text,
             st.session_state.site_area
         )
+        st.success("Pipeline executed successfully")
 
-        st.success("Pipeline executed")
+    except Exception as e:
+        st.error(f"Pipeline failed: {str(e)}")
 
     if st.session_state.result:
         result = st.session_state.result
