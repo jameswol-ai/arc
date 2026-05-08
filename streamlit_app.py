@@ -25,7 +25,7 @@ st.caption("A senior-level generative architecture system with evolving structur
 
 =========================================================
 
-APP CONFIG
+#APP CONFIG
 
 =========================================================
 
@@ -35,7 +35,7 @@ st.title("🏗️ Random AI v18 — Structural Evolution Intelligence") st.capti
 
 =========================================================
 
-STATE INIT
+#STATE INIT
 
 =========================================================
 
@@ -49,7 +49,7 @@ if "tick" not in st.session_state: st.session_state.tick = 0
 
 =========================================================
 
-SIDEBAR — SYSTEM CONTROLS
+#SIDEBAR — SYSTEM CONTROLS
 
 =========================================================
 
@@ -109,7 +109,7 @@ return {
 
 =========================================================
 
-EVOLUTION ENGINE
+#EVOLUTION ENGINE
 
 =========================================================
 
@@ -117,7 +117,7 @@ def evolve(current, target, mutation_rate): noise = np.random.normal(0, mutation
 
 =========================================================
 
-FLOORPLAN GENERATOR
+#FLOORPLAN GENERATOR
 
 =========================================================
 
@@ -133,7 +133,7 @@ return [
 
 =========================================================
 
-SIMULATION STEP
+#SIMULATION STEP
 
 =========================================================
 
@@ -156,7 +156,7 @@ analysis = structural_model() floorplans = generate_plan()
 
 =========================================================
 
-CONTROL PANEL
+#CONTROL PANEL
 
 =========================================================
 
@@ -168,7 +168,7 @@ with colB: if st.button("🛑 Stop Engine"): st.session_state.running = False
 
 =========================================================
 
-DASHBOARD
+#DASHBOARD
 
 =========================================================
 
@@ -190,7 +190,7 @@ elif analysis["stability"] > 0.45:
 else:
     st.error("Critical instability")
 
-FLOOR SYSTEM
+#FLOOR SYSTEM
 
 with col2: st.subheader("🏗️ Floor System")
 
@@ -214,7 +214,7 @@ st.progress(harmony)
 
 =========================================================
 
-LOOP ENGINE
+#LOOP ENGINE
 
 =========================================================
 
@@ -222,7 +222,7 @@ if st.session_state.running: analysis = simulation_step() st.session_state.tick 
 
 =========================================================
 
-HISTORY GRAPH
+#HISTORY GRAPH
 
 =========================================================
 
@@ -232,7 +232,7 @@ if len(st.session_state.history) > 2: fig, ax = plt.subplots() ax.plot(st.sessio
 
 =========================================================
 
-MANUAL STEP
+#MANUAL STEP
 
 =========================================================
 
