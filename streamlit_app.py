@@ -14,8 +14,6 @@ import streamlit as st import numpy as np import random import time import matpl
 
 OPTIONAL MODULE IMPORTS
 
-(safe fallbacks for missing files)
-
 -------------------------
 
 try: from architecture.floorplan_engine import generate_floorplan from architecture.zoning_engine import zone_building from architecture.room_generator import generate_rooms except: generate_floorplan = None zone_building = None generate_rooms = None
@@ -62,7 +60,7 @@ material = st.sidebar.selectbox("Material", ["Concrete", "Steel", "Hybrid"]) win
 
 =========================================================
 
-ARCHITECTURE ENGINE (HIGH LEVEL)
+ARCHITECTURE ENGINE
 
 =========================================================
 
@@ -110,7 +108,7 @@ return {
 
 =========================================================
 
-GRID + STRUCTURE LAYOUT
+GRID + STRUCTURE
 
 =========================================================
 
@@ -128,18 +126,16 @@ return {
 
 =========================================================
 
-LOAD FLOW + EUROCODE CHECK (SIMPLIFIED)
+LOAD SYSTEM
 
 =========================================================
 
 def load_system(struct):
 
 base = structural_engine()
-
 column_count = struct["columns"]
 
 load_per_column = base["load"] / max(column_count, 1)
-
 stress = load_per_column / max(base["capacity"] / 10, 1e-6)
 
 euro_ok = stress < 1.0
@@ -152,7 +148,7 @@ return {
 
 =========================================================
 
-EVOLUTION SYSTEM
+EVOLUTION
 
 =========================================================
 
@@ -182,7 +178,7 @@ return analysis
 
 =========================================================
 
-PIPELINE EXECUTION
+PIPELINE
 
 =========================================================
 
@@ -208,29 +204,9 @@ DASHBOARD
 
 A, B, C = st.columns(3)
 
--------------------------
+with A: st.subheader("🏛️ Architecture") st.write("Rooms:", architecture.get("rooms", "N/A")) st.write("Cores:", architecture.get("cores", "N/A"))
 
-ARCHITECTURE
-
--------------------------
-
-with A: st.subheader("🏛️ Architecture")
-
-st.write("Rooms:", architecture.get("rooms", "N/A"))
-st.write("Core Systems:", architecture.get("cores", "N/A"))
-
--------------------------
-
-STRUCTURE
-
--------------------------
-
-with B: st.subheader("🏗️ Structure")
-
-st.metric("Load", f"{analysis['load']:.1f}")
-st.metric("Capacity", f"{analysis['capacity']:.1f}")
-st.metric("Utilization", f"{analysis['utilization']:.3f}")
-st.metric("Stability", f"{analysis['stability']:.3f}")
+with B: st.subheader("🏗️ Structure") st.metric("Load", f"{analysis['load']:.1f}") st.metric("Capacity", f"{analysis['capacity']:.1f}") st.metric("Utilization", f"{analysis['utilization']:.3f}") st.metric("Stability", f"{analysis['stability']:.3f}")
 
 if analysis["stability"] > 0.75:
     st.success("Stable structure")
@@ -239,16 +215,7 @@ elif analysis["stability"] > 0.4:
 else:
     st.error("Failure risk")
 
--------------------------
-
-LOAD + EUROCODE
-
--------------------------
-
-with C: st.subheader("📐 Eurocode Check")
-
-st.metric("Column Load", f"{loads['column_load']:.2f}")
-st.metric("Stress", f"{loads['stress']:.2f}")
+with C: st.subheader("📐 Eurocode Check") st.metric("Column Load", f"{loads['column_load']:.2f}") st.metric("Stress", f"{loads['stress']:.2f}")
 
 if loads["eurocode_pass"]:
     st.success("Eurocode PASS")
@@ -259,7 +226,7 @@ st.progress(min(1.0, loads["stress"]))
 
 =========================================================
 
-LOOP ENGINE
+LOOP
 
 =========================================================
 
@@ -267,11 +234,11 @@ if st.session_state.running: step() st.session_state.tick += 1 st.toast(f"Cycle 
 
 =========================================================
 
-EVOLUTION HISTORY
+HISTORY
 
 =========================================================
 
-st.divider() st.subheader("📈 Structural Evolution")
+st.divider() st.subheader("📈 Stability Evolution")
 
 if len(st.session_state.history) > 2: fig, ax = plt.subplots() ax.plot(st.session_state.history) ax.set_title("Stability Evolution") st.pyplot(fig)
 
@@ -287,7 +254,7 @@ if st.button("Run Single Simulation Step"): step() st.success(f"Stability: {st.s
 
 =========================================================
 
-REPO ARCHITECTURE VIEW
+REPO VIEW
 
 =========================================================
 
