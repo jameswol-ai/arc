@@ -147,7 +147,7 @@ elif mode == "Structure Engine":
 
         #result = structural_assessment(span, load, load * 0.6, height)
 
-        st.json(result)
+        #st.json(result)
 
 
 # =========================================================
