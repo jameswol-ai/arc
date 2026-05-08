@@ -31,7 +31,8 @@ st.caption("A senior-level generative architecture system with evolving structur
 
 st.set_page_config(page_title="Random AI Architecture System v18", layout="wide")
 
-st.title("🏗️ Random AI v18 — Structural Evolution Intelligence") st.caption("A generative architecture system with evolving structural memory and simplified Eurocode logic")
+       st.title("🏗️ Random AI v18 — Structural Evolution Intelligence") st.caption("A generative architecture system with evolving structural memory and simplified Eurocode logic")
+       st.caption("A senior-level generative architecture system with evolving structural memory")
 
 =========================================================
 
