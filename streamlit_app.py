@@ -74,6 +74,34 @@ elif mode == "Architecture Generator":
 # =========================================================
 # STRUCTURE ENGINE
 # =========================================================
+from structure.eurocode_engine import structural_assessment
+
+if mode == "Structure Engine":
+    st.header("🏗️ Eurocode Structural Analysis")
+
+    span = st.slider("Beam Span (m)", 2.0, 12.0, 6.0)
+    floors = st.slider("Floors", 1, 20, 5)
+    area = st.number_input("Floor Area (m²)", value=500.0)
+    height = st.slider("Column Height (m)", 2.5, 6.0, 3.2)
+
+    if st.button("Run Eurocode Check"):
+        result = structural_assessment(span, area, area * 0.6, height)
+
+        st.subheader("Results")
+
+        st.write("ULS Load:", result["ULS_load_kN"])
+
+        st.write("### Beam Check")
+        st.json(result["beam_check"])
+
+        st.write("### Column Check")
+        st.json(result["column_check"])
+
+        if result["global_safe"]:
+            st.success("Structure passes simplified Eurocode checks")
+        else:
+            st.error("Structural failure risk detected")
+
 elif mode == "Structure Engine":
     st.header("🏗️ Structural System (Eurocode Logic)")
 
