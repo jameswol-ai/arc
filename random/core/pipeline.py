@@ -1,45 +1,41 @@
 from ai.intent_router import interpret_intent
 from ai.design_brain import generate_design_profile
+from ai.memory_bank import store_design
+from ai.scoring_engine import score_design
+from ai.evolution_engine import mutate_design
 
 from architecture.grid_system import generate_grid
 from architecture.room_generator import generate_rooms
 from architecture.floor_stack import stack_floors
 
 from structure.load_calculator import calculate_load
-from structure.column_stack import generate_columns
 from structure.eurocode_engine import structural_assessment
 
 
-# =========================================================
-# 🧠 FULL RANDOM BUILDING PIPELINE
-# SITE → AI → ARCH → STRUCTURE → CHECK
-# =========================================================
-
 def run_pipeline(user_input: str, site_area: float):
-    
-    # 1. AI INTERPRETATION
+
+    # 1. INTENT
     intent = interpret_intent(user_input)
     profile = generate_design_profile(intent)
+    intent["design_profile"] = profile
 
+    # 2. ARCHITECTURE
     floors = intent.get("floors", 3)
 
-    # 2. ARCHITECTURE GENERATION
     grid = generate_grid(floors)
-    floors_stack = stack_floors(floors)
     rooms = generate_rooms(intent.get("building_type", "Residential"))
+    floor_stack = stack_floors(floors)
 
     architecture = {
         "grid": grid,
-        "floors": floors_stack,
         "rooms": rooms,
+        "floors": floor_stack,
         "design_profile": profile
     }
 
-    # 3. STRUCTURAL LOGIC
+    # 3. STRUCTURE
     load = calculate_load(site_area, floors)
-    columns = generate_columns(grid["axes"], floors)
 
-    # take simplified assumptions for spans & height
     span = grid["spacing"] * 1.5
     height = 3.2 * floors
 
@@ -50,9 +46,24 @@ def run_pipeline(user_input: str, site_area: float):
         height=height
     )
 
-    return {
+    # 4. SCORING
+    score = score_design(architecture, structure)
+
+    # 5. STORE DESIGN MEMORY
+    design_package = {
         "intent": intent,
         "architecture": architecture,
         "structure": structure,
-        "status": "generated"
+        "score": score
     }
+
+    stored = store_design(design_package)
+
+    # 6. EVOLUTION STEP (NEXT GENERATION IDEA)
+    next_intent = mutate_design(intent)
+
+    return {
+        "current_design": design_package,
+        "stored_id": stored["id"],
+        "next_generation_seed": next_intent
+                 }
