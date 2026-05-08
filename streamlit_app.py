@@ -10,10 +10,6 @@ import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Random AI Control Center", layout="wide")
 
-from core.pipeline import run_pipeline
-from export.bim_exporter import export_bim
-from structure.eurocode_engine import structural_assessment
-
 # =========================================================
 # GLOBAL STATE (SAFE STORAGE)
 # =========================================================
