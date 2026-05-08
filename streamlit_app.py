@@ -277,3 +277,32 @@ elif mode == "Full Pipeline Simulation":
             progress.progress((i + 1) / len(steps))
 
         st.success("Simulation complete — building system generated")
+
+     #Parametric BIM Control#
+elif mode == "Parametric BIM":
+
+    st.header("🧬 Parametric BIM Control System")
+
+    result = run_pipeline(intent_text, site_area)
+    engine = result["parametric_engine"]
+    bim = result["bim"]
+
+    st.subheader("⚙️ Parameters")
+
+    floor_height = st.slider("Floor Height", 2.5, 5.0, 3.2)
+    grid_spacing = st.slider("Grid Spacing", 3.0, 8.0, 4.0)
+    wall_thickness = st.slider("Wall Thickness", 0.1, 0.5, 0.2)
+
+    if st.button("Update Model"):
+        engine.set_parameter("floor_height", floor_height)
+        engine.set_parameter("grid_spacing", grid_spacing)
+        engine.set_parameter("wall_thickness", wall_thickness)
+
+        updated = engine.get_model()
+
+        st.success("BIM model updated parametrically")
+
+        st.metric("Elements", len(updated.elements))
+
+        sample = list(updated.elements.values())[0]
+        st.json(sample.__dict__)
