@@ -11,13 +11,11 @@ from architecture.floor_stack import stack_floors
 from structure.load_calculator import calculate_load
 from structure.eurocode_engine import structural_assessment
 
-def run_pipeline(intent_text, site_area):
-    # architecture generation
-    # structure analysis
-    # BIM creation
-    # parametric engine setup
+from core.registry import registry
 
-    return {
+def run_pipeline(intent_text, site_area):
+
+    result = {
         "current_design": {
             "architecture": {},
             "structure": {},
@@ -28,3 +26,11 @@ def run_pipeline(intent_text, site_area):
         "bim": None,
         "parametric_engine": None
     }
+
+    return result
+
+
+# =========================================================
+# AUTO REGISTER ON IMPORT
+# =========================================================
+registry.register("pipeline", run_pipeline)
