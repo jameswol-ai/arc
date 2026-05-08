@@ -17,10 +17,9 @@ import matplotlib.pyplot as plt
 
 =========================================================
 
-st.set_page_config(page_title="RANDOM AI — ARCHITECTURE + STRUCTURAL EVOLUTION CORE v18 (UPGRADED)
-", layout="wide")
+st.set_page_config(page_title="RANDOM", layout="wide")
 
-st.title("🏗️ Random AI v18 — Structural Evolution Intelligence")
+st.title("🏗️ Random")
 st.caption("A senior-level generative architecture system with evolving structural memory")
 
 
