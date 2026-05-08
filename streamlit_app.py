@@ -1,268 +1,298 @@
-# =========================================================
-# 🏗️ RANDOM AI v20 — STRUCTURAL ENGINEERING MODE
-# Columns + Beams + Load Paths + Evolutionary Architecture
-# =========================================================
+=========================================================
 
-import streamlit as st
-import numpy as np
-import random
-import time
-import matplotlib.pyplot as plt
+🏗️ RANDOM AI v21 — FULL ARCHITECTURE + STRUCTURE + BIM PIPELINE
 
-st.set_page_config(page_title="Random AI v20", layout="wide")
+Architecture → Structure → MEP → Cost → Export → Evolution
 
-st.title("🏗️ Random AI v20 — Engineering Structural Intelligence")
-st.caption("Now simulating simplified structural mechanics, not just geometry")
+Repo-Driven Modular Engineering System
 
-# =========================================================
-# STATE
-# =========================================================
-if "running" not in st.session_state:
-    st.session_state.running = False
+=========================================================
 
-if "stability" not in st.session_state:
-    st.session_state.stability = 0.7
+import streamlit as st import numpy as np import random import time import matplotlib.pyplot as plt
 
-if "history" not in st.session_state:
-    st.session_state.history = []
+-------------------------
 
-if "tick" not in st.session_state:
-    st.session_state.tick = 0
+OPTIONAL MODULE IMPORTS
 
+(safe fallbacks for missing files)
 
-# =========================================================
-# SIDEBAR
-# =========================================================
-st.sidebar.header("Engineering Parameters")
+-------------------------
 
-floors = st.sidebar.slider("Floors", 1, 80, 12)
-span = st.sidebar.slider("Structural Grid Span (m)", 2, 12, 4)
-width = st.sidebar.slider("Building Width (m)", 10, 120, 40)
-depth = st.sidebar.slider("Building Depth (m)", 10, 120, 30)
+try: from architecture.floorplan_engine import generate_floorplan from architecture.zoning_engine import zone_building from architecture.room_generator import generate_rooms except: generate_floorplan = None zone_building = None generate_rooms = None
 
-material_factor = st.sidebar.selectbox("Material System", ["Concrete", "Steel", "Hybrid"])
-wind = st.sidebar.slider("Wind Load Factor", 0.0, 1.0, 0.4)
-mutation = st.sidebar.slider("Structural Mutation", 0.0, 1.0, 0.25)
+try: from structure.grid_generator import generate_grid from structure.eurocode_engine import eurocode_check from structure.load_calculator import calculate_loads except: generate_grid = None eurocode_check = None calculate_loads = None
 
+try: from rendering.massing_renderer import render_mass except: render_mass = None
 
-# =========================================================
-# 🧠 STRUCTURAL ENGINE (SIMPLIFIED ENGINEERING)
-# =========================================================
-def structural_model():
+=========================================================
 
-    area = width * depth
+APP CONFIG
 
-    strength_map = {
-        "Concrete": 60,
-        "Steel": 120,
-        "Hybrid": 90
-    }
+=========================================================
 
-    strength = strength_map[material_factor]
+st.set_page_config(page_title="Random AI v21", layout="wide")
 
-    base_load = area * floors * 4.5
+st.title("🏗️ Random AI v21 — Architecture + Structural BIM Engine") st.caption("Architecture → Structure → Simulation → Evolution → Export Pipeline")
 
-    # 🌪️ wind + height amplification
-    lateral_load = floors * wind * base_load * 0.1
+=========================================================
 
-    total_load = base_load + lateral_load
+STATE
 
-    capacity = area * strength
+=========================================================
 
-    utilization = total_load / max(capacity, 1e-6)
-    stability = max(0.0, 1.0 - utilization)
+if "running" not in st.session_state: st.session_state.running = False
 
-    return {
-        "load": total_load,
-        "capacity": capacity,
-        "utilization": utilization,
-        "stability": stability
-    }
+if "history" not in st.session_state: st.session_state.history = []
 
+if "stability" not in st.session_state: st.session_state.stability = 0.75
 
-# =========================================================
-# 🧬 EVOLUTION ENGINE
-# =========================================================
-def evolve(current, target, mutation_rate):
-    noise = np.random.normal(0, mutation_rate * 0.05)
-    return float(np.clip(0.8 * current + 0.2 * target + noise, 0, 1))
+if "tick" not in st.session_state: st.session_state.tick = 0
 
+=========================================================
 
-# =========================================================
-# 🧱 COLUMN–BEAM GRID SYSTEM (NEW CORE)
-# =========================================================
-def generate_structure():
+SIDEBAR INPUTS
 
-    grid_x = max(2, int(width / span))
-    grid_y = max(2, int(depth / span))
+=========================================================
 
-    structure = []
+st.sidebar.header("Design Controls")
 
-    for f in range(floors):
+floors = st.sidebar.slider("Floors", 1, 100, 15) span = st.sidebar.slider("Grid Span (m)", 2, 12, 4) width = st.sidebar.slider("Width (m)", 10, 150, 50) depth = st.sidebar.slider("Depth (m)", 10, 150, 40)
 
-        floor = {
-            "columns": [],
-            "beams": []
-        }
+material = st.sidebar.selectbox("Material", ["Concrete", "Steel", "Hybrid"]) wind = st.sidebar.slider("Wind Load", 0.0, 1.0, 0.35) mutation = st.sidebar.slider("Evolution Rate", 0.0, 1.0, 0.25)
 
-        # columns
-        for i in range(grid_x):
-            for j in range(grid_y):
-                floor["columns"].append((i, j))
+=========================================================
 
-        # beams (connect adjacent columns)
-        for i in range(grid_x - 1):
-            for j in range(grid_y - 1):
-                floor["beams"].append(
-                    ((i, j), (i + 1, j))
-                )
-                floor["beams"].append(
-                    ((i, j), (i, j + 1))
-                )
+ARCHITECTURE ENGINE (HIGH LEVEL)
 
-        structure.append(floor)
+=========================================================
 
-    return structure
+def architecture_engine(): if generate_floorplan: return generate_floorplan(width, depth, floors)
 
+return {
+    "layout": "procedural-grid",
+    "rooms": int((width * depth) / 20),
+    "cores": max(1, floors // 10)
+}
 
-# =========================================================
-# LOAD PATH SIMULATION (SIMPLIFIED)
-# =========================================================
-def load_distribution():
+=========================================================
 
-    base = structural_model()
+STRUCTURAL ENGINE
 
-    load_per_column = base["load"] / max(1, (width / span) * (depth / span) * floors)
+=========================================================
 
-    return {
-        "column_load": load_per_column,
-        "stress_level": min(1.0, load_per_column / (base["capacity"] / 10))
-    }
+def structural_engine():
 
+area = width * depth
 
-# =========================================================
-# SIMULATION STEP
-# =========================================================
-def simulation_step():
+strength_map = {
+    "Concrete": 65,
+    "Steel": 120,
+    "Hybrid": 95
+}
 
-    analysis = structural_model()
+strength = strength_map[material]
 
-    st.session_state.stability = evolve(
-        st.session_state.stability,
-        analysis["stability"],
-        mutation
-    )
+gravity_load = area * floors * 4.8
+wind_load = gravity_load * wind * (floors / 10)
 
-    st.session_state.history.append(st.session_state.stability)
+total_load = gravity_load + wind_load
+capacity = area * strength
 
-    if len(st.session_state.history) > 100:
-        st.session_state.history.pop(0)
+utilization = total_load / max(capacity, 1e-6)
+stability = max(0.0, 1.0 - utilization)
 
-    return analysis
+return {
+    "load": total_load,
+    "capacity": capacity,
+    "utilization": utilization,
+    "stability": stability
+}
 
+=========================================================
 
-analysis = structural_model()
-structure = generate_structure()
-loads = load_distribution()
+GRID + STRUCTURE LAYOUT
 
+=========================================================
 
-# =========================================================
-# CONTROL
-# =========================================================
-cA, cB = st.columns(2)
+def structural_grid():
 
-with cA:
-    if st.button("🚀 Start Engineering Simulation"):
-        st.session_state.running = True
+grid_x = max(2, int(width / span))
+grid_y = max(2, int(depth / span))
 
-with cB:
-    if st.button("🛑 Stop"):
-        st.session_state.running = False
+return {
+    "grid": (grid_x, grid_y),
+    "columns": grid_x * grid_y,
+    "beams": (grid_x - 1) * grid_y + (grid_y - 1) * grid_x,
+    "nodes": [(i, j) for i in range(grid_x) for j in range(grid_y)]
+}
 
+=========================================================
 
-# =========================================================
-# DASHBOARD
-# =========================================================
-a1, a2, a3 = st.columns(3)
+LOAD FLOW + EUROCODE CHECK (SIMPLIFIED)
 
-# -------------------------
-# STRUCTURE
-# -------------------------
-with a1:
-    st.subheader("🏗️ Structural Engine")
+=========================================================
 
-    st.metric("Load", f"{analysis['load']:.1f}")
-    st.metric("Capacity", f"{analysis['capacity']:.1f}")
-    st.metric("Utilization", f"{analysis['utilization']:.3f}")
-    st.metric("Stability", f"{analysis['stability']:.3f}")
+def load_system(struct):
 
-    if analysis["stability"] > 0.75:
-        st.success("Structurally safe")
-    elif analysis["stability"] > 0.45:
-        st.warning("Stress increasing")
-    else:
-        st.error("Failure risk zone")
+base = structural_engine()
 
+column_count = struct["columns"]
 
-# -------------------------
-# GRID SYSTEM
-# -------------------------
-with a2:
-    st.subheader("🧱 Column–Beam Grid")
+load_per_column = base["load"] / max(column_count, 1)
 
-    f0 = structure[0]
+stress = load_per_column / max(base["capacity"] / 10, 1e-6)
 
-    st.write("Columns:", len(f0["columns"]))
-    st.write("Beams:", len(f0["beams"]))
+euro_ok = stress < 1.0
 
-    st.write("Sample Columns:")
-    st.text(f0["columns"][:10])
+return {
+    "column_load": load_per_column,
+    "stress": stress,
+    "eurocode_pass": euro_ok
+}
 
+=========================================================
 
-# -------------------------
-# LOAD PATH
-# -------------------------
-with a3:
-    st.subheader("📊 Load Distribution")
+EVOLUTION SYSTEM
 
-    st.metric("Column Load", f"{loads['column_load']:.2f}")
-    st.metric("Stress Level", f"{loads['stress_level']:.2f}")
+=========================================================
 
-    st.progress(min(1.0, loads["stress_level"]))
+def evolve(current, target): noise = np.random.normal(0, mutation * 0.05) return float(np.clip(0.8 * current + 0.2 * target + noise, 0, 1))
 
+=========================================================
 
-# =========================================================
-# LOOP
-# =========================================================
-if st.session_state.running:
+SIMULATION STEP
 
-    simulation_step()
-    st.session_state.tick += 1
+=========================================================
 
-    st.toast(f"Engine Cycle {st.session_state.tick}")
+def step():
 
-    time.sleep(0.2)
-    st.rerun()
+analysis = structural_engine()
 
+st.session_state.stability = evolve(
+    st.session_state.stability,
+    analysis["stability"]
+)
 
-# =========================================================
-# HISTORY
-# =========================================================
+st.session_state.history.append(st.session_state.stability)
+
+if len(st.session_state.history) > 120:
+    st.session_state.history.pop(0)
+
+return analysis
+
+=========================================================
+
+PIPELINE EXECUTION
+
+=========================================================
+
+architecture = architecture_engine() structure = structural_grid() analysis = structural_engine() loads = load_system(structure)
+
+=========================================================
+
+CONTROLS
+
+=========================================================
+
+col1, col2 = st.columns(2)
+
+with col1: if st.button("🚀 Start Full BIM Simulation"): st.session_state.running = True
+
+with col2: if st.button("⛔ Stop"): st.session_state.running = False
+
+=========================================================
+
+DASHBOARD
+
+=========================================================
+
+A, B, C = st.columns(3)
+
+-------------------------
+
+ARCHITECTURE
+
+-------------------------
+
+with A: st.subheader("🏛️ Architecture")
+
+st.write("Rooms:", architecture.get("rooms", "N/A"))
+st.write("Core Systems:", architecture.get("cores", "N/A"))
+
+-------------------------
+
+STRUCTURE
+
+-------------------------
+
+with B: st.subheader("🏗️ Structure")
+
+st.metric("Load", f"{analysis['load']:.1f}")
+st.metric("Capacity", f"{analysis['capacity']:.1f}")
+st.metric("Utilization", f"{analysis['utilization']:.3f}")
+st.metric("Stability", f"{analysis['stability']:.3f}")
+
+if analysis["stability"] > 0.75:
+    st.success("Stable structure")
+elif analysis["stability"] > 0.4:
+    st.warning("Stress detected")
+else:
+    st.error("Failure risk")
+
+-------------------------
+
+LOAD + EUROCODE
+
+-------------------------
+
+with C: st.subheader("📐 Eurocode Check")
+
+st.metric("Column Load", f"{loads['column_load']:.2f}")
+st.metric("Stress", f"{loads['stress']:.2f}")
+
+if loads["eurocode_pass"]:
+    st.success("Eurocode PASS")
+else:
+    st.error("Eurocode FAIL")
+
+st.progress(min(1.0, loads["stress"]))
+
+=========================================================
+
+LOOP ENGINE
+
+=========================================================
+
+if st.session_state.running: step() st.session_state.tick += 1 st.toast(f"Cycle {st.session_state.tick}") time.sleep(0.2) st.rerun()
+
+=========================================================
+
+EVOLUTION HISTORY
+
+=========================================================
+
+st.divider() st.subheader("📈 Structural Evolution")
+
+if len(st.session_state.history) > 2: fig, ax = plt.subplots() ax.plot(st.session_state.history) ax.set_title("Stability Evolution") st.pyplot(fig)
+
+=========================================================
+
+SINGLE STEP
+
+=========================================================
+
 st.divider()
-st.subheader("📈 Stability Evolution")
 
-if len(st.session_state.history) > 1:
-    fig, ax = plt.subplots()
-    ax.plot(st.session_state.history)
-    ax.set_title("Structural Stability Over Time")
-    st.pyplot(fig)
+if st.button("Run Single Simulation Step"): step() st.success(f"Stability: {st.session_state.stability:.3f}")
 
+=========================================================
 
-# =========================================================
-# MANUAL STEP
-# =========================================================
-st.divider()
+REPO ARCHITECTURE VIEW
 
-if st.button("Run Single Engineering Step"):
-    simulation_step()
-    st.success(f"Stability: {st.session_state.stability:.3f}")
+=========================================================
+
+st.divider() st.subheader("📦 System Architecture")
+
+st.code(""" random/ │ ├── streamlit_app.py ├── architecture/ ├── structure/ ├── mep/ ├── gis/ ├── rendering/ ├── export/ ├── cost/ ├── standards/ └── ai/
+
+Pipeline: Architecture → Structure → Load → Eurocode → Evolution → Export """)
