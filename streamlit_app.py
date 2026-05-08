@@ -78,6 +78,7 @@ if mode == "AI Brain":
             st.session_state.intent_text,
             st.session_state.site_area
         )
+
         st.success("Pipeline executed successfully")
 
     except Exception as e:
