@@ -1,6 +1,6 @@
 # =========================================================
-# 🏙️ RANDOM vNEXT — EVOLVING CITY + COLLAPSE PHYSICS ENGINE
-# Generational Growth + Failure Cascades + Load Dynamics
+# 🏙️ RANDOM vNEXT — LEARNING & OPTIMIZING CITY ENGINE
+# Memory + Adaptive Planning + Structural Evolution
 # =========================================================
 
 import streamlit as st
@@ -10,24 +10,60 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 # =========================================================
-# 🧠 CITY PLANNER (EVOLUTIONARY)
+# 🧠 CITY MEMORY (LEARNING LAYER)
 # =========================================================
-class CityPlanner:
-    def generate(self, previous_city=None):
+class CityMemory:
+    def __init__(self):
+        self.failure_heatmap = {}   # (x,y,z) → frequency
+        self.stability_history = []
+
+    def record_failures(self, failed_nodes):
+        for node in failed_nodes:
+            self.failure_heatmap[node] = self.failure_heatmap.get(node, 0) + 1
+
+    def risk_score(self, x, y):
+        score = 0
+        for (fx, fy, fz), freq in self.failure_heatmap.items():
+            dist = abs(x - fx) + abs(y - fy)
+            if dist < 5:
+                score += freq
+        return score
+
+    def stability_trend(self):
+        if not self.stability_history:
+            return 1.0
+        return sum(self.stability_history[-5:]) / min(5, len(self.stability_history))
+
+# =========================================================
+# 🧠 ADAPTIVE CITY PLANNER
+# =========================================================
+class AdaptivePlanner:
+    def __init__(self, memory):
+        self.memory = memory
+
+    def generate(self):
         buildings = []
 
-        base_count = 4 if not previous_city else len(previous_city)
+        base_count = 5
 
-        for i in range(base_count + random.randint(-1, 2)):
+        for i in range(base_count):
+            x, y = random.randint(0, 25), random.randint(0, 25)
+
+            risk = self.memory.risk_score(x, y)
+
+            # 🧠 learning influence: reduce building density in risky zones
+            if risk > 3:
+                floors = random.randint(2, 5)
+                grid = random.choice([6, 8])  # safer smaller structures
+            else:
+                floors = random.randint(4, 10)
+                grid = random.choice([10, 12, 14])
+
             buildings.append({
                 "id": i,
-                "type": random.choice(["residential", "commercial", "industrial"]),
-                "floors": random.randint(3, 10),
-                "grid": random.choice([8, 10, 12]),
-                "offset": (
-                    random.randint(0, 25),
-                    random.randint(0, 25)
-                )
+                "floors": floors,
+                "grid": grid,
+                "offset": (x, y)
             })
 
         return buildings
@@ -45,7 +81,7 @@ class StructuralEngine:
             for z in range(b["floors"]):
                 for x in range(0, b["grid"], 2):
                     for y in range(0, b["grid"], 2):
-                        nodes.append((x + ox, y + oy, z, b["id"]))
+                        nodes.append((x + ox, y + oy, z))
 
         return nodes
 
@@ -54,127 +90,95 @@ class StructuralEngine:
 # =========================================================
 class PhysicsEngine:
     def compute_loads(self, nodes):
-        load = {n: 0.0 for n in nodes}
+        loads = {n: 0 for n in nodes}
 
-        # top-down initialization
+        max_z = max(n[2] for n in nodes)
+
         for n in nodes:
-            if n[2] == max(z for _, _, z, _ in nodes):
-                load[n] += 1.0
+            if n[2] == max_z:
+                loads[n] += 1.0
 
-        # propagate
         for _ in range(3):
-            for (x, y, z, bid), l in list(load.items()):
-
+            for (x, y, z), l in list(loads.items()):
                 if l <= 0:
                     continue
 
-                below = (x, y, z - 1, bid)
-                if below in load:
-                    load[below] += l * 0.7
+                below = (x, y, z - 1)
+                if below in loads:
+                    loads[below] += l * 0.7
 
-                # lateral diffusion (city stress coupling)
-                for other in load:
-                    ox, oy, oz, obid = other
-                    if obid != bid and abs(x - ox) + abs(y - oy) < 3:
-                        load[other] += l * 0.03
+        return loads
 
-        return load
-
-    # =====================================================
-    # 🌊 COLLAPSE PROPAGATION
-    # =====================================================
-    def collapse(self, load_map, threshold=2.2):
+    def collapse(self, loads, threshold=2.0):
         failed = set()
 
-        # initial failures
-        for node, l in load_map.items():
+        for node, l in loads.items():
             if l > threshold:
                 failed.add(node)
-
-        # cascade propagation
-        for _ in range(2):
-            new_failures = set()
-
-            for node in failed:
-                x, y, z, bid = node
-
-                for other in load_map:
-                    ox, oy, oz, obid = other
-
-                    if other not in failed:
-                        dist = abs(x - ox) + abs(y - oy) + abs(z - oz)
-
-                        if dist <= 2:
-                            load_map[other] += 0.4
-                            if load_map[other] > threshold:
-                                new_failures.add(other)
-
-            failed |= new_failures
 
         return failed
 
 # =========================================================
-# 🧪 CITY SIMULATION
+# 🧪 SIMULATION ENGINE
 # =========================================================
-class CitySim:
-    def evaluate(self, load_map, failed):
-        loads = list(load_map.values())
-
-        stability = max(0, 1 - (len(failed) / max(1, len(load_map))))
-        congestion = min(1, sum(loads) / len(loads))
+class SimEngine:
+    def evaluate(self, loads, failed):
+        stability = max(0, 1 - len(failed) / max(1, len(loads)))
 
         return {
-            "stability": round(stability, 3),
-            "congestion": round(congestion, 3),
+            "stability": stability,
             "failures": len(failed)
         }
 
 # =========================================================
-# 🧬 CITY EVOLUTION ENGINE
+# 🧠 CITY ENGINE (LEARNING LOOP)
 # =========================================================
 class CityEngine:
     def __init__(self):
-        self.planner = CityPlanner()
+        self.memory = CityMemory()
+        self.planner = AdaptivePlanner(self.memory)
         self.structure = StructuralEngine()
         self.physics = PhysicsEngine()
-        self.sim = CitySim()
-
-        self.city_state = None
+        self.sim = SimEngine()
 
     def step(self):
-        buildings = self.planner.generate(self.city_state)
+        buildings = self.planner.generate()
 
         nodes = self.structure.build(buildings)
         loads = self.physics.compute_loads(nodes)
         failed = self.physics.collapse(loads)
 
+        self.memory.record_failures(failed)
+
         sim = self.sim.evaluate(loads, failed)
+        self.memory.stability_history.append(sim["stability"])
 
-        self.city_state = buildings
-
-        return buildings, nodes, loads, failed, sim
+        return buildings, nodes, loads, failed, sim, self.memory
 
 # =========================================================
 # 🌐 STREAMLIT UI
 # =========================================================
-st.set_page_config(page_title="Random Evolving City", layout="wide")
+st.set_page_config(page_title="Learning City Engine", layout="wide")
 
-st.title("🏙️ RANDOM vNEXT — Evolving City + Collapse Physics")
-st.caption("Generational urban growth with structural failure cascades")
+st.title("🏙️ RANDOM vNEXT — Learning & Optimizing City")
+st.caption("A city that remembers its failures and adapts")
 
 engine = CityEngine()
 
-if st.button("🚀 Next City Generation"):
+if st.button("🚀 Next Learning Generation"):
 
-    buildings, nodes, loads, failed, sim = engine.step()
+    buildings, nodes, loads, failed, sim, memory = engine.step()
 
     st.subheader("🏗️ City State")
     st.write(buildings)
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Stability", sim["stability"])
-    c2.metric("Congestion", sim["congestion"])
-    c3.metric("Failures", sim["failures"])
+    c1, c2 = st.columns(2)
+    c1.metric("Stability", round(sim["stability"], 3))
+    c2.metric("Failures", sim["failures"])
+
+    st.subheader("🧠 Learning Status")
+    st.write("Stability Trend:", round(memory.stability_trend(), 3))
+    st.write("Known Weak Zones:", len(memory.failure_heatmap))
 
     # =====================================================
     # 🌆 3D VISUALIZATION
@@ -185,26 +189,26 @@ if st.button("🚀 Next City Generation"):
     xs, ys, zs, colors = [], [], [], []
 
     for node in nodes:
-        x, y, z, _ = node
+        x, y, z = node
 
         xs.append(x)
         ys.append(y)
         zs.append(z)
 
         if node in failed:
-            colors.append(5)  # collapse spike
+            colors.append(5)
         else:
             colors.append(loads[node])
 
-    sc = ax.scatter(xs, ys, zs, c=colors, cmap='plasma', s=12)
+    sc = ax.scatter(xs, ys, zs, c=colors, cmap='viridis', s=10)
 
-    ax.set_title("🏙️ City Load + Collapse Field")
+    ax.set_title("🏙️ Learning City Structural Field")
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.set_zlabel("Height")
 
-    plt.colorbar(sc, ax=ax, shrink=0.5, label="Load / Failure Intensity")
+    plt.colorbar(sc, ax=ax, shrink=0.5)
 
     st.pyplot(fig)
 
-    st.warning(f"⚠️ Structural failures detected: {len(failed)}")
+    st.success("City has learned from its structural past 🧠🏙️")
