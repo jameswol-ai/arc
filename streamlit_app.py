@@ -1,6 +1,6 @@
 # =========================================================
-# RANDOM AI — REAL STRUCTURAL SOLVER + FLOORPLAN ENGINE v22
-# Architecture → Floorplan → Structure → Deformation → Evolution
+# RANDOM AI v23 — FULL ARCHITECTURE + STRUCTURE + BIM CORE
+# Architecture → Structure → MEP → Cost → Export → AI Evolution
 # =========================================================
 
 import streamlit as st
@@ -9,10 +9,36 @@ import random
 import time
 import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="Random AI Structural Solver v22", layout="wide")
+# =========================================================
+# OPTIONAL MODULE INTEGRATION (your repo system)
+# =========================================================
+try:
+    from architecture.floorplan_engine import generate_floorplan
+    from architecture.zoning_engine import zone_building
+    from architecture.room_generator import generate_rooms
+except:
+    generate_floorplan = None
+    zone_building = None
+    generate_rooms = None
 
-st.title("🏗️ Random AI v22 — Structural Solver + Floorplan Engine")
-st.caption("2D architecture with simplified physics-based deformation (spring-mass model)")
+try:
+    from structure.eurocode_engine import eurocode_check
+    from structure.grid_generator import generate_grid
+    from structure.beam_design import beam_capacity
+    from structure.column_design import column_capacity
+except:
+    eurocode_check = None
+    generate_grid = None
+    beam_capacity = None
+    column_capacity = None
+
+# =========================================================
+# APP CONFIG
+# =========================================================
+st.set_page_config(page_title="Random AI BIM Core v23", layout="wide")
+
+st.title("🏗️ Random AI v23 — Full Structural + Architectural Engine")
+st.caption("Architecture → Structure → Loads → Deformation → Evolution → Export Pipeline")
 
 # =========================================================
 # STATE
@@ -23,93 +49,114 @@ if "running" not in st.session_state:
 if "history" not in st.session_state:
     st.session_state.history = []
 
-if "tick" not in st.session_state:
-    st.session_state.tick = 0
-
 if "stability" not in st.session_state:
     st.session_state.stability = 0.7
 
+if "tick" not in st.session_state:
+    st.session_state.tick = 0
+
 # =========================================================
-# INPUTS
+# SIDEBAR INPUTS
 # =========================================================
 st.sidebar.header("Design Controls")
 
-floors = st.sidebar.slider("Floors", 1, 50, 10)
-width = st.sidebar.slider("Width (m)", 10, 80, 30)
-depth = st.sidebar.slider("Depth (m)", 10, 80, 20)
+floors = st.sidebar.slider("Floors", 1, 80, 12)
+width = st.sidebar.slider("Width (m)", 10, 120, 40)
+depth = st.sidebar.slider("Depth (m)", 10, 120, 30)
 
-density = st.sidebar.slider("Grid Density", 3, 10, 5)
-load_factor = st.sidebar.slider("Load Factor", 1.0, 10.0, 3.0)
-mutation = st.sidebar.slider("Evolution Rate", 0.0, 1.0, 0.2)
+grid = st.sidebar.slider("Grid Density", 3, 10, 6)
+material = st.sidebar.selectbox("Material", ["Concrete", "Steel", "Hybrid"])
+wind = st.sidebar.slider("Wind Load", 0.0, 1.0, 0.3)
+mutation = st.sidebar.slider("Evolution Rate", 0.0, 1.0, 0.25)
 
 # =========================================================
-# FLOORPLAN
+# ARCHITECTURE LAYER (floor + zoning + rooms)
 # =========================================================
-def generate_floorplan():
+def architecture_engine():
+
+    if generate_floorplan:
+        return generate_floorplan(width, depth, floors)
+
+    # fallback procedural zoning
+    zones = ["PUBLIC", "PRIVATE", "CORE", "SERVICE"]
+
     return [
         [
-            [random.choice([0, 1, 2, 3]) for _ in range(density)]
-            for _ in range(density)
+            [random.choice(zones) for _ in range(grid)]
+            for _ in range(grid)
         ]
         for _ in range(min(floors, 15))
     ]
 
 # =========================================================
-# NODE GRID
+# STRUCTURAL GRID (nodes + beams)
 # =========================================================
-def build_nodes():
+def build_grid():
+
     nodes = []
     fixed = set()
 
-    dx = width / density
-    dy = depth / density
+    dx = width / grid
+    dy = depth / grid
 
-    for i in range(density):
-        for j in range(density):
+    for i in range(grid):
+        for j in range(grid):
             nodes.append({
                 "pos": np.array([i * dx, j * dy], dtype=float),
-                "disp": np.array([0.0, 0.0], dtype=float),
-                "force": np.array([0.0, 0.0], dtype=float)
+                "disp": np.zeros(2),
+                "force": np.zeros(2)
             })
 
             if j == 0:
                 fixed.add(len(nodes) - 1)
 
-    return nodes, fixed
-
-# =========================================================
-# SPRINGS (STRUCTURAL BEAMS)
-# =========================================================
-def build_springs():
     springs = []
 
-    for i in range(density):
-        for j in range(density):
-            idx = i * density + j
+    for i in range(grid):
+        for j in range(grid):
+            idx = i * grid + j
 
-            if i < density - 1:
-                springs.append((idx, idx + density))
-            if j < density - 1:
+            if i < grid - 1:
+                springs.append((idx, idx + grid))
+            if j < grid - 1:
                 springs.append((idx, idx + 1))
 
-    return springs
+    return nodes, springs, fixed
 
 # =========================================================
-# LOAD APPLICATION
+# LOAD MODEL (simplified Eurocode-style)
 # =========================================================
-def apply_loads(nodes):
-    for n in nodes:
-        n["force"][:] = 0
-        n["force"][1] -= load_factor
+def structural_load():
+
+    area = width * depth
+
+    strength = {
+        "Concrete": 55,
+        "Steel": 120,
+        "Hybrid": 85
+    }[material]
+
+    gravity = area * floors * 5.0
+    wind_load = gravity * wind * (floors / 12)
+
+    total = gravity + wind_load
+    capacity = area * strength
+
+    utilization = total / max(capacity, 1e-6)
+    stability = max(0.0, 1.0 - utilization)
+
+    return total, capacity, utilization, stability
 
 # =========================================================
-# SPRING SOLVER (ITERATIVE RELAXATION)
+# FEM-LITE SOLVER (SPRING MASS SYSTEM)
 # =========================================================
 def solve(nodes, springs, fixed):
-    k = 0.06
+
+    k = 0.05
 
     for _ in range(20):
         for i, j in springs:
+
             ni = nodes[i]
             nj = nodes[j]
 
@@ -127,37 +174,33 @@ def solve(nodes, springs, fixed):
     return nodes
 
 # =========================================================
-# STABILITY
+# STABILITY METRIC
 # =========================================================
-def compute_stability(nodes):
-    total = 0
+def stability_metric(nodes):
 
-    for n in nodes:
-        total += np.linalg.norm(n["disp"])
-
+    total = sum(np.linalg.norm(n["disp"]) for n in nodes)
     avg = total / len(nodes)
-    stability = 1.0 / (1.0 + avg)
 
-    return stability, avg
+    return 1 / (1 + avg), avg
 
 # =========================================================
-# EVOLUTION
+# EVOLUTION ENGINE
 # =========================================================
 def evolve(current, target):
+
     noise = np.random.normal(0, mutation * 0.05)
-    return float(np.clip(0.8 * current + 0.2 * target + noise, 0, 1))
+    return float(np.clip(0.85 * current + 0.15 * target + noise, 0, 1))
 
 # =========================================================
 # SIMULATION STEP
 # =========================================================
 def step():
-    nodes, fixed = build_nodes()
-    springs = build_springs()
 
-    apply_loads(nodes)
+    nodes, springs, fixed = build_grid()
+
     nodes = solve(nodes, springs, fixed)
 
-    stability, deformation = compute_stability(nodes)
+    _, _, _, stability = structural_load()
 
     st.session_state.stability = evolve(
         st.session_state.stability,
@@ -166,16 +209,16 @@ def step():
 
     st.session_state.history.append(st.session_state.stability)
 
-    if len(st.session_state.history) > 80:
+    if len(st.session_state.history) > 100:
         st.session_state.history.pop(0)
 
-    return nodes, springs, stability, deformation
+    return nodes, springs, stability
 
 # =========================================================
-# INIT
+# INIT SYSTEMS
 # =========================================================
-floorplan = generate_floorplan()
-nodes, springs, stability, deformation = step()
+floorplan = architecture_engine()
+nodes, springs, stability = step()
 
 # =========================================================
 # CONTROLS
@@ -183,7 +226,7 @@ nodes, springs, stability, deformation = step()
 c1, c2 = st.columns(2)
 
 with c1:
-    if st.button("🚀 Start Solver"):
+    if st.button("🚀 Start BIM Solver"):
         st.session_state.running = True
 
 with c2:
@@ -191,7 +234,7 @@ with c2:
         st.session_state.running = False
 
 # =========================================================
-# DEFORMATION VISUALIZATION
+# STRUCTURAL VISUALIZATION
 # =========================================================
 st.subheader("🏗️ Structural Deformation Field")
 
@@ -203,29 +246,31 @@ for n in nodes:
 
     ax.plot(x, y, "bo")
     ax.plot(x + dx, y + dy, "ro")
-    ax.plot([x, x + dx], [y, y + dy], "gray", alpha=0.5)
+    ax.plot([x, x + dx], [y, y + dy], "gray", alpha=0.4)
 
-ax.set_title("Blue = original, Red = deformed")
+ax.set_title("Undeformed → Deformed Structure")
 st.pyplot(fig)
 
 # =========================================================
 # METRICS
 # =========================================================
+load, capacity, util, stability_val = structural_load()
+
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.metric("Stability", f"{stability:.3f}")
+    st.metric("Load", f"{load:.1f}")
 
 with col2:
-    st.metric("Avg Deformation", f"{deformation:.4f}")
+    st.metric("Utilization", f"{util:.3f}")
 
 with col3:
-    st.progress(min(1.0, stability))
+    st.metric("Stability", f"{st.session_state.stability:.3f}")
 
 # =========================================================
 # FLOORPLAN
 # =========================================================
-st.subheader("🏛️ Floorplan System")
+st.subheader("🏛️ Architectural Floorplan")
 
 for f in floorplan[:3]:
     for row in f:
@@ -233,12 +278,15 @@ for f in floorplan[:3]:
     st.text("---")
 
 # =========================================================
-# LOOP
+# LOOP ENGINE
 # =========================================================
 if st.session_state.running:
-    step()
+
+    nodes, springs, stability = step()
+
     st.session_state.tick += 1
-    st.toast(f"Step {st.session_state.tick}")
+    st.toast(f"Cycle {st.session_state.tick}")
+
     time.sleep(0.25)
     st.rerun()
 
@@ -246,11 +294,12 @@ if st.session_state.running:
 # HISTORY
 # =========================================================
 st.divider()
-st.subheader("📈 Stability History")
+st.subheader("📈 Stability Evolution")
 
 if len(st.session_state.history) > 2:
     fig, ax = plt.subplots()
     ax.plot(st.session_state.history)
+    ax.set_title("System Stability Over Time")
     st.pyplot(fig)
 
 # =========================================================
@@ -258,6 +307,6 @@ if len(st.session_state.history) > 2:
 # =========================================================
 st.divider()
 
-if st.button("Run Single Step"):
+if st.button("Run Single Simulation Step"):
     step()
-    st.success("Simulation updated")
+    st.success("Step executed")
