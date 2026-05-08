@@ -9,7 +9,13 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # IMPORTANT: keep imports at top
-#from core.pipeline import run_pipeline
+from core.safe_import import get_pipeline
+run_pipeline = get_pipeline()
+
+st.session_state.result = run_pipeline(
+    st.session_state.intent_text,
+    st.session_state.site_area
+)
 #from export.bim_exporter import export_bim
 #from structure.eurocode_engine import structural_assessment
 
