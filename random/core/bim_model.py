@@ -29,3 +29,13 @@ class BIMModel:
 
     def get_element(self, element_id: str):
         return self.elements.get(element_id)
+
+    def update_element(self, element_id, properties=None, geometry=None):
+    if element_id not in self.elements:
+        return
+
+    if properties:
+        self.elements[element_id].properties.update(properties)
+
+    if geometry:
+        self.elements[element_id].geometry.update(geometry)
