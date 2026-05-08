@@ -38,6 +38,29 @@ mode = st.sidebar.selectbox(
 # =========================================================
 # AI BRAIN MODULE
 # =========================================================
+from core.pipeline import run_pipeline
+
+if mode == "AI Brain":
+    st.header("🧠 Design Brain + Full System Pipeline")
+
+    intent_text = st.text_area("Describe building")
+
+    site_area = st.number_input("Site Area (m²)", value=1000.0)
+
+    if st.button("RUN FULL BUILDING GENERATION"):
+        result = run_pipeline(intent_text, site_area)
+
+        st.success("Pipeline executed")
+
+        st.subheader("AI INTENT")
+        st.json(result["intent"])
+
+        st.subheader("ARCHITECTURE")
+        st.json(result["architecture"])
+
+        st.subheader("STRUCTURE")
+        st.json(result["structure"])
+
 if mode == "AI Brain":
     st.header("🧠 Design Brain")
 
