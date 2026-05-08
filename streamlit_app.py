@@ -7,6 +7,10 @@ import numpy as np
 import time
 import random
 import matplotlib.pyplot as plt
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # =========================================================
 # 🧠 RANDOM AI — CONTROL CENTER DASHBOARD
