@@ -9,7 +9,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # IMPORTANT: keep imports at top
-@from core.safe_import import get_pipeline
+#from core.safe_import import get_pipeline
 run_pipeline = get_pipeline()
 
 st.session_state.result = run_pipeline(
@@ -18,7 +18,7 @@ st.session_state.result = run_pipeline(
 )
 #from export.bim_exporter import export_bim
 #from structure.eurocode_engine import structural_assessment
-from core.registry import registry
+#from core.registry import registry
 
 if st.sidebar.checkbox("Show Registered Modules"):
     st.json(registry.list_modules())
