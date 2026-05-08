@@ -6,41 +6,36 @@ import matplotlib.pyplot as plt
 
 # =========================================================
 # 🧠 RANDOM AI — CONTROL CENTER DASHBOARD
-# Architecture + Structure + MEP + Cost + Export
 # =========================================================
-
-if mode == "Export Center":
-    st.header("🏗️ BIM Digital Twin Viewer")
-
-    if st.button("Generate BIM Model"):
-        result = run_pipeline(intent_text, site_area)
-
-        bim = result["bim"]
-
-        st.write("### BIM ELEMENT COUNT")
-        st.metric("Elements", len(bim.elements))
-
-        st.write("### SAMPLE ELEMENT")
-        sample_id = list(bim.elements.keys())[0]
-        st.json(bim.get_element(sample_id).__dict__)
-
-        st.download_button(
-            "Download BIM JSON",
-            data=export_bim(bim),
-            file_name="bim_model.json"
-        )
 
 st.set_page_config(page_title="Random AI Control Center", layout="wide")
 
-# =========================
-# HEADER
-# =========================
-st.title("🏗️ RANDOM AI — CONTROL CENTER")
-st.caption("A generative architecture + structural intelligence system")
+from core.pipeline import run_pipeline
+from export.bim_exporter import export_bim
+from structure.eurocode_engine import structural_assessment
 
-# =========================
+# =========================================================
+# GLOBAL STATE (SAFE STORAGE)
+# =========================================================
+if "result" not in st.session_state:
+    st.session_state.result = None
+
+if "intent_text" not in st.session_state:
+    st.session_state.intent_text = ""
+
+if "site_area" not in st.session_state:
+    st.session_state.site_area = 1000.0
+
+
+# =========================================================
+# HEADER
+# =========================================================
+st.title("🏗️ RANDOM AI — CONTROL CENTER")
+st.caption("Generative Architecture + Structural + BIM + Parametric System")
+
+# =========================================================
 # SIDEBAR NAVIGATION
-# =========================
+# =========================================================
 mode = st.sidebar.selectbox(
     "SYSTEM MODULE",
     [
@@ -52,257 +47,222 @@ mode = st.sidebar.selectbox(
         "Cost Engine",
         "Rendering",
         "Export Center",
+        "Parametric BIM",
         "Full Pipeline Simulation"
     ]
 )
 
 # =========================================================
-# AI BRAIN MODULE
+# AI BRAIN
 # =========================================================
-st.subheader("🧬 Evolution Output")
-st.json(result["current_design"]["score"])
-
-st.subheader("🧠 Next Generation Seed")
-st.json(result["next_generation_seed"])
-
-from core.pipeline import run_pipeline
-
 if mode == "AI Brain":
-    st.header("🧠 Design Brain + Full System Pipeline")
+    st.header("🧠 Design Brain + Full Pipeline")
 
-    intent_text = st.text_area("Describe building")
+    st.session_state.intent_text = st.text_area(
+        "Describe building",
+        value=st.session_state.intent_text
+    )
 
-    site_area = st.number_input("Site Area (m²)", value=1000.0)
+    st.session_state.site_area = st.number_input(
+        "Site Area (m²)",
+        value=st.session_state.site_area
+    )
 
-    if st.button("RUN FULL BUILDING GENERATION"):
-        result = run_pipeline(intent_text, site_area)
+    if st.button("RUN FULL GENERATION"):
+        st.session_state.result = run_pipeline(
+            st.session_state.intent_text,
+            st.session_state.site_area
+        )
 
         st.success("Pipeline executed")
 
-        st.subheader("AI INTENT")
-        st.json(result["intent"])
+    if st.session_state.result:
+        result = st.session_state.result
+
+        st.subheader("INTENT")
+        st.json(result["current_design"]["intent"])
 
         st.subheader("ARCHITECTURE")
-        st.json(result["architecture"])
+        st.json(result["current_design"]["architecture"])
 
         st.subheader("STRUCTURE")
-        st.json(result["structure"])
+        st.json(result["current_design"]["structure"])
 
-if mode == "AI Brain":
-    st.header("🧠 Design Brain")
+        st.subheader("SCORE")
+        st.json(result["current_design"]["score"])
 
-    intent = st.text_area("Describe your building intent")
+        st.subheader("NEXT EVOLUTION SEED")
+        st.json(result["next_generation_seed"])
 
-    if st.button("Generate Concept"):
-        st.success("AI is interpreting architectural intent...")
-
-        st.write("### Concept Output")
-        st.json({
-            "building_type": random.choice(["Residential", "Commercial", "Industrial"]),
-            "style": random.choice(["Modern", "Brutalist", "Organic", "Parametric"]),
-            "efficiency_score": round(random.uniform(0.6, 0.95), 2),
-            "structural_complexity": random.choice(["Low", "Medium", "High"])
-        })
 
 # =========================================================
-# ARCHITECTURE MODULE
+# ARCHITECTURE
 # =========================================================
 elif mode == "Architecture Generator":
     st.header("🏛️ Architecture Engine")
 
     floors = st.slider("Number of Floors", 1, 50, 5)
-    building_type = st.selectbox("Type", ["Residential", "Commercial", "Industrial"])
 
     if st.button("Generate Floorplan"):
-        st.success("Generating floor system...")
-
         for i in range(floors):
-            st.write(f"Floor {i+1}: Grid-based layout generated")
+            st.write(f"Floor {i+1}: Generated grid system")
 
-        st.info("Zoning rules applied + circulation paths optimized")
+        st.info("Zoning + circulation optimized (simulated)")
+
 
 # =========================================================
 # STRUCTURE ENGINE
 # =========================================================
-from structure.eurocode_engine import structural_assessment
-
-if mode == "Structure Engine":
+elif mode == "Structure Engine":
     st.header("🏗️ Eurocode Structural Analysis")
 
     span = st.slider("Beam Span (m)", 2.0, 12.0, 6.0)
-    floors = st.slider("Floors", 1, 20, 5)
     area = st.number_input("Floor Area (m²)", value=500.0)
     height = st.slider("Column Height (m)", 2.5, 6.0, 3.2)
 
-    if st.button("Run Eurocode Check"):
-        result = structural_assessment(span, area, area * 0.6, height)
+    if st.button("Run Structural Check"):
+        load = area * 0.6
 
-        st.subheader("Results")
+        result = structural_assessment(span, load, load * 0.6, height)
 
-        st.write("ULS Load:", result["ULS_load_kN"])
+        st.subheader("RESULTS")
+        st.json(result)
 
-        st.write("### Beam Check")
-        st.json(result["beam_check"])
-
-        st.write("### Column Check")
-        st.json(result["column_check"])
-
-        if result["global_safe"]:
-            st.success("Structure passes simplified Eurocode checks")
-        else:
-            st.error("Structural failure risk detected")
-
-elif mode == "Structure Engine":
-    st.header("🏗️ Structural System (Eurocode Logic)")
-
-    load = st.number_input("Applied Load (kN)", value=10.0)
-
-    if st.button("Run Structural Analysis"):
-        stress = load * random.uniform(1.2, 2.5)
-        safety_factor = random.uniform(1.5, 3.0)
-
-        st.write("### Results")
-        st.metric("Stress Level", f"{stress:.2f} kN/m²")
-        st.metric("Safety Factor", f"{safety_factor:.2f}")
-
-        if safety_factor > 2:
-            st.success("Structure is SAFE under Eurocode-like assumptions")
-        else:
-            st.error("WARNING: Structural redesign required")
 
 # =========================================================
-# MEP SYSTEMS
+# MEP
 # =========================================================
 elif mode == "MEP Systems":
-    st.header("⚡ Mechanical, Electrical, Plumbing")
+    st.header("⚡ MEP Simulation")
 
-    st.write("Simulating building services layout...")
+    st.metric("HVAC Efficiency", f"{random.randint(70, 98)}%")
+    st.metric("Water Flow", f"{random.randint(60, 100)} L/s")
+    st.metric("Electrical Load", f"{random.randint(50, 120)} kW")
 
-    hvac_efficiency = random.randint(70, 98)
-    water_flow = random.randint(60, 100)
-    power_load = random.randint(50, 120)
-
-    st.metric("HVAC Efficiency", f"{hvac_efficiency}%")
-    st.metric("Water System Flow", f"{water_flow} L/s")
-    st.metric("Electrical Load", f"{power_load} kW")
 
 # =========================================================
-# GIS MODULE
+# GIS
 # =========================================================
 elif mode == "GIS & Site":
-    st.header("🌍 Site & Terrain Intelligence")
+    st.header("🌍 Terrain Analysis")
 
     slope = random.uniform(0, 35)
-
-    st.write(f"Site slope: {slope:.2f}°")
+    st.write(f"Slope: {slope:.2f}°")
 
     fig, ax = plt.subplots()
     x = np.linspace(0, 10, 100)
     y = np.sin(x) + slope / 10
-
     ax.plot(x, y)
-    ax.set_title("Terrain Profile")
+
     st.pyplot(fig)
+
 
 # =========================================================
 # COST ENGINE
 # =========================================================
 elif mode == "Cost Engine":
-    st.header("💰 Construction Cost Simulation")
+    st.header("💰 Cost Estimation")
 
-    area = st.number_input("Floor Area (m²)", value=500)
+    area = st.number_input("Area (m²)", value=500.0)
 
-    cost_per_m2 = random.randint(400, 1200)
-    total_cost = area * cost_per_m2
+    cost = area * random.randint(400, 1200)
 
-    st.metric("Cost per m²", f"${cost_per_m2}")
-    st.metric("Total Estimated Cost", f"${total_cost:,.0f}")
+    st.metric("Total Cost", f"${cost:,.0f}")
+
 
 # =========================================================
 # RENDERING
 # =========================================================
 elif mode == "Rendering":
-    st.header("🧊 Massing & Visualization")
+    st.header("🧊 Massing Model")
 
-    size = st.slider("Building Mass Size", 1, 10, 5)
+    size = st.slider("Size", 1, 10, 5)
 
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(111, projection="3d")
 
-    x = np.random.rand(50) * size
-    y = np.random.rand(50) * size
-    z = np.random.rand(50) * size
+    ax.scatter(
+        np.random.rand(50) * size,
+        np.random.rand(50) * size,
+        np.random.rand(50) * size
+    )
 
-    ax.scatter(x, y, z)
     st.pyplot(fig)
 
+
 # =========================================================
-# EXPORT CENTER
+# EXPORT CENTER (BIM FIXED)
 # =========================================================
 elif mode == "Export Center":
     st.header("📦 BIM Export Hub")
 
-    st.write("Export formats ready:")
+    if st.session_state.result:
+        bim = st.session_state.result["bim"]
 
-    st.checkbox("DXF")
-    st.checkbox("IFC")
-    st.checkbox("PDF Report")
-    st.checkbox("Construction Schedule")
+        st.metric("BIM Elements", len(bim.elements))
 
-    if st.button("Export Project"):
-        st.success("Project exported successfully (simulated)")
+        sample_id = list(bim.elements.keys())[0]
+        st.json(bim.elements[sample_id].__dict__)
+
+        if st.button("Download BIM JSON"):
+            st.download_button(
+                "Download",
+                data=export_bim(bim),
+                file_name="bim_model.json"
+            )
+    else:
+        st.warning("Run AI Brain first to generate BIM model")
+
 
 # =========================================================
-# FULL PIPELINE SIMULATION
+# PARAMETRIC BIM
+# =========================================================
+elif mode == "Parametric BIM":
+    st.header("🧬 Parametric BIM System")
+
+    if not st.session_state.result:
+        st.warning("Run AI Brain first")
+    else:
+        engine = st.session_state.result["parametric_engine"]
+
+        floor_height = st.slider("Floor Height", 2.5, 5.0, 3.2)
+        grid_spacing = st.slider("Grid Spacing", 3.0, 8.0, 4.0)
+        wall_thickness = st.slider("Wall Thickness", 0.1, 0.5, 0.2)
+
+        if st.button("Update BIM"):
+            engine.set_parameter("floor_height", floor_height)
+            engine.set_parameter("grid_spacing", grid_spacing)
+            engine.set_parameter("wall_thickness", wall_thickness)
+
+            updated = engine.get_model()
+
+            st.success("BIM updated")
+
+            st.metric("Elements", len(updated.elements))
+
+
+# =========================================================
+# FULL PIPELINE
 # =========================================================
 elif mode == "Full Pipeline Simulation":
-    st.header("🚀 End-to-End System Run")
+    st.header("🚀 System Simulation")
 
-    if st.button("Run Full Simulation"):
+    if st.button("Run"):
         steps = [
-            "AI Brain interpreting intent",
-            "Generating architecture",
-            "Calculating structural system",
-            "Integrating MEP systems",
-            "Evaluating cost",
-            "Rendering massing model",
-            "Exporting BIM package"
+            "AI Brain",
+            "Architecture",
+            "Structure",
+            "MEP",
+            "Cost",
+            "Rendering",
+            "Export"
         ]
 
-        progress = st.progress(0)
+        p = st.progress(0)
 
-        for i, step in enumerate(steps):
-            st.write(step)
-            time.sleep(0.6)
-            progress.progress((i + 1) / len(steps))
+        for i, s in enumerate(steps):
+            st.write(s)
+            time.sleep(0.4)
+            p.progress((i + 1) / len(steps))
 
-        st.success("Simulation complete — building system generated")
-
-     #Parametric BIM Control#
-elif mode == "Parametric BIM":
-
-    st.header("🧬 Parametric BIM Control System")
-
-    result = run_pipeline(intent_text, site_area)
-    engine = result["parametric_engine"]
-    bim = result["bim"]
-
-    st.subheader("⚙️ Parameters")
-
-    floor_height = st.slider("Floor Height", 2.5, 5.0, 3.2)
-    grid_spacing = st.slider("Grid Spacing", 3.0, 8.0, 4.0)
-    wall_thickness = st.slider("Wall Thickness", 0.1, 0.5, 0.2)
-
-    if st.button("Update Model"):
-        engine.set_parameter("floor_height", floor_height)
-        engine.set_parameter("grid_spacing", grid_spacing)
-        engine.set_parameter("wall_thickness", wall_thickness)
-
-        updated = engine.get_model()
-
-        st.success("BIM model updated parametrically")
-
-        st.metric("Elements", len(updated.elements))
-
-        sample = list(updated.elements.values())[0]
-        st.json(sample.__dict__)
+        st.success("Complete")
