@@ -9,14 +9,19 @@ import matplotlib.pyplot as plt
 
 =========================================================
 
-RANDOM AI — ARCHITECTURE + STRUCTURAL EVOLUTION CORE v18 (UPGRADED)
+#RANDOM AI — ARCHITECTURE + STRUCTURAL EVOLUTION CORE v18 (UPGRADED)
 
-Architecture → Structure → Load → Eurocode → Evolution → Export
+#Architecture → Structure → Load → Eurocode → Evolution → Export
 
-Repo-Driven Generative Engineering System
+#Repo-Driven Generative Engineering System
 
 =========================================================
 
+st.set_page_config(page_title="RANDOM AI — ARCHITECTURE + STRUCTURAL EVOLUTION CORE v18 (UPGRADED)
+", layout="wide")
+
+st.title("🏗️ Random AI v18 — Structural Evolution Intelligence")
+st.caption("A senior-level generative architecture system with evolving structural memory")
 
 
 =========================================================
