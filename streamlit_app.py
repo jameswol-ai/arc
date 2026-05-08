@@ -11,7 +11,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # IMPORTANT: keep imports at top
-from core.pipeline import run_pipeline
+#from core.pipeline import run_pipeline
 from export.bim_exporter import export_bim
 from structure.eurocode_engine import structural_assessment
 
