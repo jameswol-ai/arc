@@ -1,6 +1,8 @@
 import streamlit as st
 import threading
 import logging
+import json
+import os
 from monitoring.metrics import MetricsPlugin
 from plugins.stop_loss import StopLossPlugin
 from plugins.notifier import EmailNotifier, SlackNotifier
@@ -15,6 +17,8 @@ if "last_result" not in st.session_state:
     st.session_state["last_result"] = None
 if "trading_active" not in st.session_state:
     st.session_state["trading_active"] = False
+if "pnl" not in st.session_state:
+    st.session_state["pnl"] = 0.0
 
 # Risk plugins
 stop_loss = StopLossPlugin(threshold=0.05)  # FIXED: closed parenthesis
@@ -31,6 +35,9 @@ def trading_loop():
             trade = {"price": 100, "qty": 1}
             st.session_state["positions"].append(trade)
             logging.info(f"Executed trade: {trade}")
+
+            # Update PnL safely
+            st.session_state["pnl"] += trade["qty"] * (trade["price"] - 100)
 
             # Risk management
             stop_loss.check(trade)
@@ -57,6 +64,7 @@ def dashboard_tab():
 
     st.write("Positions:", st.session_state["positions"])
     st.write("Last Result:", st.session_state["last_result"])
+    st.write("PnL:", st.session_state["pnl"])
 
 def strategy_tab():
     st.title("Strategy Config")
@@ -64,8 +72,11 @@ def strategy_tab():
 
 def logs_tab():
     st.title("Logs")
-    with open("trading_bot.log", "r") as f:
-        st.text(f.read())
+    if os.path.exists("trading_bot.log"):
+        with open("trading_bot.log", "r") as f:
+            st.text(f.read())
+    else:
+        st.warning("No logs found yet.")
 
 def model_testing_tab():
     st.title("Model Testing")
@@ -75,9 +86,30 @@ def debug_tab():
     st.title("Debug")
     st.write("Session State:", st.session_state)
 
+def ci_results_tab():
+    st.title("CI Test Results")
+    results_file = "ci_results.json"
+    if os.path.exists(results_file):
+        with open(results_file, "r") as f:
+            data = json.load(f)
+
+        st.subheader("Summary")
+        st.write(f"Status: {data.get('status', 'Unknown')}")
+        st.write(f"Total Tests: {data.get('total', 0)}")
+        st.write(f"Passed: {data.get('passed', 0)}")
+        st.write(f"Failed: {data.get('failed', 0)}")
+
+        st.subheader("Details")
+        for test in data.get("tests", []):
+            st.write(f"{test['name']}: {test['result']}")
+    else:
+        st.warning("No CI results found. Run pipeline to generate ci_results.json.")
+
 def main():
     st.sidebar.title("Navigation")
-    tab = st.sidebar.radio("Go to", ["Dashboard", "Strategy Config", "Logs", "Model Testing", "Debug"])
+    tab = st.sidebar.radio("Go to", [
+        "Dashboard", "Strategy Config", "Logs", "Model Testing", "Debug", "CI Results"
+    ])
 
     if tab == "Dashboard":
         dashboard_tab()
@@ -89,6 +121,8 @@ def main():
         model_testing_tab()
     elif tab == "Debug":
         debug_tab()
+    elif tab == "CI Results":
+        ci_results_tab()
 
 if __name__ == "__main__":
     main()
