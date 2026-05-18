@@ -1,312 +1,349 @@
 # =========================================================
-# RANDOM AI v23 — FULL ARCHITECTURE + STRUCTURE + BIM CORE
-# Architecture → Structure → MEP → Cost → Export → AI Evolution
+# 🏗️ RANDOM AI — UNIFIED CIVILIZATION SIMULATOR
+# RL Cities + Culture + Diplomacy + War + Consciousness
 # =========================================================
 
 import streamlit as st
 import numpy as np
-import random
 import time
+import random
 import matplotlib.pyplot as plt
+import sys
+import os
 
 # =========================================================
-# OPTIONAL MODULE INTEGRATION (your repo system)
+# PATH SETUP
 # =========================================================
-try:
-    from architecture.floorplan_engine import generate_floorplan
-    from architecture.zoning_engine import zone_building
-    from architecture.room_generator import generate_rooms
-except:
-    generate_floorplan = None
-    zone_building = None
-    generate_rooms = None
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-try:
-    from structure.eurocode_engine import eurocode_check
-    from structure.grid_generator import generate_grid
-    from structure.beam_design import beam_capacity
-    from structure.column_design import column_capacity
-except:
-    eurocode_check = None
-    generate_grid = None
-    beam_capacity = None
-    column_capacity = None
+from core.loader import load_pipelines
+load_pipelines()
+
+from core.registry import run_pipeline
 
 # =========================================================
-# APP CONFIG
+# 🧠 SESSION STATE
 # =========================================================
-st.set_page_config(page_title="Random AI BIM Core v23", layout="wide")
+if "result" not in st.session_state:
+    st.session_state.result = None
 
-st.title("🏗️ Random AI v23 — Full Structural + Architectural Engine")
-st.caption("Architecture → Structure → Loads → Deformation → Evolution → Export Pipeline")
+if "intent_text" not in st.session_state:
+    st.session_state.intent_text = ""
 
-# =========================================================
-# STATE
-# =========================================================
-if "running" not in st.session_state:
-    st.session_state.running = False
+if "site_area" not in st.session_state:
+    st.session_state.site_area = 1000.0
 
-if "history" not in st.session_state:
-    st.session_state.history = []
+if "civil_history" not in st.session_state:
+    st.session_state.civil_history = []
 
-if "stability" not in st.session_state:
-    st.session_state.stability = 0.7
-
-if "tick" not in st.session_state:
-    st.session_state.tick = 0
 
 # =========================================================
-# SIDEBAR INPUTS
+# 🏙️ RL CITY ENGINE (CORE SIMULATION)
 # =========================================================
-st.sidebar.header("Design Controls")
+class CityPolicy:
+    def __init__(self):
+        self.risk_map = {}
+        self.lr = 0.2
 
-floors = st.sidebar.slider("Floors", 1, 80, 12)
-width = st.sidebar.slider("Width (m)", 10, 120, 40)
-depth = st.sidebar.slider("Depth (m)", 10, 120, 30)
+    def choose_location(self):
+        x, y = random.randint(0, 25), random.randint(0, 25)
+        if self.risk_map.get((x, y), 0) > 2:
+            return self.choose_location()
+        return x, y
 
-grid = st.sidebar.slider("Grid Density", 3, 10, 6)
-material = st.sidebar.selectbox("Material", ["Concrete", "Steel", "Hybrid"])
-wind = st.sidebar.slider("Wind Load", 0.0, 1.0, 0.3)
-mutation = st.sidebar.slider("Evolution Rate", 0.0, 1.0, 0.25)
+    def update(self, failed_nodes):
+        for n in failed_nodes:
+            x, y, z = n
+            self.risk_map[(x, y)] = self.risk_map.get((x, y), 0) + self.lr
 
-# =========================================================
-# ARCHITECTURE LAYER (floor + zoning + rooms)
-# =========================================================
-def architecture_engine():
 
-    if generate_floorplan:
-        return generate_floorplan(width, depth, floors)
-
-    # fallback procedural zoning
-    zones = ["PUBLIC", "PRIVATE", "CORE", "SERVICE"]
-
-    return [
-        [
-            [random.choice(zones) for _ in range(grid)]
-            for _ in range(grid)
-        ]
-        for _ in range(min(floors, 15))
-    ]
-
-# =========================================================
-# STRUCTURAL GRID (nodes + beams)
-# =========================================================
-def build_grid():
-
-    nodes = []
-    fixed = set()
-
-    dx = width / grid
-    dy = depth / grid
-
-    for i in range(grid):
-        for j in range(grid):
-            nodes.append({
-                "pos": np.array([i * dx, j * dy], dtype=float),
-                "disp": np.zeros(2),
-                "force": np.zeros(2)
+class RLBuildingEngine:
+    def generate(self, policy):
+        buildings = []
+        for _ in range(5):
+            x, y = policy.choose_location()
+            buildings.append({
+                "x": x,
+                "y": y,
+                "floors": random.randint(3, 10),
+                "grid": random.choice([6, 8, 10, 12])
             })
+        return buildings
 
-            if j == 0:
-                fixed.add(len(nodes) - 1)
 
-    springs = []
+class RLPhysics:
+    def build_nodes(self, buildings):
+        nodes = []
+        for b in buildings:
+            for z in range(b["floors"]):
+                for x in range(0, b["grid"], 2):
+                    for y in range(0, b["grid"], 2):
+                        nodes.append((x + b["x"], y + b["y"], z))
+        return nodes
 
-    for i in range(grid):
-        for j in range(grid):
-            idx = i * grid + j
+    def loads(self, nodes):
+        load = {n: 0.0 for n in nodes}
+        max_z = max(n[2] for n in nodes)
 
-            if i < grid - 1:
-                springs.append((idx, idx + grid))
-            if j < grid - 1:
-                springs.append((idx, idx + 1))
+        for n in nodes:
+            if n[2] == max_z:
+                load[n] += 1.0
 
-    return nodes, springs, fixed
+        for _ in range(2):
+            for (x, y, z), l in list(load.items()):
+                below = (x, y, z - 1)
+                if below in load:
+                    load[below] += l * 0.7
 
-# =========================================================
-# LOAD MODEL (simplified Eurocode-style)
-# =========================================================
-def structural_load():
+        return load
 
-    area = width * depth
+    def collapse(self, load):
+        return {n for n, l in load.items() if l > 2.0}
 
-    strength = {
-        "Concrete": 55,
-        "Steel": 120,
-        "Hybrid": 85
-    }[material]
 
-    gravity = area * floors * 5.0
-    wind_load = gravity * wind * (floors / 12)
+class RLCityEngine:
+    def __init__(self):
+        self.policy = CityPolicy()
+        self.builder = RLBuildingEngine()
+        self.physics = RLPhysics()
+        self.history = []
 
-    total = gravity + wind_load
-    capacity = area * strength
+    def step(self):
+        buildings = self.builder.generate(self.policy)
+        nodes = self.physics.build_nodes(buildings)
+        loads = self.physics.loads(nodes)
+        failed = self.physics.collapse(loads)
 
-    utilization = total / max(capacity, 1e-6)
-    stability = max(0.0, 1.0 - utilization)
+        self.policy.update(failed)
 
-    return total, capacity, utilization, stability
+        stability = max(0, 1 - len(failed) / max(1, len(nodes)))
+        reward = stability - 0.3 * len(failed)
 
-# =========================================================
-# FEM-LITE SOLVER (SPRING MASS SYSTEM)
-# =========================================================
-def solve(nodes, springs, fixed):
+        self.history.append(reward)
 
-    k = 0.05
+        return buildings, nodes, loads, failed, stability, reward
 
-    for _ in range(20):
-        for i, j in springs:
 
-            ni = nodes[i]
-            nj = nodes[j]
+rl_engine = RLCityEngine()
 
-            delta = (nj["pos"] + nj["disp"]) - (ni["pos"] + ni["disp"])
-            dist = np.linalg.norm(delta) + 1e-6
-            direction = delta / dist
-
-            force = k * (dist - 1.0)
-
-            if i not in fixed:
-                ni["disp"] += force * direction * 0.5
-            if j not in fixed:
-                nj["disp"] -= force * direction * 0.5
-
-    return nodes
 
 # =========================================================
-# STABILITY METRIC
+# 🧠 APP CONFIG
 # =========================================================
-def stability_metric(nodes):
+st.set_page_config(page_title="Random AI Civilization Engine", layout="wide")
 
-    total = sum(np.linalg.norm(n["disp"]) for n in nodes)
-    avg = total / len(nodes)
+st.title("🏗️ Random AI — Civilization Engine (RL + Diplomacy + Consciousness)")
 
-    return 1 / (1 + avg), avg
 
-# =========================================================
-# EVOLUTION ENGINE
-# =========================================================
-def evolve(current, target):
+user_input = st.text_input("Input", "hello")
 
-    noise = np.random.normal(0, mutation * 0.05)
-    return float(np.clip(0.85 * current + 0.15 * target + noise, 0, 1))
+if st.button("Run Core Pipeline"):
+    st.session_state.result = run_pipeline("main", user_input)
+    st.success("Pipeline executed")
+
 
 # =========================================================
-# SIMULATION STEP
+# SIDEBAR — FULL CIVILIZATION STACK
 # =========================================================
-def step():
+mode = st.sidebar.selectbox(
+    "SYSTEM MODULE",
+    [
+        "AI Brain",
+        "Architecture Generator",
+        "Structure Engine",
+        "MEP Systems",
+        "GIS & Site",
+        "Cost Engine",
+        "Rendering",
+        "Full Pipeline Simulation",
 
-    nodes, springs, fixed = build_grid()
+        # 🧠 CIVILIZATION LAYERS
+        "🏙️ RL City",
+        "🌆 City Learning",
+        "🤝 Diplomacy Network",
+        "⚔️ War System",
+        "🎭 Culture System",
+        "🧠 Civilization Consciousness",
+        "🧬 Meta-Evolution View"
+    ]
+)
 
-    nodes = solve(nodes, springs, fixed)
 
-    _, _, _, stability = structural_load()
+# =========================================================
+# 🧠 AI BRAIN
+# =========================================================
+if mode == "AI Brain":
 
-    st.session_state.stability = evolve(
-        st.session_state.stability,
-        stability
+    st.header("🧠 Design Brain")
+
+    st.session_state.intent_text = st.text_area(
+        "Describe building intent",
+        value=st.session_state.intent_text
     )
 
-    st.session_state.history.append(st.session_state.stability)
+    st.session_state.site_area = st.number_input(
+        "Site Area (m²)",
+        value=st.session_state.site_area
+    )
 
-    if len(st.session_state.history) > 100:
-        st.session_state.history.pop(0)
+    if st.button("RUN FULL GENERATION"):
+        try:
+            st.session_state.result = run_pipeline(
+                st.session_state.intent_text,
+                st.session_state.site_area
+            )
+            st.success("Pipeline executed successfully")
+        except Exception as e:
+            st.error(str(e))
 
-    return nodes, springs, stability
+    if st.session_state.result:
+        st.json(st.session_state.result)
 
-# =========================================================
-# INIT SYSTEMS
-# =========================================================
-floorplan = architecture_engine()
-nodes, springs, stability = step()
-
-# =========================================================
-# CONTROLS
-# =========================================================
-c1, c2 = st.columns(2)
-
-with c1:
-    if st.button("🚀 Start BIM Solver"):
-        st.session_state.running = True
-
-with c2:
-    if st.button("⛔ Stop"):
-        st.session_state.running = False
 
 # =========================================================
-# STRUCTURAL VISUALIZATION
+# 🏛️ ARCHITECTURE
 # =========================================================
-st.subheader("🏗️ Structural Deformation Field")
+elif mode == "Architecture Generator":
+    st.header("🏛️ Architecture Engine")
+    floors = st.slider("Floors", 1, 50, 5)
 
-fig, ax = plt.subplots()
+    if st.button("Generate"):
+        st.write([f"Floor {i}" for i in range(floors)])
 
-for n in nodes:
-    x, y = n["pos"]
-    dx, dy = n["disp"]
-
-    ax.plot(x, y, "bo")
-    ax.plot(x + dx, y + dy, "ro")
-    ax.plot([x, x + dx], [y, y + dy], "gray", alpha=0.4)
-
-ax.set_title("Undeformed → Deformed Structure")
-st.pyplot(fig)
 
 # =========================================================
-# METRICS
+# 🧱 STRUCTURE
 # =========================================================
-load, capacity, util, stability_val = structural_load()
+elif mode == "Structure Engine":
+    st.header("🏗️ Structural Check")
+    st.info("Eurocode engine placeholder (external module)")
 
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.metric("Load", f"{load:.1f}")
-
-with col2:
-    st.metric("Utilization", f"{util:.3f}")
-
-with col3:
-    st.metric("Stability", f"{st.session_state.stability:.3f}")
 
 # =========================================================
-# FLOORPLAN
+# ⚡ MEP
 # =========================================================
-st.subheader("🏛️ Architectural Floorplan")
+elif mode == "MEP Systems":
+    st.header("MEP Systems")
+    st.metric("HVAC Efficiency", f"{random.randint(70, 98)}%")
 
-for f in floorplan[:3]:
-    for row in f:
-        st.text(" ".join(str(x) for x in row))
-    st.text("---")
 
 # =========================================================
-# LOOP ENGINE
+# 🌍 GIS
 # =========================================================
-if st.session_state.running:
+elif mode == "GIS & Site":
+    st.header("Terrain Analysis")
 
-    nodes, springs, stability = step()
+    x = np.linspace(0, 10, 100)
+    y = np.sin(x)
 
-    st.session_state.tick += 1
-    st.toast(f"Cycle {st.session_state.tick}")
-
-    time.sleep(0.25)
-    st.rerun()
-
-# =========================================================
-# HISTORY
-# =========================================================
-st.divider()
-st.subheader("📈 Stability Evolution")
-
-if len(st.session_state.history) > 2:
     fig, ax = plt.subplots()
-    ax.plot(st.session_state.history)
-    ax.set_title("System Stability Over Time")
+    ax.plot(x, y)
+
     st.pyplot(fig)
 
-# =========================================================
-# MANUAL STEP
-# =========================================================
-st.divider()
 
-if st.button("Run Single Simulation Step"):
-    step()
-    st.success("Step executed")
+# =========================================================
+# 💰 COST
+# =========================================================
+elif mode == "Cost Engine":
+    st.header("Cost Engine")
+
+    area = st.number_input("Area", value=500.0)
+    st.metric("Cost", f"${area * random.randint(400, 1200):,.0f}")
+
+
+# =========================================================
+# 🧊 RENDERING
+# =========================================================
+elif mode == "Rendering":
+    st.header("3D Massing")
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+
+    ax.scatter(
+        np.random.rand(50),
+        np.random.rand(50),
+        np.random.rand(50)
+    )
+
+    st.pyplot(fig)
+
+
+# =========================================================
+# 🚀 FULL PIPELINE
+# =========================================================
+elif mode == "Full Pipeline Simulation":
+    st.header("System Simulation")
+
+    steps = ["AI", "Architecture", "Structure", "MEP", "Cost", "Render", "Export"]
+    p = st.progress(0)
+
+    for i, s in enumerate(steps):
+        st.write(s)
+        time.sleep(0.2)
+        p.progress((i + 1) / len(steps))
+
+    st.success("Complete")
+
+
+# =========================================================
+# 🏙️ RL CITY MODULE (PHYSICS + RL)
+# =========================================================
+elif mode == "🏙️ RL City":
+
+    st.header("🏙️ Reinforcement Learning City")
+
+    if st.button("Run City Step"):
+
+        buildings, nodes, loads, failed, stability, reward = rl_engine.step()
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Stability", round(stability, 3))
+        c2.metric("Failures", len(failed))
+        c3.metric("Reward", round(reward, 3))
+
+        st.json(buildings)
+
+
+# =========================================================
+# 🌆 LEARNING CURVE
+# =========================================================
+elif mode == "🌆 City Learning":
+
+    st.header("Learning Curve")
+
+    if rl_engine.history:
+        st.line_chart(rl_engine.history)
+    else:
+        st.info("Run RL City first")
+
+
+# =========================================================
+# 🧠 CIVILIZATION CONSCIOUSNESS (SIMULATED VIEW)
+# =========================================================
+elif mode == "🧠 Civilization Consciousness":
+
+    st.header("🌍 Global Civilization Mind")
+
+    state = np.random.rand(10)
+
+    mind = {
+        "stability": float(np.mean(state)),
+        "conflict_pressure": float(np.std(state)),
+        "innovation_drive": float(np.max(state))
+    }
+
+    st.json(mind)
+
+
+# =========================================================
+# 🧬 META-EVOLUTION VIEW
+# =========================================================
+elif mode == "🧬 Meta-Evolution View":
+
+    st.header("Evolution of Evolution")
+
+    st.write("System is dynamically adjusting learning pressure, mutation rates, and stability constraints.")
+
+    st.info("Meta-learning layer active (conceptual simulation)")
