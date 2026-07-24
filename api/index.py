@@ -1,7 +1,14 @@
+from flask import Flask, render_template, request
+import pandas as pd
 import requests
-from flask import Flask, request, Response
+import plotly.express as px
+import json
+import plotly.utils
 
+# Template folder is automatically "templates" relative to this api/ directory
 app = Flask(__name__)
+
+# ... rest of your code stays exactly the same ...
 
 # ═══ CHANGE THIS TO YOUR ACTUAL STREAMLIT CLOUD URL ═══
 STREAMLIT_URL = "https://arc-eight.streamlit.app"  # <-- replace if different
