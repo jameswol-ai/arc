@@ -2,63 +2,181 @@ from flask import Flask, render_template, request
 import pandas as pd
 import requests
 import plotly.express as px
-import json
-import plotly.utils
+import traceback
 
-# Template folder is automatically "templates" relative to this api/ directory
 app = Flask(__name__)
 
-# ... rest of your code stays exactly the same ...
+# --- CURATED SOLANA TOKENS ---
+DEFAULT_TOKENS = {
+    "Solana (SOL)": {"mint": "So11111111111111111111111111111111111111112", "risk": "Low", "price_default": 140.0, "type": "Native L1"},
+    "USD Coin (USDC)": {"mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "risk": "Low", "price_default": 1.0, "type": "Stablecoin"},
+    "Tether (USDT)": {"mint": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", "risk": "Low", "price_default": 1.0, "type": "Stablecoin"},
+    "Jupiter (JUP)": {"mint": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN", "risk": "Medium", "price_default": 0.95, "type": "DeFi Utility"},
+    "Pyth Network (PYTH)": {"mint": "HZ1JbNs2ST4wwE7as979mJ6Y8XFR3EnZ5Rdf8S6ZfLNp", "risk": "Medium", "price_default": 0.35, "type": "Oracle / Infra"},
+    "Jito (JTO)": {"mint": "jtojtome5kxvXzKSpRndmcg9fK5S8fBfD8LscV3N5K6", "risk": "Medium", "price_default": 2.20, "type": "Liquid Staking"},
+    "Dogwifhat (WIF)": {"mint": "EKpQGSJmg823YEV4L6p3W5ij37mN2Y8SmW91mZ366xoV", "risk": "High", "price_default": 2.50, "type": "Memecoin"},
+    "Bonk (BONK)": {"mint": "DezXAZ8z7PnrFcPyg7GRt6R3G338gMt858H8VXHzpHqg", "risk": "High", "price_default": 0.000022, "type": "Memecoin"},
+    "Popcat (POPCAT)": {"mint": "7GCih6b9GMSr0979L6vvwY6Y3089mZ366xoV56Y8xoV", "risk": "High", "price_default": 1.10, "type": "Memecoin"}
+}
 
-# ═══ CHANGE THIS TO YOUR ACTUAL STREAMLIT CLOUD URL ═══
-STREAMLIT_URL = "https://arc-eight.streamlit.app"  # <-- replace if different
-# ══════════════════════════════════════════════════════
+SIMULATED_WALLET = {
+    "Solana (SOL)": 500.0,
+    "USD Coin (USDC)": 15000.0,
+    "Jupiter (JUP)": 8000.0,
+    "Pyth Network (PYTH)": 4000.0,
+    "Dogwifhat (WIF)": 150.0
+}
 
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def proxy(path):
-    target = f"{STREAMLIT_URL}/{path}" if path else STREAMLIT_URL
+def fetch_prices(api_key=None):
+    prices = {}
+    for name, data in DEFAULT_TOKENS.items():
+        prices[name] = data["price_default"]
+    if api_key:
+        try:
+            mints = [data["mint"] for data in DEFAULT_TOKENS.values()]
+            url = f"https://api.jup.ag/price/v3?ids={','.join(mints)}"
+            headers = {"x-api-key": api_key}
+            resp = requests.get(url, headers=headers, timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()["data"]
+                mint_to_name = {v["mint"]: k for k, v in DEFAULT_TOKENS.items()}
+                for mint, token_data in data.items():
+                    if token_data and "price" in token_data:
+                        name = mint_to_name.get(mint)
+                        if name:
+                            prices[name] = float(token_data["price"])
+        except:
+            pass
+    return prices
 
-    # Build headers (strip 'host' to avoid conflicts)
-    headers = {k: v for k, v in request.headers.items() if k.lower() != 'host'}
-
-    # Forward the request exactly as received
-    try:
-        resp = requests.request(
-            method=request.method,
-            url=target,
-            headers=headers,
-            data=request.get_data(),
-            cookies=request.cookies,
-            allow_redirects=False,   # we handle redirects manually
-            timeout=30               # Vercel max is 10s for hobby, but we set 30 to be safe
+def generate_insights(risk_score, low_pct, med_pct, high_pct):
+    if risk_score > 7.0:
+        return (
+            "⚠️ **Aggressive Risk Exposure Detected**\n\n"
+            "- **De-risk into Core Assets:** Over 70% of your holdings are allocated to highly volatile high-risk categories. Consider shifting profits into native SOL or established stablecoins (USDC/USDT).\n"
+            "- **Set Stop-Losses:** Volatility on Solana memecoins can exceed 50% in hours. Ensure you have targeted exit points.\n"
+            "- **Yield Opportunities:** Move some stable holdings to trusted Solana yield lending protocols (like Kamino or Marginfi) to build passive baselines."
         )
-    except requests.exceptions.Timeout:
-        return "Proxy timeout – Streamlit app may be slow", 504
-    except requests.exceptions.RequestException as e:
-        return f"Proxy error: {str(e)}", 502
+    elif risk_score > 4.0:
+        return (
+            "⚖️ **Balanced Growth Portfolio**\n\n"
+            "- **Optimized Ecosystem Allocation:** Your mix is healthy. You have a reliable baseline in SOL/stables while capturing growth in major Solana altcoins (JUP, PYTH).\n"
+            "- **Rebalancing Strategy:** Periodically lock in profits from high-performing speculative plays back into your 'Low Risk' bucket to maintain your target asset allocation.\n"
+            "- **Governance Engagement:** If holding JUP or JTO, consider staking them on their native platforms to qualify for potential governance benefits and ecological distributions."
+        )
+    else:
+        return (
+            "🛡️ **Conservative / Defensive Allocation**\n\n"
+            "- **Capital Preservation Focus:** Excellent baseline stability. Your portfolio is highly resilient to market drawdowns.\n"
+            "- **Liquidity Optimization:** Consider liquid-staking your SOL through platforms like Jito (JTO) or Marinade to earn network yields while keeping assets fluid.\n"
+            "- **Strategic Allocation:** If your risk appetite permits, allocate a small percentage (2-5%) to core Solana ecosystem infrastructure protocols to gain exposure to decentralized network growth."
+        )
 
-    # If the response is a redirect, follow it (but we need to keep our domain)
-    # Streamlit often redirects to '/' from '/'
-    if resp.status_code in (301, 302, 303, 307, 308):
-        location = resp.headers.get('Location')
-        if location:
-            # Make location absolute
-            if location.startswith('/'):
-                location = f"{STREAMLIT_URL}{location}"
-            # Recursively fetch the final content
-            try:
-                final_resp = requests.get(location, headers=headers, cookies=request.cookies, timeout=30)
-                # Return the final response (we keep the status 200, but you can pass the status)
-                return Response(final_resp.content, status=final_resp.status_code, headers=dict(final_resp.headers))
-            except:
-                return "Failed to follow redirect", 500
+def sanitize_dataframe(df):
+    """Replace NaN/inf with 0 and convert numpy numbers to Python native types."""
+    df = df.fillna(0).replace([float('inf'), float('-inf')], 0)
+    for col in df.select_dtypes(include=['float64', 'int64', 'float32', 'int32']).columns:
+        df[col] = df[col].apply(lambda x: float(x))
+    return df
 
-    # Prepare response headers (remove problematic ones)
-    response_headers = dict(resp.headers)
-    response_headers.pop('Content-Encoding', None)   # avoid double gzip
-    response_headers.pop('Transfer-Encoding', None)
-    # Optionally remove X-Frame-Options if you want to embed (but not needed)
+@app.route("/", methods=["GET", "POST"])
+def index():
+    portfolio_items = []
+    results = None
+    error = None
+    debug_info = None
+    api_key = request.form.get("jup_api_key", "").strip()
+    mode = request.form.get("mode", "manual")
 
-    # Return the response
-    return Response(resp.content, status=resp.status_code, headers=response_headers)
+    prices = fetch_prices(api_key if api_key else None)
+
+    try:
+        if request.method == "POST":
+            if mode == "manual":
+                selected_tokens = request.form.getlist("token")
+                for token in selected_tokens:
+                    amt_str = request.form.get(f"amount_{token}", "0")
+                    try:
+                        amount = float(amt_str)
+                    except:
+                        amount = 0.0
+                    if amount > 0:
+                        price = prices.get(token, DEFAULT_TOKENS[token]["price_default"])
+                        portfolio_items.append({
+                            "Token": token,
+                            "Amount": amount,
+                            "Price (USD)": price,
+                            "Value (USD)": amount * price,
+                            "Risk Profile": DEFAULT_TOKENS[token]["risk"],
+                            "Type": DEFAULT_TOKENS[token]["type"]
+                        })
+            elif mode == "wallet":
+                wallet = request.form.get("wallet_address", "")
+                if wallet:
+                    for token, amount in SIMULATED_WALLET.items():
+                        price = prices.get(token, DEFAULT_TOKENS[token]["price_default"])
+                        portfolio_items.append({
+                            "Token": token,
+                            "Amount": amount,
+                            "Price (USD)": price,
+                            "Value (USD)": amount * price,
+                            "Risk Profile": DEFAULT_TOKENS[token]["risk"],
+                            "Type": DEFAULT_TOKENS[token]["type"]
+                        })
+                else:
+                    error = "Please enter a wallet address."
+
+            if portfolio_items:
+                df = pd.DataFrame(portfolio_items)
+                df = sanitize_dataframe(df)
+
+                total_val = float(df["Value (USD)"].sum())
+                df["Allocation (%)"] = (df["Value (USD)"] / total_val) * 100
+
+                low_pct = df[df['Risk Profile'] == 'Low']['Allocation (%)'].sum()
+                med_pct = df[df['Risk Profile'] == 'Medium']['Allocation (%)'].sum()
+                high_pct = df[df['Risk Profile'] == 'High']['Allocation (%)'].sum()
+                risk_score = float((low_pct * 1 + med_pct * 5 + high_pct * 10) / 10)
+
+                fig_assets = px.pie(df, values='Value (USD)', names='Token', hole=0.4,
+                                    color_discrete_sequence=px.colors.sequential.Agsunset)
+                chart_assets = fig_assets.to_json()
+
+                risk_grouped = df.groupby('Risk Profile').sum(numeric_only=True).reset_index()
+                fig_risk = px.bar(risk_grouped, x='Risk Profile', y='Value (USD)', color='Risk Profile',
+                                  color_discrete_map={'Low': '#4CAF50', 'Medium': '#FF9800', 'High': '#F44336'},
+                                  category_orders={'Risk Profile': ['Low', 'Medium', 'High']})
+                chart_risk = fig_risk.to_json()
+
+                insights = generate_insights(risk_score, low_pct, med_pct, high_pct)
+
+                # Convert table to safe dicts (no numpy values)
+                table_data = df.to_dict(orient='records')
+                for row in table_data:
+                    for k, v in row.items():
+                        if isinstance(v, (float, int)):
+                            row[k] = float(v)
+
+                results = {
+                    "total_val": total_val,
+                    "risk_score": risk_score,
+                    "risk_label": ("High Risk 🔥" if risk_score > 7 else "Moderate Risk ⚖️" if risk_score > 4 else "Low Risk 🛡️"),
+                    "largest_holding": df.loc[df['Value (USD)'].idxmax()]['Token'].split(' ')[0],
+                    "assets_count": len(df),
+                    "chart_assets": chart_assets,
+                    "chart_risk": chart_risk,
+                    "table_data": table_data,
+                    "insights": insights
+                }
+
+    except Exception as e:
+        error = f"Server error: {str(e)}"
+        debug_info = traceback.format_exc()
+
+    return render_template("index.html",
+                           tokens=DEFAULT_TOKENS,
+                           results=results,
+                           error=error,
+                           debug=debug_info,   # show in template if debug
+                           api_key=api_key,
+                           mode=mode)
