@@ -1,6 +1,2 @@
-
+Flask
 requests
-streamlit
-plotly
-pandas
-numpy
