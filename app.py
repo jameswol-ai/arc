@@ -12,11 +12,6 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import numpy as np, pandas as pd
 
-app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "change_me_in_production_123!")
-
-
-
 # ════════════════  UNIT CONVERSION  ════════════════
 M2_TO_FT2, M_TO_FT = 10.7639, 3.28084
 
