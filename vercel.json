@@ -2,7 +2,7 @@
   "redirects": [
     {
       "source": "/(.*)",
-      "destination": "app.py",
+      "destination": "https://ai-arc.streamlit.app/",
       "statusCode": 301
     }
   ]
