@@ -6,7 +6,7 @@ import traceback
 
 app = Flask(__name__)
 
-# --- CURATED SOLANA TOKENS ---
+# --- CURATED SOLANA TOKENS (unchanged) ---
 DEFAULT_TOKENS = {
     "Solana (SOL)": {"mint": "So11111111111111111111111111111111111111112", "risk": "Low", "price_default": 140.0, "type": "Native L1"},
     "USD Coin (USDC)": {"mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "risk": "Low", "price_default": 1.0, "type": "Stablecoin"},
@@ -72,25 +72,17 @@ def generate_insights(risk_score, low_pct, med_pct, high_pct):
             "- **Strategic Allocation:** If your risk appetite permits, allocate a small percentage (2-5%) to core Solana ecosystem infrastructure protocols to gain exposure to decentralized network growth."
         )
 
-def sanitize_dataframe(df):
-    """Replace NaN/inf with 0 and convert numpy numbers to Python native types."""
-    df = df.fillna(0).replace([float('inf'), float('-inf')], 0)
-    for col in df.select_dtypes(include=['float64', 'int64', 'float32', 'int32']).columns:
-        df[col] = df[col].apply(lambda x: float(x))
-    return df
-
 @app.route("/", methods=["GET", "POST"])
 def index():
-    portfolio_items = []
-    results = None
-    error = None
-    debug_info = None
-    api_key = request.form.get("jup_api_key", "").strip()
-    mode = request.form.get("mode", "manual")
-
-    prices = fetch_prices(api_key if api_key else None)
-
     try:
+        portfolio_items = []
+        results = None
+        error = None
+        api_key = request.form.get("jup_api_key", "").strip()
+        mode = request.form.get("mode", "manual")
+
+        prices = fetch_prices(api_key if api_key else None)
+
         if request.method == "POST":
             if mode == "manual":
                 selected_tokens = request.form.getlist("token")
@@ -128,7 +120,7 @@ def index():
 
             if portfolio_items:
                 df = pd.DataFrame(portfolio_items)
-                df = sanitize_dataframe(df)
+                df = df.fillna(0).replace([float('inf'), float('-inf')], 0)
 
                 total_val = float(df["Value (USD)"].sum())
                 df["Allocation (%)"] = (df["Value (USD)"] / total_val) * 100
@@ -150,7 +142,6 @@ def index():
 
                 insights = generate_insights(risk_score, low_pct, med_pct, high_pct)
 
-                # Convert table to safe dicts (no numpy values)
                 table_data = df.to_dict(orient='records')
                 for row in table_data:
                     for k, v in row.items():
@@ -169,14 +160,14 @@ def index():
                     "insights": insights
                 }
 
+        return render_template("index.html",
+                               tokens=DEFAULT_TOKENS,
+                               results=results,
+                               error=error,
+                               debug=None,
+                               api_key=api_key,
+                               mode=mode)
     except Exception as e:
-        error = f"Server error: {str(e)}"
-        debug_info = traceback.format_exc()
-
-    return render_template("index.html",
-                           tokens=DEFAULT_TOKENS,
-                           results=results,
-                           error=error,
-                           debug=debug_info,   # show in template if debug
-                           api_key=api_key,
-                           mode=mode)
+        # Return raw traceback to the browser
+        tb = traceback.format_exc()
+        return f"<pre>Error:\n{tb}</pre>", 500
