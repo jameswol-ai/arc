@@ -4,7 +4,7 @@ from flask import Flask, request, Response
 app = Flask(__name__)
 
 # ═══ CHANGE THIS TO YOUR ACTUAL STREAMLIT CLOUD URL ═══
-STREAMLIT_URL = "https://your-app-name.streamlit.app"
+STREAMLIT_URL = "https://ai-arc.streamlit.app"
 # ══════════════════════════════════════════════════════
 
 @app.route('/', defaults={'path': ''})
