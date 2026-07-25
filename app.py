@@ -4,13 +4,13 @@
 # Improved Soil Selection & Error Fixes
 # =========================================================
 
-import streamlit as st
-import json, random, uuid, hashlib, requests
-import plotly.express as px
-import plotly.graph_objects as go
+import os, json, uuid, hashlib, math, random, base64
+from datetime import datetime
 from pathlib import Path
-from datetime import datetime, timedelta
-import numpy as np, pandas as pd
+from flask import Flask, session, request, render_template_string, redirect, url_for, make_response
+
+app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "change_me_in_production_123!")
 
 # ════════════════  UNIT CONVERSION  ════════════════
 M2_TO_FT2, M_TO_FT = 10.7639, 3.28084
