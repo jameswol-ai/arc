@@ -1,7 +1,0 @@
-[project]
-name = "arc"                     # match your project name
-version = "0.1.0"
-dependencies = []                # list your dependencies here, e.g., ["flask", "requests"]
-
-[tool.uv]
-environments = ["sys_platform == 'linux'"]
