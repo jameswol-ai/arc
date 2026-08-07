@@ -10,13 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: #0a0a0a;
-            color: #cccccc;
-            font-family: 'Inter', sans-serif;
-            display: flex;
-            min-height: 100vh;
-        }
+        body { background: #0a0a0a; color: #ccc; font-family: 'Inter', sans-serif; display: flex; min-height: 100vh; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #1a1a1a; }
         ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
@@ -34,7 +28,7 @@
             display: flex;
             flex-direction: column;
         }
-        .sidebar .logo { font-size: 1.6rem; font-weight: 300; color: #aaaaaa; text-align: center; margin-bottom: 28px; letter-spacing: 2px; }
+        .sidebar .logo { font-size: 1.6rem; font-weight: 300; color: #aaa; text-align: center; margin-bottom: 28px; letter-spacing: 2px; }
         .sidebar nav a {
             display: block;
             padding: 10px 14px;
@@ -76,18 +70,17 @@
             overflow-y: auto;
             max-height: 100vh;
         }
-
         .glass-panel {
-            background: #111111;
-            border: 1px solid #333333;
+            background: #111;
+            border: 1px solid #333;
             border-radius: 18px;
             padding: 20px 24px;
             margin-bottom: 24px;
             transition: border-color 0.2s;
         }
         .glass-panel:hover { border-color: #444; }
-        .glass-panel h2 { color: #aaaaaa; margin-bottom: 8px; font-weight: 400; }
-        .glass-panel h3 { color: #aaaaaa; margin-bottom: 12px; font-weight: 400; }
+        .glass-panel h2 { color: #aaa; margin-bottom: 8px; font-weight: 400; }
+        .glass-panel h3 { color: #aaa; margin-bottom: 12px; font-weight: 400; }
         .glass-panel p { color: #888; }
 
         .btn {
@@ -114,7 +107,7 @@
             background: transparent !important;
             border: 1px solid #333 !important;
             border-radius: 8px;
-            color: #cccccc !important;
+            color: #ccc !important;
             padding: 8px 12px;
             width: 100%;
             font-family: inherit;
@@ -224,7 +217,6 @@
             border-left: 3px solid #555;
         }
 
-        /* ── Login overlay ── */
         #login-overlay {
             position: fixed;
             inset: 0;
@@ -249,7 +241,6 @@
         #login-overlay .login-box .btn { width: 100%; justify-content: center; }
         .login-error { color: #cc5555; font-size: 0.85rem; margin-top: 8px; text-align: center; }
 
-        /* ── Modal for 3D viewer ── */
         .modal {
             display: none;
             position: fixed;
@@ -302,7 +293,7 @@
 </head>
 <body>
 
-<!-- ─── LOGIN ─── -->
+<!-- LOGIN -->
 <div id="login-overlay">
     <div class="login-box">
         <h2>◈ Arc</h2>
@@ -314,7 +305,7 @@
     </div>
 </div>
 
-<!-- ─── SIDEBAR ─── -->
+<!-- SIDEBAR -->
 <div class="sidebar">
     <div class="logo">◈ Arc</div>
     <nav>
@@ -328,10 +319,10 @@
     </div>
 </div>
 
-<!-- ─── MAIN ─── -->
+<!-- MAIN -->
 <div class="main">
 
-    <!-- DASHBOARD -->
+    <!-- Dashboard -->
     <div id="tab-dashboard">
         <div class="glass-panel text-center" style="margin-bottom:24px;">
             <h2 style="margin:0;">Welcome back, <span id="welcome-username">Architect</span> 👋</h2>
@@ -383,7 +374,7 @@
         </div>
     </div>
 
-    <!-- CONCEPTS -->
+    <!-- Concepts -->
     <div id="tab-concepts" class="hidden">
         <div class="glass-panel">
             <h2>🔬 Evolution Engine</h2>
@@ -414,7 +405,7 @@
         </div>
     </div>
 
-    <!-- RAM AI -->
+    <!-- Ram AI -->
     <div id="tab-ram" class="hidden">
         <div class="glass-panel">
             <h2>🧠 Ram AI – Infinite Architectural Intelligence</h2>
@@ -432,7 +423,7 @@
     </div>
 </div>
 
-<!-- ─── 3D MODAL ─── -->
+<!-- 3D Modal -->
 <div id="three-modal" class="modal">
     <div class="modal-content">
         <button class="close-btn" onclick="close3D()">✕</button>
@@ -441,7 +432,7 @@
 </div>
 
 <script>
-    // ─── GLOBAL STATE ──────────────────────────────────────────
+    // ─── GLOBALS ──────────────────────────────────────────────
     let currentUsername = localStorage.getItem('arc_username') || null;
     let conceptsData = [];
 
@@ -450,13 +441,11 @@
     const M_TO_FT = 3.28084;
     function getUnitSystem() { return document.getElementById('unit-toggle').value; }
     function formatArea(m2) {
-        const unit = getUnitSystem();
-        if (unit === 'imperial') return (m2 * M2_TO_FT2).toFixed(1) + ' sq ft';
+        if (getUnitSystem() === 'imperial') return (m2 * M2_TO_FT2).toFixed(1) + ' sq ft';
         return m2.toFixed(1) + ' m²';
     }
     function formatLength(m) {
-        const unit = getUnitSystem();
-        if (unit === 'imperial') return (m * M_TO_FT).toFixed(1) + ' ft';
+        if (getUnitSystem() === 'imperial') return (m * M_TO_FT).toFixed(1) + ' ft';
         return m.toFixed(1) + ' m';
     }
 
@@ -616,7 +605,7 @@
         document.getElementById('metric-logs').textContent = Math.floor(Math.random() * 20 + 5);
     }
 
-    // ─── SOIL OPTIONS DYNAMIC ──────────────────────────────────
+    // ─── SOIL OPTIONS ──────────────────────────────────────────
     const soilMap = {
         Kenya: ['Nairobi Red Coffee Clay', 'Generic Firm Sandy Gravel', 'Generic Soft Silt / Clay', 'Generic Hard Rock / Laterite'],
         Uganda: ['Kampala Red Lateritic Clay', 'Wetland Silts (Kampala)', 'Generic Firm Sandy Gravel', 'Generic Hard Rock / Laterite'],
@@ -757,29 +746,35 @@
             <div class="section-title">⚠️ Risk Register</div>
             <table>
                 <tr><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Mitigation</th></tr>
-                ${c.boq_breakdown.slice(0,5).map((item, i) => {
-                    const risks = ["Foundation settlement", "Steel supply delay", "Labour shortage", "Weather disruption", "Cost overrun"];
-                    const likelihoods = ["Medium", "High", "Low", "Medium", "High"];
-                    const impacts = ["High", "Medium", "Medium", "Low", "High"];
-                    const mitigations = ["Soil improvement", "Pre-order steel", "Local hiring plan", "Flexible schedule", "10% contingency"];
-                    const idx2 = i % risks.length;
-                    return `<tr><td>${risks[idx2]}</td><td>${likelihoods[idx2]}</td><td>${impacts[idx2]}</td><td>${mitigations[idx2]}</td></tr>`;
-                }).join('')}
+                ${[
+                    {Risk:'Foundation settlement', Likelihood:'Medium', Impact:'High', Mitigation:'Soil improvement'},
+                    {Risk:'Steel supply delay', Likelihood:'High', Impact:'Medium', Mitigation:'Pre-order steel'},
+                    {Risk:'Labour shortage', Likelihood:'Low', Impact:'Medium', Mitigation:'Local hiring plan'},
+                    {Risk:'Weather disruption', Likelihood:'Medium', Impact:'Low', Mitigation:'Flexible schedule'},
+                    {Risk:'Cost overrun', Likelihood:'High', Impact:'High', Mitigation:'10% contingency'}
+                ].map(r => `<tr><td>${r.Risk}</td><td>${r.Likelihood}</td><td>${r.Impact}</td><td>${r.Mitigation}</td></tr>`).join('')}
             </table>
 
             <div class="section-title">✅ Quality Checklist</div>
             <table>
                 <tr><th>Phase</th><th>Item</th><th>Status</th></tr>
-                ${['Foundation','Structure','Finishes','MEP','External'].map(phase => {
-                    const items = {
-                        'Foundation': ['Excavation depth', 'Reinforcement placement', 'Concrete pour'],
-                        'Structure': ['Column alignment', 'Beam formwork', 'Slab curing'],
-                        'Finishes': ['Floor flatness', 'Wall plaster', 'Painting'],
-                        'MEP': ['Electrical conduit', 'Plumbing layout', 'HVAC'],
-                        'External': ['Drainage', 'Landscaping', 'Access roads']
-                    };
-                    return items[phase].map(item => `<tr><td>${phase}</td><td>${item}</td><td>✅ Pass</td></tr>`).join('');
-                }).join('')}
+                ${[
+                    ['Foundation','Excavation depth','✅ Pass'],
+                    ['Foundation','Reinforcement placement','✅ Pass'],
+                    ['Foundation','Concrete pour','✅ Pass'],
+                    ['Structure','Column alignment','✅ Pass'],
+                    ['Structure','Beam formwork','✅ Pass'],
+                    ['Structure','Slab curing','✅ Pass'],
+                    ['Finishes','Floor flatness','✅ Pass'],
+                    ['Finishes','Wall plaster','✅ Pass'],
+                    ['Finishes','Painting','✅ Pass'],
+                    ['MEP','Electrical conduit','✅ Pass'],
+                    ['MEP','Plumbing layout','✅ Pass'],
+                    ['MEP','HVAC','✅ Pass'],
+                    ['External','Drainage','✅ Pass'],
+                    ['External','Landscaping','✅ Pass'],
+                    ['External','Access roads','✅ Pass']
+                ].map(row => `<tr><td>${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td></tr>`).join('')}
             </table>
 
             <div style="margin-top:12px;">
@@ -833,34 +828,26 @@
         const modal = document.getElementById('three-modal');
         modal.classList.add('open');
         const container = document.getElementById('three-container');
-        // Simple massing model
         const width = container.clientWidth;
         const height = container.clientHeight;
         scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0a0a0a);
-
         camera = new THREE.PerspectiveCamera(45, width/height, 0.1, 1000);
         camera.position.set(15, 10, 20);
         camera.lookAt(0, 0, 0);
-
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(width, height);
         renderer.setPixelRatio(window.devicePixelRatio);
         container.appendChild(renderer.domElement);
-
-        // Controls
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.target.set(0, 3, 0);
-
-        // Lights
         const ambient = new THREE.AmbientLight(0x404060);
         scene.add(ambient);
         const dirLight = new THREE.DirectionalLight(0xffffff, 1);
         dirLight.position.set(5, 10, 7);
         scene.add(dirLight);
 
-        // Find concept
         const concept = conceptsData.find(c => c.id === id);
         if (!concept) return;
         const floors = concept.floors || 3;
@@ -869,7 +856,6 @@
         const width2 = size * 0.8;
         const depth = size * 0.6;
 
-        // Draw floors as boxes
         const floorHeight = 3.0;
         const color = 0x666666;
         for (let f=0; f<floors; f++) {
@@ -878,7 +864,6 @@
             const box = new THREE.Mesh(geometry, material);
             box.position.set(0, f * floorHeight + 0.15, 0);
             scene.add(box);
-            // Add columns at corners (simplified)
             const colPositions = [
                 [-width2/2+0.5, -depth/2+0.5],
                 [width2/2-0.5, -depth/2+0.5],
@@ -893,15 +878,11 @@
                 scene.add(col);
             });
         }
-
-        // Roof slab
         const roofGeom = new THREE.BoxGeometry(width2, 0.2, depth);
         const roofMat = new THREE.MeshPhongMaterial({ color: 0x555555 });
         const roof = new THREE.Mesh(roofGeom, roofMat);
         roof.position.set(0, floors * floorHeight, 0);
         scene.add(roof);
-
-        // Ground plane grid
         const gridHelper = new THREE.GridHelper(20, 10, 0x666666, 0x444444);
         gridHelper.position.y = -0.1;
         scene.add(gridHelper);
@@ -913,7 +894,6 @@
         }
         animate();
 
-        // Resize
         window.addEventListener('resize', () => {
             const w = container.clientWidth;
             const h = container.clientHeight;
