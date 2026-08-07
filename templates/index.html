@@ -1,16 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Arc – AI Engine</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <title>Arc – Sai Engine</title>
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
     <style>
         body { background: #0a0a0a; color: #cccccc; font-family: 'Inter', sans-serif; margin: 0; padding: 20px; }
         .glass-panel { background: #111111; border: 1px solid #333; border-radius: 18px; padding: 20px; margin-bottom: 20px; }
         button { background: #333; color: #fff; border: none; border-radius: 10px; padding: 10px 20px; cursor: pointer; }
         button:hover { background: #444; }
-        input, select { background: transparent; border: 1px solid #333; border-radius: 8px; color: #ccc; padding: 8px; }
+        input, select { background: transparent; border: 1px solid #333; border-radius: 8px; color: #ccc; padding: 8px; width: 100%; }
         .flex { display: flex; gap: 20px; flex-wrap: wrap; }
-        .col { flex: 1; min-width: 200px; }
+        .col { flex: 1; min-width: 150px; }
+        .concept-card { background: #1a1a1a; border: 1px solid #444; border-radius: 10px; padding: 15px; margin: 10px 0; }
+        .concept-card h4 { margin: 0; color: #aaa; }
+        .concept-card .score { float: right; color: #888; }
+        .concept-card .detail { font-size: 0.9em; color: #888; }
+        .progress-bar { background: #222; border-radius: 5px; height: 8px; width: 100%; }
+        .progress-fill { background: #888; height: 100%; border-radius: 5px; }
+        .metric { display: inline-block; margin-right: 20px; }
     </style>
 </head>
 <body>
@@ -39,21 +46,44 @@
             </select>
         </div>
         <div class="col">
+            <label>Typology</label>
+            <select id="typology">
+                <option>Luxury Villa</option><option>Modern Apartment</option><option>Townhouse Studio</option>
+            </select>
+        </div>
+        <div class="col">
             <label>Plot Area (m²)</label>
             <input type="number" id="plot" value="800">
+        </div>
+        <div class="col">
+            <label>Floors</label>
+            <input type="number" id="floors" value="3">
+        </div>
+        <div class="col">
+            <label>Bathrooms</label>
+            <input type="number" id="baths" value="2">
+        </div>
+        <div class="col">
+            <label>Soil</label>
+            <select id="soil">
+                <option>Nairobi Red Coffee Clay</option>
+                <option>Kampala Red Lateritic Clay</option>
+                <option>Dar Coastal Sand / Coral Limestone</option>
+                <option>Generic Firm Sandy Gravel</option>
+            </select>
         </div>
         <div class="col">
             <button onclick="generateConcepts()">✨ Generate Concepts</button>
         </div>
     </div>
 
-    <div id="concepts-output" class="glass-panel" style="display: none;">
+    <div id="concepts-output" style="display: none;" class="glass-panel">
         <h3>Generated Concepts</h3>
         <div id="concepts-container"></div>
     </div>
 
     <script>
-        // Fetch and plot forex rates
+        // Load forex
         async function loadForex() {
             const res = await fetch('/api/forex');
             const data = await res.json();
@@ -79,11 +109,11 @@
             const payload = {
                 country: document.getElementById('country').value,
                 domain: document.getElementById('domain').value,
-                typology: 'Luxury Villa', // you can add a select for this
+                typology: document.getElementById('typology').value,
                 plot_size: parseInt(document.getElementById('plot').value),
-                floors: 3,
-                baths: 2,
-                soil_name: 'Nairobi Red Coffee Clay'
+                floors: parseInt(document.getElementById('floors').value),
+                baths: parseInt(document.getElementById('baths').value),
+                soil_name: document.getElementById('soil').value
             };
             const res = await fetch('/api/generate', {
                 method: 'POST',
@@ -91,9 +121,20 @@
                 body: JSON.stringify(payload)
             });
             const concepts = await res.json();
-            // Render concepts (simplified)
             const container = document.getElementById('concepts-container');
-            container.innerHTML = concepts.map(c => `<div>${c.type} – Score: ${c.scores.composite}</div>`).join('');
+            container.innerHTML = '';
+            concepts.forEach((c, idx) => {
+                const card = document.createElement('div');
+                card.className = 'concept-card';
+                card.innerHTML = `
+                    <h4>${c.type} <span class="score">Composite: ${c.scores.composite}</span></h4>
+                    <div class="detail">${c.country} · ${c.floors} floors · ${c.total_gfa} m²</div>
+                    <div class="detail">Arch: ${c.scores.arch}% &nbsp;|&nbsp; Struct: ${c.scores.struct}% &nbsp;|&nbsp; Sust: ${c.scores.sust}% &nbsp;|&nbsp; Cost: ${c.scores.cost}%</div>
+                    <div class="progress-bar"><div class="progress-fill" style="width:${c.scores.composite}%;"></div></div>
+                    <div style="margin-top:5px; font-size:0.8em; color:#666;">${c.eurocode.uls_status} · USD ${c.total_usd.toLocaleString()}</div>
+                `;
+                container.appendChild(card);
+            });
             document.getElementById('concepts-output').style.display = 'block';
         }
     </script>
