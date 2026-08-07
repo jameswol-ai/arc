@@ -1,7 +1,6 @@
 # =========================================================
 # Arc — AEC INTELLIGENCE
 # streamlit_app.py – Full Architecture, Engineering & Construction
-# Enhanced with Structural Design, Materials, Carbon, BOQ, Risks, Gantt, 3D
 # =========================================================
 
 import streamlit as st
@@ -27,7 +26,6 @@ def to_display_area(m2):
         return (round(m2 * M2_TO_FT2, 1), "sq ft")
     return (round(m2, 1), "m²")
 
-# ===== HELPER FUNCTIONS =====
 def format_length(m):
     val, unit = to_display_length(m)
     return f"{val} {unit}"
@@ -114,7 +112,7 @@ def log_event(username, mem, msg):
     save_memory(username, mem)
 
 # ════════════════════════════════════════════════
-#  3. SOIL SYSTEM (enhanced with region-specific)
+#  3. SOIL SYSTEM
 # ════════════════════════════════════════════════
 SOIL_TYPES = {
     "Nairobi Red Coffee Clay":             {"multiplier": 1.0,  "cat": "Medium", "region": "Kenya"},
@@ -128,7 +126,6 @@ SOIL_TYPES = {
     "Generic Soft Silt / Clay":            {"multiplier": 1.5,  "cat": "Soft",   "region": "All"},
     "Generic Hard Rock / Laterite":        {"multiplier": 0.7,  "cat": "Rock",   "region": "All"},
 }
-
 REGION_SOIL_OPTIONS = {
     "Kenya":       ["Nairobi Red Coffee Clay", "Generic Firm Sandy Gravel", "Generic Soft Silt / Clay", "Generic Hard Rock / Laterite"],
     "Uganda":      ["Kampala Red Lateritic Clay", "Wetland Silts (Kampala)", "Generic Firm Sandy Gravel", "Generic Hard Rock / Laterite"],
@@ -152,13 +149,11 @@ ARCH_DOMAINS = {
     "Commercial": ["Corporate Hub Block", "Boutique Retail Space", "Medical Clinic Center"],
     "Industrial": ["Distribution Depot", "Heavy Machinery Plant Warehouse"],
 }
-
 FOUNDATION_TYPES = {
     "Residential": ["Strip Footing", "Raft Foundation", "Pile Foundation"],
     "Commercial": ["Raft Foundation", "Pile Foundation", "Mat Foundation"],
     "Industrial": ["Pile Foundation", "Deep Strip", "Mat Foundation"],
 }
-
 SLAB_SYSTEMS = {
     "Residential": ["Flat Slab", "Beam-and-Slab"],
     "Commercial": ["Flat Slab", "Post-Tensioned Slab", "Composite Slab"],
@@ -171,12 +166,10 @@ def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soi
     max_fp = int(plot * rng.uniform(0.5, 0.75))
     fa = min(max_fp, rng.randint(100, int(max_fp * 1.3)))
     gfa = fa * floors
-
     span = 6.0 if domain == "Residential" else (7.5 if domain == "Commercial" else 12.0)
     span *= rng.uniform(0.85, 1.15)
     cols = max(8, int((fa / (span * 5.0)) * rng.uniform(3, 5)))
     beams = int(cols * rng.uniform(1.5, 2.2))
-
     foundation = rng.choice(FOUNDATION_TYPES.get(domain, ["Strip Footing"]))
     slab_system = rng.choice(SLAB_SYSTEMS.get(domain, ["Flat Slab"]))
     storey_height = rng.uniform(3.0, 4.2)
@@ -197,7 +190,6 @@ def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soi
     else:
         rooms += [{"name": "Main Production Bay Floor", "type": "Manufacturing Floor", "w": rng.uniform(16, 20), "h": rng.uniform(10, 14), "color": "#2a1a1a"},
                   {"name": "Logistics Dispatch Terminal", "type": "Loading Bay", "w": rng.uniform(7, 9), "h": rng.uniform(7, 9), "color": "#3a2a1a"}]
-
     for b in range(baths):
         rooms.append({"name": f"Sanitary Bathroom {b+1}", "type": "Bathroom", "w": rng.uniform(2.5, 3.5), "h": rng.uniform(2, 3), "color": "#4a2a2a"})
     doors = len(rooms) + floors * rng.randint(1, 3)
@@ -371,7 +363,7 @@ def compute_boq(d, country):
     return total_usd, total_local, fx, breakdown
 
 # ════════════════════════════════════════════════
-#  7. FX HISTORY & FOREST (charts)
+#  7. FX HISTORY & FOREST
 # ════════════════════════════════════════════════
 @st.cache_data(ttl=3600)
 def fetch_hist(start, end):
@@ -451,7 +443,7 @@ def ram_ai(q, country, domain):
     return f"**Ram AI:** {random.choice(pool)}\n\n📌 *{country}*: {TIPS.get(country, '')}"
 
 # ════════════════════════════════════════════════
-#  9. RENDERERS (2D, 3D, Isometric, Gantt, Radar)
+#  9. RENDERERS
 # ════════════════════════════════════════════════
 def render_floorplan(plan, span=6.0):
     corridor = next((r for r in plan if r["type"]=="Corridor"), plan[0])
@@ -823,7 +815,7 @@ elif nav == "Concepts":
                 col1, col2 = st.columns([3,2])
                 with col1:
                     st.markdown("### 🗺️ 2D Floor Plan")
-                    st.plotly_chart(render_floorplan(c["plan"], c["structural"]["span"]), use_container_width=True, key=f"fp_{idx}")
+                    st.plotly_chart(render_floorplan(c["plan"], c["structural"]["span"]), use_container_width=True, key=f"fp_{c['id']}")
                     st.caption(f"Floor Area: {format_area(c['floor_area'])} | {c['floors']} floors | {c['country']}")
                     with st.expander("🧱 Material Breakdown"):
                         st.dataframe(pd.DataFrame(c['boq_breakdown']), use_container_width=True)
@@ -836,11 +828,12 @@ elif nav == "Concepts":
                     st.metric("USD Total", f"${c['total_usd']:,.0f}")
                     st.metric(f"Local ({c['fx']['currency']})", f"{c['fx']['symbol']} {c['total_local']:,.0f}")
                     st.markdown("### 📦 3D Massing")
-                    view = st.radio("View", ["Isometric","Interactive"], horizontal=True, key=f"3d_{idx}")
+                    # Use unique keys for radio and plot
+                    view = st.radio("View", ["Isometric","Interactive"], horizontal=True, key=f"view_{c['id']}")
                     if view == "Isometric":
                         st.components.v1.html(render_isometric(c["plan"], c["structural"]["span"]), height=400)
                     else:
-                        st.plotly_chart(render_3d(c["plan"], c["floors"], c["structural"]["span"]), use_container_width=True, key=f"3d_{idx}")
+                        st.plotly_chart(render_3d(c["plan"], c["floors"], c["structural"]["span"]), use_container_width=True, key=f"plot_{c['id']}")
 
                 # AEC DETAILS
                 with st.expander("🧰 AEC Details (Structural, Materials, Carbon, Risks, Quality)", expanded=False):
@@ -873,10 +866,10 @@ elif nav == "Concepts":
                     st.dataframe(pd.DataFrame(c['boq_breakdown']), use_container_width=True)
 
                     st.markdown("#### 📅 Construction Schedule (Gantt)")
-                    st.plotly_chart(gantt_chart(c), use_container_width=True)
+                    st.plotly_chart(gantt_chart(c), use_container_width=True, key=f"gantt_{c['id']}")
 
                     st.markdown("#### 📊 AI Scores Radar")
-                    st.plotly_chart(radar_chart(c['scores']), use_container_width=True)
+                    st.plotly_chart(radar_chart(c['scores']), use_container_width=True, key=f"radar_{c['id']}")
 
                     st.markdown("#### ⚠️ Risk Register")
                     risks = [
