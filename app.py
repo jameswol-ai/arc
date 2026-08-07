@@ -4,7 +4,7 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# ─── SOIL SYSTEM ──────────────────────────────────────────
+# ─── SOIL ──────────────────────────────────────────────────
 SOIL_TYPES = {
     "Nairobi Red Coffee Clay":             {"multiplier": 1.0,  "cat": "Medium", "region": "Kenya"},
     "Kampala Red Lateritic Clay":          {"multiplier": 1.6,  "cat": "Soft",   "region": "Uganda"},
@@ -17,27 +17,24 @@ SOIL_TYPES = {
     "Generic Soft Silt / Clay":            {"multiplier": 1.5,  "cat": "Soft",   "region": "All"},
     "Generic Hard Rock / Laterite":        {"multiplier": 0.7,  "cat": "Rock",   "region": "All"},
 }
-
 def get_soil_multiplier(soil_name):
     return SOIL_TYPES.get(soil_name, {"multiplier": 1.0})["multiplier"]
 
-# ─── ENHANCED SAI ENGINE ──────────────────────────────────
+# ─── DOMAINS, FOUNDATIONS, SLABS ────────────────────────
 ARCH_DOMAINS = {
     "Residential": ["Luxury Villa", "Modern Apartment", "Townhouse Studio"],
     "Commercial": ["Corporate Hub Block", "Boutique Retail Space", "Medical Clinic Center"],
     "Industrial": ["Distribution Depot", "Heavy Machinery Plant Warehouse"],
 }
-
 FOUNDATION_TYPES = {
     "Residential": ["Strip Footing", "Raft Foundation", "Pile Foundation"],
     "Commercial": ["Raft Foundation", "Pile Foundation", "Mat Foundation"],
-    "Industrial": ["Pile Foundation", "Deep Strip", "Mat Foundation"]
+    "Industrial": ["Pile Foundation", "Deep Strip", "Mat Foundation"],
 }
-
 SLAB_SYSTEMS = {
     "Residential": ["Flat Slab", "Beam-and-Slab"],
     "Commercial": ["Flat Slab", "Post-Tensioned Slab", "Composite Slab"],
-    "Industrial": ["Heavy-duty Slab", "Composite Slab"]
+    "Industrial": ["Heavy-duty Slab", "Composite Slab"],
 }
 
 def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soil_name, seed=0):
@@ -46,17 +43,15 @@ def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soi
     max_fp = int(plot * rng.uniform(0.5, 0.75))
     fa = min(max_fp, rng.randint(100, int(max_fp * 1.3)))
     gfa = fa * floors
-
     span = 6.0 if domain == "Residential" else (7.5 if domain == "Commercial" else 12.0)
     span *= rng.uniform(0.85, 1.15)
     cols = max(8, int((fa / (span * 5.0)) * rng.uniform(3, 5)))
     beams = int(cols * rng.uniform(1.5, 2.2))
-
     foundation = rng.choice(FOUNDATION_TYPES.get(domain, ["Strip Footing"]))
     slab_system = rng.choice(SLAB_SYSTEMS.get(domain, ["Flat Slab"]))
     storey_height = rng.uniform(3.0, 4.2)
     wall_type = "Reinforced Concrete" if rng.random() > 0.3 else "Masonry"
-
+    # rooms (simplified for brevity – copy full version from previous app.py)
     rooms = [
         {"name": "Central Corridor Gallery", "type": "Corridor", "w": 2.5, "h": 14.0, "color": "#3a3a4a"},
         {"name": "Main Staircase Core", "type": "Stairs", "w": 4.5, "h": 4.0, "color": "#4a4a5a"},
@@ -72,12 +67,11 @@ def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soi
     else:
         rooms += [{"name": "Main Production Bay Floor", "type": "Manufacturing Floor", "w": rng.uniform(16, 20), "h": rng.uniform(10, 14), "color": "#2a1a1a"},
                   {"name": "Logistics Dispatch Terminal", "type": "Loading Bay", "w": rng.uniform(7, 9), "h": rng.uniform(7, 9), "color": "#3a2a1a"}]
-
-    for b in range(baths): rooms.append({"name": f"Sanitary Bathroom {b+1}", "type": "Bathroom", "w": rng.uniform(2.5, 3.5), "h": rng.uniform(2, 3), "color": "#4a2a2a"})
+    for b in range(baths):
+        rooms.append({"name": f"Sanitary Bathroom {b+1}", "type": "Bathroom", "w": rng.uniform(2.5, 3.5), "h": rng.uniform(2, 3), "color": "#4a2a2a"})
     doors = len(rooms) + floors * rng.randint(1, 3)
     windows = max(4, int(gfa / rng.randint(12, 20)))
     soil_mult = get_soil_multiplier(soil_name)
-
     return {
         "id": str(uuid.uuid4())[:8].upper(),
         "domain": domain,
@@ -119,16 +113,20 @@ def run_eurocode_analysis(d, domain):
             "uls_status": "PASS ✅" if m_rd > m_ed else "FAIL ❌", "f_ck_used": round(f_ck,1), "b_used": round(b), "d_eff_used": round(d_eff)}
 
 def calculate_ai_scores(asset, ec, total_usd, prompt=None, weights=(0.25,0.25,0.25,0.25)):
+    # same as before – keep the full implementation
     arch = 40 + min(30, asset['floors']*4) + min(20, len(asset['rooms'])*2.5) + random.randint(-10,10)
     arch = min(100, arch)
     try:
         m_ed = float(ec['m_ed'].split()[0]); m_rd = float(ec['m_rd'].split()[0])
         struct = 70 + min(30, (m_rd - m_ed) / m_ed * 20)
-    except: struct = 50
-    if ec['uls_status'] != "PASS ✅": struct -= random.randint(20,40)
+    except:
+        struct = 50
+    if ec['uls_status'] != "PASS ✅":
+        struct -= random.randint(20,40)
     struct = min(100, max(0, int(struct + random.randint(-5,5))))
     sust = 40 + min(40, int(asset['windows']*2.0)) + random.randint(0,15)
-    if prompt and 'sustain' in prompt.lower(): sust += 10
+    if prompt and 'sustain' in prompt.lower():
+        sust += 10
     sust = min(100, sust)
     cost = 50 + (30 if total_usd/asset['total_gfa'] < 400 else (20 if total_usd/asset['total_gfa'] < 600 else 5)) + random.randint(-5,5)
     cost = min(100, int(cost))
@@ -136,10 +134,9 @@ def calculate_ai_scores(asset, ec, total_usd, prompt=None, weights=(0.25,0.25,0.
     composite = round(arch*w[0] + struct*w[1] + sust*w[2] + cost*w[3])
     return arch, struct, sust, cost, composite
 
-# ─── MATERIAL QUANTITIES & CARBON ────────────────────────
+# ─── MATERIALS & CARBON ──────────────────────────────────
 CARBON_FACTORS = {"concrete": 0.12, "steel": 1.85, "brick": 0.24, "finish": 5.0}
-
-def compute_materials(d, country):
+def compute_materials(d):
     gfa = d["total_gfa"]
     concrete_per_m2 = 0.25
     steel_per_m2 = 60
@@ -163,28 +160,27 @@ def compute_materials(d, country):
         "embodied_carbon_t": round(total_embodied_carbon / 1000, 2)
     }
 
-# ─── BOQ ──────────────────────────────────────────────────
+# ─── FOREX ──────────────────────────────────────────────────
 STATIC_FX = {"Kenya":129.49, "Uganda":3665.20, "Tanzania":2625.00, "South Sudan":4626.40, "Rwanda":1330.00, "Ethiopia":125.00}
 BASE_FX = {
     "Kenya": ("KES","KSh",1.00,"East Africa"), "Uganda": ("UGX","USh",0.95,"East Africa"),
     "Tanzania": ("TZS","TSh",0.98,"East Africa"), "South Sudan": ("SSP","SSP",1.35,"East Africa"),
     "Rwanda": ("RWF","FRw",0.85,"Central Africa"), "Ethiopia": ("ETB","Br",0.80,"Horn of Africa")
 }
-
 def _fetch_live():
     try:
         data = requests.get("https://api.exchangerate-api.com/v4/latest/USD", timeout=5).json()["rates"]
         mapping = {"Kenya":"KES","Uganda":"UGX","Tanzania":"TZS","South Sudan":"SSP","Rwanda":"RWF","Ethiopia":"ETB"}
         return {c: data[m[c]] for c in mapping if m[c] in data}
-    except: return {}
-
+    except:
+        return {}
 def get_fx(country):
     live = _fetch_live()
     rate = live.get(country, STATIC_FX[country])
     cur, sym, mult, reg = BASE_FX[country]
     return {"currency": cur, "symbol": sym, "rate": rate, "multiplier": mult, "region": reg}
-
-def get_all_countries(): return list(STATIC_FX.keys())
+def get_all_countries():
+    return list(STATIC_FX.keys())
 
 def compute_boq(d, country):
     gfa = d["total_gfa"]
@@ -208,7 +204,7 @@ def compute_boq(d, country):
     breakdown = [{"item": item, "quantity": qty, "unit_usd": round(u * fx["multiplier"], 2), "total_usd": round(qty * u * fx["multiplier"], 0)} for item, qty, u in items]
     return total_usd, total_local, fx, breakdown
 
-# ─── RAM AI ──────────────────────────────────────────────
+# ─── RAM AI ──────────────────────────────────────────────────
 WISDOM = {
     "soil": ["For soft clay, use raft/pile foundations. Black cotton soil expands when wet—add moisture barrier.",
              "Lateritic soils (Uganda/Rwanda) need erosion protection; strip footings with cover.",
@@ -226,7 +222,6 @@ WISDOM = {
 TIPS = {"Kenya":"Nairobi altitude reduces curing time.", "Uganda":"Termite attack risk on timber.",
         "Tanzania":"Sulphate‑resistant cement for coral limestone.", "South Sudan":"Compaction/soil replacement needed.",
         "Rwanda":"Volcanic soil stable; focus on cooling.", "Ethiopia":"Seismic ductile detailing per Eurocode 8."}
-
 def ram_ai(q, country, domain):
     q = q.lower()
     pool = WISDOM.get("soil" if "soil" in q or "ground" in q else
@@ -235,7 +230,7 @@ def ram_ai(q, country, domain):
                       "sustainability" if any(w in q for w in ("sustain","green","eco")) else "default")
     return f"**Ram AI:** {random.choice(pool)}\n\n📌 *{country}*: {TIPS.get(country, '')}"
 
-# ─── FLASK ROUTES ─────────────────────────────────────────
+# ─── FLASK ROUTES ──────────────────────────────────────────
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -267,7 +262,7 @@ def generate():
         d["eurocode"] = ec
         total_usd, total_local, fx, boq_breakdown = compute_boq(d, country)
         arch, struct, sust, cost, comp = calculate_ai_scores(d, ec, total_usd, "", tuple(weights))
-        materials = compute_materials(d, country)
+        materials = compute_materials(d)
         d["scores"] = {"arch":arch,"struct":struct,"sust":sust,"cost":cost,"composite":comp}
         d["total_usd"] = total_usd
         d["total_local"] = total_local
