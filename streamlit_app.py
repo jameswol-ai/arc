@@ -27,8 +27,17 @@ def to_display_area(m2):
         return (round(m2 * M2_TO_FT2, 1), "sq ft")
     return (round(m2, 1), "m²")
 
+# ===== HELPER FUNCTIONS =====
+def format_length(m):
+    val, unit = to_display_length(m)
+    return f"{val} {unit}"
+
+def format_area(m2):
+    val, unit = to_display_area(m2)
+    return f"{val} {unit}"
+
 # ════════════════════════════════════════════════
-#  2. AUTH & MEMORY (file-based, works on Streamlit Cloud)
+#  2. AUTH & MEMORY (file-based)
 # ════════════════════════════════════════════════
 DATA_DIR = Path("data")
 DATA_DIR.mkdir(exist_ok=True)
@@ -120,7 +129,6 @@ SOIL_TYPES = {
     "Generic Hard Rock / Laterite":        {"multiplier": 0.7,  "cat": "Rock",   "region": "All"},
 }
 
-# Dynamic soil options per country
 REGION_SOIL_OPTIONS = {
     "Kenya":       ["Nairobi Red Coffee Clay", "Generic Firm Sandy Gravel", "Generic Soft Silt / Clay", "Generic Hard Rock / Laterite"],
     "Uganda":      ["Kampala Red Lateritic Clay", "Wetland Silts (Kampala)", "Generic Firm Sandy Gravel", "Generic Hard Rock / Laterite"],
@@ -675,7 +683,6 @@ with st.sidebar:
         floors = st.slider("Floors", 1, 12, 3)
         baths = st.slider("Bathrooms", 1, 10, 2)
 
-        # Dynamic soil based on country
         soil_options = REGION_SOIL_OPTIONS.get(country, ["Generic Firm Sandy Gravel"])
         soil_names = soil_options
         default_idx = 0
