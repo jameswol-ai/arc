@@ -1,5 +1,2 @@
 Flask
 requests
-numpy
-pandas
-plotly
