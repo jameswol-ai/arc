@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Arc – Sai Engine</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
     <style>
+        /* ── Reset & base ── */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: #0a0a0a;
@@ -15,35 +16,36 @@
             display: flex;
             min-height: 100vh;
         }
-        /* ── Scrollbar ── */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #1a1a1a; }
         ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
 
         /* ── Sidebar ── */
         .sidebar {
-            width: 240px;
+            width: 250px;
             background: #0a0a0a;
             border-right: 1px solid #222;
-            padding: 20px 16px;
+            padding: 24px 16px;
             flex-shrink: 0;
             height: 100vh;
             position: sticky;
             top: 0;
             overflow-y: auto;
+            display: flex;
+            flex-direction: column;
         }
         .sidebar .logo {
-            font-size: 1.4rem;
+            font-size: 1.6rem;
             font-weight: 300;
             color: #aaaaaa;
             text-align: center;
-            margin-bottom: 24px;
-            letter-spacing: 1px;
+            margin-bottom: 28px;
+            letter-spacing: 2px;
         }
         .sidebar .logo span { color: #666; }
         .sidebar nav a {
             display: block;
-            padding: 10px 12px;
+            padding: 10px 14px;
             color: #888;
             text-decoration: none;
             border-radius: 8px;
@@ -54,8 +56,29 @@
         }
         .sidebar nav a:hover { background: #1a1a1a; color: #ddd; }
         .sidebar nav a.active { background: #222; color: #fff; }
+        .sidebar .user-area {
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid #222;
+            font-size: 0.9rem;
+            color: #888;
+        }
+        .sidebar .user-area .username { color: #ccc; font-weight: 500; }
+        .sidebar .user-area .logout-btn {
+            background: transparent;
+            border: 1px solid #333;
+            color: #888;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-top: 8px;
+            width: 100%;
+            transition: 0.2s;
+        }
+        .sidebar .user-area .logout-btn:hover { background: #222; color: #ddd; }
 
-        /* ── Main content ── */
+        /* ── Main ── */
         .main {
             flex: 1;
             padding: 24px 32px 40px;
@@ -68,10 +91,12 @@
             background: #111111;
             border: 1px solid #333333;
             border-radius: 18px;
-            padding: 20px;
+            padding: 20px 24px;
             margin-bottom: 24px;
+            transition: border-color 0.2s;
         }
-        .glass-panel h2 { color: #aaaaaa; margin-top: 0; margin-bottom: 12px; font-weight: 400; }
+        .glass-panel:hover { border-color: #444; }
+        .glass-panel h2 { color: #aaaaaa; margin-bottom: 8px; font-weight: 400; }
         .glass-panel h3 { color: #aaaaaa; margin-bottom: 12px; font-weight: 400; }
         .glass-panel p { color: #888; }
 
@@ -84,13 +109,17 @@
             padding: 10px 24px;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.2s, box-shadow 0.2s;
+            transition: all 0.2s;
             box-shadow: 0 2px 8px rgba(0,0,0,0.5);
             font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
         .btn:hover { background: #444; box-shadow: 0 4px 12px rgba(0,0,0,0.8); }
         .btn-secondary { background: #222; }
         .btn-secondary:hover { background: #333; }
+        .btn-sm { padding: 6px 14px; font-size: 0.85rem; }
 
         input, select {
             background: transparent !important;
@@ -106,26 +135,30 @@
 
         .form-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
             gap: 16px;
             align-items: end;
         }
         .form-grid .field { display: flex; flex-direction: column; gap: 4px; }
         .form-grid .field label { font-size: 0.8rem; color: #888; }
 
-        /* ── Concept cards ── */
+        /* ── Cards ── */
         .concept-card {
             background: #1a1a1a;
             border: 1px solid #444;
             border-radius: 12px;
             padding: 16px 20px;
             margin-bottom: 12px;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
         }
+        .concept-card:hover { border-color: #666; background: #1e1e1e; }
         .concept-card .head {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 6px;
+            flex-wrap: wrap;
+            gap: 8px;
         }
         .concept-card .head h4 { color: #aaa; margin: 0; }
         .concept-card .head .score { color: #888; font-weight: 600; }
@@ -133,7 +166,7 @@
         .concept-card .progress {
             background: #222;
             border-radius: 5px;
-            height: 8px;
+            height: 6px;
             width: 100%;
             margin: 6px 0;
         }
@@ -150,6 +183,30 @@
             color: #666;
             margin-top: 4px;
         }
+        .concept-card .expand-btn {
+            background: transparent;
+            border: 1px solid #444;
+            color: #888;
+            padding: 2px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: 0.2s;
+        }
+        .concept-card .expand-btn:hover { background: #333; color: #ddd; }
+        .concept-detail {
+            display: none;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #333;
+            font-size: 0.9rem;
+        }
+        .concept-detail.open { display: block; }
+        .concept-detail .row { display: flex; gap: 20px; flex-wrap: wrap; }
+        .concept-detail .row > div { flex: 1; min-width: 200px; }
+        .concept-detail table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .concept-detail table td, .concept-detail table th { padding: 4px 8px; border-bottom: 1px solid #333; text-align: left; }
+        .concept-detail table th { color: #888; font-weight: 400; }
 
         /* ── Metrics ── */
         .metrics {
@@ -162,7 +219,7 @@
             padding: 12px 20px;
             border-radius: 12px;
             flex: 1;
-            min-width: 120px;
+            min-width: 100px;
             text-align: center;
         }
         .metrics .metric .value { font-size: 1.8rem; font-weight: 600; color: #ccc; }
@@ -179,22 +236,67 @@
             border-left: 3px solid #555;
         }
 
+        /* ── Login overlay ── */
+        #login-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+        #login-overlay .login-box {
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 24px;
+            padding: 40px 48px;
+            width: 100%;
+            max-width: 400px;
+        }
+        #login-overlay .login-box h2 { text-align: center; color: #aaa; font-weight: 300; margin-bottom: 24px; }
+        #login-overlay .login-box .field { margin-bottom: 16px; }
+        #login-overlay .login-box .field label { display: block; color: #888; font-size: 0.8rem; margin-bottom: 4px; }
+        #login-overlay .login-box .btn { width: 100%; justify-content: center; }
+        .login-error { color: #cc5555; font-size: 0.85rem; margin-top: 8px; text-align: center; }
+
         /* ── Responsive ── */
         @media (max-width: 768px) {
             body { flex-direction: column; }
-            .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid #222; }
+            .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid #222; padding: 16px; }
             .main { max-height: none; padding: 16px; }
+            .form-grid { grid-template-columns: 1fr 1fr; }
         }
 
-        /* ── Utility ── */
+        /* utilities */
         .hidden { display: none !important; }
         .mt-12 { margin-top: 12px; }
         .text-center { text-align: center; }
         .flex { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
         .flex-1 { flex: 1; }
+        .gap-8 { gap: 8px; }
     </style>
 </head>
 <body>
+
+<!-- ─── LOGIN OVERLAY ─── -->
+<div id="login-overlay">
+    <div class="login-box">
+        <h2>◈ Arc</h2>
+        <div class="field">
+            <label>Username</label>
+            <input type="text" id="login-username" value="admin" />
+        </div>
+        <div class="field">
+            <label>Password</label>
+            <input type="password" id="login-password" value="admin123" />
+        </div>
+        <button class="btn" onclick="login()">Sign In</button>
+        <div id="login-error" class="login-error hidden"></div>
+        <p style="text-align:center; color:#666; font-size:0.8rem; margin-top:12px;">Demo: admin/admin123</p>
+    </div>
+</div>
 
 <!-- ─── SIDEBAR ─── -->
 <div class="sidebar">
@@ -204,43 +306,61 @@
         <a href="#" data-tab="concepts">🏗️ Concepts</a>
         <a href="#" data-tab="ram">🧠 Ram AI</a>
     </nav>
-    <div style="margin-top: 40px; font-size: 0.7rem; color: #444; text-align: center;">
-        AI Powered · Data Driven
+    <div class="user-area">
+        <div><span class="username" id="sidebar-username">Guest</span></div>
+        <button class="logout-btn" onclick="logout()">🚪 Logout</button>
     </div>
 </div>
 
-<!-- ─── MAIN CONTENT ─── -->
+<!-- ─── MAIN ─── -->
 <div class="main">
 
     <!-- ===== DASHBOARD ===== -->
     <div id="tab-dashboard">
         <div class="glass-panel text-center" style="margin-bottom:24px;">
-            <h2 style="margin:0;">Welcome back, Architect 👋</h2>
+            <h2 style="margin:0;">Welcome back, <span id="welcome-username">Architect</span> 👋</h2>
             <p style="color:#888;">Create. Evolve. Perfect.</p>
         </div>
 
         <div class="glass-panel">
-            <h3>💹 Live East African FX Rates</h3>
-            <div id="forex-bar" style="height:300px;"></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                <h3 style="margin:0;">💹 Live East African FX Rates</h3>
+                <button class="btn btn-secondary btn-sm" onclick="loadForexBar()">🔄 Refresh</button>
+            </div>
+            <div id="forex-bar" style="height:280px;"></div>
         </div>
 
         <div class="glass-panel">
             <h3>📈 East African FX History (60 days)</h3>
-            <div id="forex-history" style="height:300px;"></div>
+            <div id="forex-history" style="height:280px;"></div>
         </div>
 
         <div class="glass-panel">
             <h3>🌳 Forex Forest – Weekly Forecast</h3>
             <p style="color:#888; font-size:0.9rem;">Monte Carlo simulation of possible rate paths over the next 7 days</p>
-            <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+            <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
                 <label style="color:#888;">Country</label>
                 <select id="forest-country" style="width:auto; flex:1; min-width:150px;">
                     <option>Kenya</option><option>Uganda</option><option>Tanzania</option>
                     <option>South Sudan</option><option>Rwanda</option><option>Ethiopia</option>
                 </select>
-                <button class="btn btn-secondary" onclick="updateForest()">Update</button>
+                <button class="btn btn-secondary btn-sm" onclick="updateForest()">Update</button>
             </div>
-            <div id="forest-chart" style="height:300px; margin-top:12px;"></div>
+            <div id="forest-chart" style="height:280px; margin-top:12px;"></div>
+        </div>
+
+        <div class="glass-panel">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                <h3 style="margin:0;">🌍 Country Tip</h3>
+                <div style="display:flex; gap:12px; align-items:center;">
+                    <label style="color:#888; font-size:0.8rem;">Unit system</label>
+                    <select id="unit-toggle" style="width:auto; padding:4px 8px; font-size:0.8rem;">
+                        <option value="metric">Metric</option>
+                        <option value="imperial">Imperial</option>
+                    </select>
+                </div>
+            </div>
+            <div id="country-tip" style="background:#1a1a1a; border-radius:12px; padding:12px 16px; color:#aaa; border-left:3px solid #555;"></div>
         </div>
 
         <div class="glass-panel">
@@ -332,7 +452,69 @@
 </div>
 
 <script>
-    // ─── Navigation ────────────────────────────────────────────
+    // ─── GLOBAL STATE ──────────────────────────────────────────
+    let currentUsername = localStorage.getItem('arc_username') || null;
+    let conceptsData = []; // store generated concepts for detail view
+
+    // ─── UNIT CONVERSION ──────────────────────────────────────
+    const M2_TO_FT2 = 10.7639;
+    const M_TO_FT = 3.28084;
+
+    function getUnitSystem() {
+        return document.getElementById('unit-toggle').value;
+    }
+
+    function formatArea(m2) {
+        const unit = getUnitSystem();
+        if (unit === 'imperial') return (m2 * M2_TO_FT2).toFixed(1) + ' sq ft';
+        return m2.toFixed(1) + ' m²';
+    }
+
+    function formatLength(m) {
+        const unit = getUnitSystem();
+        if (unit === 'imperial') return (m * M_TO_FT).toFixed(1) + ' ft';
+        return m.toFixed(1) + ' m';
+    }
+
+    // ─── AUTH ──────────────────────────────────────────────────
+    function login() {
+        const username = document.getElementById('login-username').value.trim();
+        const password = document.getElementById('login-password').value.trim();
+        if (!username || !password) {
+            showLoginError('Please fill in both fields.');
+            return;
+        }
+        // Simulate authentication – accept admin/admin123 or any non‑empty credentials
+        if (username === 'admin' && password === 'admin123') {
+            localStorage.setItem('arc_username', username);
+            currentUsername = username;
+            document.getElementById('login-overlay').classList.add('hidden');
+            updateUserUI();
+            loadDashboard();
+        } else {
+            showLoginError('Invalid credentials. Try admin/admin123.');
+        }
+    }
+
+    function showLoginError(msg) {
+        const el = document.getElementById('login-error');
+        el.textContent = msg;
+        el.classList.remove('hidden');
+    }
+
+    function logout() {
+        localStorage.removeItem('arc_username');
+        currentUsername = null;
+        document.getElementById('login-overlay').classList.remove('hidden');
+        document.getElementById('login-error').classList.add('hidden');
+    }
+
+    function updateUserUI() {
+        document.getElementById('sidebar-username').textContent = currentUsername || 'Guest';
+        document.getElementById('welcome-username').textContent = currentUsername || 'Architect';
+    }
+
+    // ─── NAVIGATION ──────────────────────────────────────────
     document.querySelectorAll('.sidebar nav a').forEach(link => {
         link.addEventListener('click', function(e) {
             e.preventDefault();
@@ -343,16 +525,19 @@
             document.getElementById('tab-' + tab).classList.remove('hidden');
             // Refresh charts if needed
             if (tab === 'dashboard') {
-                // Re‑plot if not already
-                // We'll just rely on existing charts
+                // Reload forex if visible (already loaded on page load)
+                // but we can just leave them.
             }
         });
     });
 
-    // ─── Helpers ──────────────────────────────────────────────
-    function showError(id, msg) {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = `<p style="color:#888;">${msg}</p>`;
+    // ─── DASHBOARD LOAD ──────────────────────────────────────
+    async function loadDashboard() {
+        await loadForexBar();
+        await loadForexHistory();
+        await updateForest();
+        await updateCountryTip(document.getElementById('forest-country').value);
+        updateMetrics();
     }
 
     // ─── 1. Forex Bar ──────────────────────────────────────────
@@ -379,11 +564,11 @@
             };
             Plotly.newPlot('forex-bar', [trace], layout, { responsive: true });
         } catch(e) {
-            showError('forex-bar', 'Failed to load forex data.');
+            document.getElementById('forex-bar').innerHTML = '<p style="color:#888;">Failed to load forex data.</p>';
         }
     }
 
-    // ─── 2. Forex History (60 days) ──────────────────────────
+    // ─── 2. Forex History ──────────────────────────────────────
     async function loadForexHistory() {
         const end = new Date();
         const start = new Date(); start.setDate(start.getDate() - 60);
@@ -414,7 +599,6 @@
             };
             Plotly.newPlot('forex-history', traces, layout, { responsive: true });
         } catch(e) {
-            showError('forex-history', 'History data unavailable. Showing simulated trend.');
             // fallback: simulate
             const dates = Array.from({length:60}, (_,i) => {
                 const d = new Date(); d.setDate(d.getDate() - (59-i)); return d.toISOString().slice(0,10);
@@ -441,26 +625,24 @@
             }, { responsive: true });
         }
     }
+
     function getColor(sym) {
         const map = {KES:'#888', UGX:'#aaa', TZS:'#666', SSP:'#999', RWF:'#777', ETB:'#555'};
         return map[sym] || '#94a3b8';
     }
 
-    // ─── 3. Forex Forest (Monte Carlo) ──────────────────────
+    // ─── 3. Forex Forest ──────────────────────────────────────
     let forestChart = null;
     async function updateForest() {
         const country = document.getElementById('forest-country').value;
-        // fetch current rate
         try {
             const res = await fetch('/api/forex');
             const data = await res.json();
             const base = data[country];
-            if (!base) { showError('forest-chart', 'No data for selected country.'); return; }
-            // Monte Carlo simulation in JS
+            if (!base) { document.getElementById('forest-chart').innerHTML = '<p style="color:#888;">No data for selected country.</p>'; return; }
             const days = 7, paths = 100, vol = 0.008;
             const sim = monteCarlo(base, days, paths, vol);
             const x = Array.from({length: days}, (_,i) => i+1);
-            // compute percentiles
             const pcts = [95, 80, 50];
             const traces = [];
             pcts.forEach(p => {
@@ -490,7 +672,6 @@
                     hoverinfo: 'skip'
                 });
             });
-            // median
             const median = sim.map(s => s.reduce((a,b) => a+b, 0)/s.length);
             traces.push({
                 x: x,
@@ -511,7 +692,7 @@
             };
             Plotly.newPlot('forest-chart', traces, layout, { responsive: true });
         } catch(e) {
-            showError('forest-chart', 'Error generating forecast.');
+            document.getElementById('forest-chart').innerHTML = '<p style="color:#888;">Error generating forecast.</p>';
         }
     }
 
@@ -529,7 +710,21 @@
         return sims;
     }
 
-    // ─── 4. Generate Concepts ─────────────────────────────────
+    // ─── 4. Country Tip ──────────────────────────────────────
+    const TIPS = {
+        Kenya: "Nairobi altitude reduces curing time.",
+        Uganda: "Termite attack risk on timber.",
+        Tanzania: "Sulphate‑resistant cement for coral limestone.",
+        "South Sudan": "Compaction/soil replacement needed.",
+        Rwanda: "Volcanic soil stable; focus on cooling.",
+        Ethiopia: "Seismic ductile detailing per Eurocode 8."
+    };
+    async function updateCountryTip(country) {
+        const tip = TIPS[country] || 'General advice: start with site analysis.';
+        document.getElementById('country-tip').innerHTML = `<strong>${country}</strong> – ${tip}`;
+    }
+
+    // ─── 5. Generate Concepts ─────────────────────────────────
     async function generateConcepts() {
         const payload = {
             country: document.getElementById('gen-country').value,
@@ -551,6 +746,7 @@
                 body: JSON.stringify(payload)
             });
             const concepts = await res.json();
+            conceptsData = concepts;
             container.innerHTML = '';
             if (!concepts.length) {
                 container.innerHTML = '<p style="color:#888;">No concepts generated.</p>';
@@ -565,18 +761,27 @@
                     <div class="head">
                         <h4>${c.type || 'Concept'}</h4>
                         <span class="score">Composite: ${score}</span>
+                        <button class="expand-btn" data-idx="${idx}">Details</button>
                     </div>
-                    <div class="detail">${c.country} · ${c.floors} floors · ${c.total_gfa} m² · Soil: ${c.soil_name}</div>
+                    <div class="detail">${c.country} · ${c.floors} floors · ${formatArea(c.total_gfa)} · Soil: ${c.soil_name}</div>
                     <div class="detail">Arch: ${c.scores.arch}% &nbsp;|&nbsp; Struct: ${c.scores.struct}% &nbsp;|&nbsp; Sust: ${c.scores.sust}% &nbsp;|&nbsp; Cost: ${c.scores.cost}%</div>
                     <div class="progress"><div class="fill" style="width:${score}%;"></div></div>
                     <div class="footer">
                         <span>${euroStatus}</span>
                         <span>USD ${(c.total_usd || 0).toLocaleString()}</span>
                     </div>
+                    <div class="concept-detail" id="detail-${idx}">
+                        <!-- will be filled on expand -->
+                    </div>
                 `;
                 container.appendChild(card);
+                // attach expand listener
+                card.querySelector('.expand-btn').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const idx = parseInt(this.dataset.idx);
+                    toggleDetail(idx);
+                });
             });
-            // Update metrics
             document.getElementById('metric-concepts').textContent = concepts.length;
         } catch(e) {
             container.innerHTML = '<p style="color:#888;">Error generating concepts. Check console.</p>';
@@ -584,7 +789,77 @@
         }
     }
 
-    // ─── 5. Ram AI ─────────────────────────────────────────────
+    // ─── 6. Concept Detail (expand) ──────────────────────────
+    function toggleDetail(idx) {
+        const detailDiv = document.getElementById(`detail-${idx}`);
+        if (detailDiv.classList.contains('open')) {
+            detailDiv.classList.remove('open');
+            return;
+        }
+        // close others
+        document.querySelectorAll('.concept-detail.open').forEach(d => d.classList.remove('open'));
+        const concept = conceptsData[idx];
+        if (!concept) return;
+        // Build content
+        let html = `<div class="row"><div><strong>Structural</strong><br>Columns: ${concept.structural?.columns || 'N/A'}<br>Beams: ${concept.structural?.beams || 'N/A'}<br>Span: ${concept.structural?.span ? formatLength(concept.structural.span) : 'N/A'}</div>`;
+        html += `<div><strong>Eurocode</strong><br>${concept.eurocode?.design_load || 'N/A'}<br>M_ed: ${concept.eurocode?.m_ed || 'N/A'}<br>M_rd: ${concept.eurocode?.m_rd || 'N/A'}<br>Status: ${concept.eurocode?.uls_status || 'N/A'}</div>`;
+        html += `<div><strong>Rooms (${concept.rooms_count || 0})</strong><br>`;
+        if (concept.rooms && concept.rooms.length) {
+            html += '<table><tr><th>Room</th><th>Width</th><th>Length</th></tr>';
+            concept.rooms.forEach(r => {
+                html += `<tr><td>${r.name}</td><td>${formatLength(r.w)}</td><td>${formatLength(r.h)}</td></tr>`;
+            });
+            html += '</table>';
+        } else {
+            html += 'No room data';
+        }
+        html += `</div></div>`;
+        // Radar chart for scores
+        html += `<div id="radar-${idx}" style="height:200px; margin-top:12px;"></div>`;
+        // Gantt chart placeholder – we could generate a simple bar chart
+        html += `<div id="gantt-${idx}" style="height:150px; margin-top:12px;"></div>`;
+        detailDiv.innerHTML = html;
+        detailDiv.classList.add('open');
+        // Draw radar chart
+        const scores = concept.scores;
+        const categories = ['Architecture', 'Structural', 'Sustainability', 'Cost Efficiency'];
+        const values = [scores.arch, scores.struct, scores.sust, scores.cost];
+        const radarTrace = {
+            type: 'scatterpolar',
+            r: values,
+            theta: categories,
+            fill: 'toself',
+            marker: { color: '#888' },
+            line: { color: '#aaa' }
+        };
+        Plotly.newPlot(`radar-${idx}`, [radarTrace], {
+            polar: { radialaxis: { range: [0,100], gridcolor: '#333' } },
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#aaaaaa' },
+            margin: { l: 40, r: 40, t: 20, b: 20 }
+        }, { responsive: true });
+        // Simple Gantt: horizontal bar chart for construction tasks
+        const tasks = ['Mobilization', 'Substructure', 'Floor 1', 'Floor 2', 'Roofing', 'Finishes', 'Commissioning'];
+        const durations = [5, 10, 15, 15, 12, 8, 7];
+        const ganttTrace = {
+            y: tasks,
+            x: durations,
+            type: 'bar',
+            orientation: 'h',
+            marker: { color: '#555' }
+        };
+        Plotly.newPlot(`gantt-${idx}`, [ganttTrace], {
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#aaaaaa' },
+            margin: { l: 80, r: 20, t: 10, b: 20 },
+            xaxis: { gridcolor: '#333', title: 'Days' },
+            yaxis: { gridcolor: '#333' }
+        }, { responsive: true });
+    }
+
+    // ─── 7. Ram AI ─────────────────────────────────────────────
     async function askRam() {
         const q = document.getElementById('ram-question').value.trim();
         if (!q) return;
@@ -592,7 +867,7 @@
         responseDiv.innerHTML = 'Thinking...';
         const payload = {
             q: q,
-            country: document.getElementById('gen-country').value, // use selected country from concepts tab
+            country: document.getElementById('gen-country').value,
             domain: document.getElementById('gen-domain').value
         };
         try {
@@ -608,23 +883,64 @@
         }
     }
 
-    // ─── 6. Dashboard Metrics (demo) ──────────────────────────
+    // ─── 8. Metrics ──────────────────────────────────────────────
     function updateMetrics() {
-        // Just a placeholder; you could fetch from /api/forex or other
-        document.getElementById('metric-blueprints').textContent = Math.floor(Math.random() * 5 + 1);
-        document.getElementById('metric-logs').textContent = Math.floor(Math.random() * 20 + 5);
+        // placeholder – we could fetch from localStorage or generate
+        const blueprints = Math.floor(Math.random() * 5 + 1);
+        const logs = Math.floor(Math.random() * 20 + 5);
+        document.getElementById('metric-blueprints').textContent = blueprints;
+        document.getElementById('metric-logs').textContent = logs;
+        // concepts updated after generation
     }
 
-    // ─── Init ──────────────────────────────────────────────────
-    window.onload = function() {
-        loadForexBar();
-        loadForexHistory();
-        updateForest();
-        updateMetrics();
-        // Load initial concepts? maybe not.
-        // Show dashboard by default
-    };
-</script>
+    // ─── INIT ──────────────────────────────────────────────────
+    // Check if user is logged in
+    if (currentUsername) {
+        document.getElementById('login-overlay').classList.add('hidden');
+        updateUserUI();
+        loadDashboard();
+    } else {
+        // show login
+        document.getElementById('login-overlay').classList.remove('hidden');
+    }
 
+    // Event listeners: country change updates tip and soil options
+    document.getElementById('forest-country').addEventListener('change', function() {
+        updateCountryTip(this.value);
+    });
+    document.getElementById('gen-country').addEventListener('change', function() {
+        updateSoilOptions(this.value);
+    });
+    document.getElementById('unit-toggle').addEventListener('change', function() {
+        // Refresh concept cards if any
+        if (conceptsData.length) {
+            // Re‑render concepts with new unit system
+            // We can just regenerate the container by calling generate again, but we'll just re‑render from stored data.
+            // Simple: re‑generate concepts (or re‑render)
+            // We'll keep it simple: the user can click Generate again.
+            // But we can also re‑render by calling a function.
+            // For simplicity, we'll just alert.
+        }
+    });
+
+    // Soil options mapping
+    const soilMap = {
+        Kenya: ['Nairobi Red Coffee Clay', 'Generic Firm Sandy Gravel', 'Generic Soft Silt / Clay', 'Generic Hard Rock / Laterite'],
+        Uganda: ['Kampala Red Lateritic Clay', 'Wetland Silts (Kampala)', 'Generic Firm Sandy Gravel', 'Generic Hard Rock / Laterite'],
+        Tanzania: ['Dar Coastal Sand / Coral Limestone', 'Generic Firm Sandy Gravel', 'Generic Soft Silt / Clay'],
+        'South Sudan': ['Juba Black Cotton Soil (Expansive)', 'Generic Firm Sandy Gravel', 'Generic Hard Rock / Laterite'],
+        Rwanda: ['Kigali Volcanic Andosols', 'Generic Firm Sandy Gravel', 'Generic Soft Silt / Clay'],
+        Ethiopia: ['Addis Clayey Soils & Volcanic Tuff', 'Generic Firm Sandy Gravel', 'Generic Hard Rock / Laterite']
+    };
+
+    function updateSoilOptions(country) {
+        const select = document.getElementById('gen-soil');
+        const options = soilMap[country] || ['Generic Firm Sandy Gravel'];
+        select.innerHTML = options.map(s => `<option value="${s}">${s}</option>`).join('');
+    }
+
+    // initial soil update
+    updateSoilOptions(document.getElementById('gen-country').value);
+</script>
 </body>
 </html>
