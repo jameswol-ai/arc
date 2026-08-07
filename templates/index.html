@@ -1,191 +1,630 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Arc – Sai Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
     <style>
-        body { background: #0a0a0a; color: #cccccc; font-family: 'Inter', sans-serif; margin: 0; padding: 20px; }
-        .glass-panel { background: #111111; border: 1px solid #333; border-radius: 18px; padding: 20px; margin-bottom: 20px; }
-        button { background: #333; color: #fff; border: none; border-radius: 10px; padding: 10px 20px; cursor: pointer; }
-        button:hover { background: #444; }
-        input, select { background: transparent; border: 1px solid #333; border-radius: 8px; color: #ccc; padding: 8px; width: 100%; }
-        .flex { display: flex; gap: 20px; flex-wrap: wrap; }
-        .col { flex: 1; min-width: 150px; }
-        .concept-card { background: #1a1a1a; border: 1px solid #444; border-radius: 10px; padding: 15px; margin: 10px 0; }
-        .concept-card h4 { margin: 0; color: #aaa; }
-        .concept-card .score { float: right; color: #888; }
-        .concept-card .detail { font-size: 0.9em; color: #888; }
-        .progress-bar { background: #222; border-radius: 5px; height: 8px; width: 100%; }
-        .progress-fill { background: #888; height: 100%; border-radius: 5px; }
-        .metric { display: inline-block; margin-right: 20px; }
-        #ram-response { white-space: pre-wrap; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0a;
+            color: #cccccc;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            min-height: 100vh;
+        }
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 240px;
+            background: #0a0a0a;
+            border-right: 1px solid #222;
+            padding: 20px 16px;
+            flex-shrink: 0;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            overflow-y: auto;
+        }
+        .sidebar .logo {
+            font-size: 1.4rem;
+            font-weight: 300;
+            color: #aaaaaa;
+            text-align: center;
+            margin-bottom: 24px;
+            letter-spacing: 1px;
+        }
+        .sidebar .logo span { color: #666; }
+        .sidebar nav a {
+            display: block;
+            padding: 10px 12px;
+            color: #888;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            transition: background 0.2s, color 0.2s;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+        .sidebar nav a:hover { background: #1a1a1a; color: #ddd; }
+        .sidebar nav a.active { background: #222; color: #fff; }
+
+        /* ── Main content ── */
+        .main {
+            flex: 1;
+            padding: 24px 32px 40px;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+        /* ── Glass panels ── */
+        .glass-panel {
+            background: #111111;
+            border: 1px solid #333333;
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .glass-panel h2 { color: #aaaaaa; margin-top: 0; margin-bottom: 12px; font-weight: 400; }
+        .glass-panel h3 { color: #aaaaaa; margin-bottom: 12px; font-weight: 400; }
+        .glass-panel p { color: #888; }
+
+        /* ── Buttons & inputs ── */
+        .btn {
+            background: #333;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 24px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            font-size: 0.95rem;
+        }
+        .btn:hover { background: #444; box-shadow: 0 4px 12px rgba(0,0,0,0.8); }
+        .btn-secondary { background: #222; }
+        .btn-secondary:hover { background: #333; }
+
+        input, select {
+            background: transparent !important;
+            border: 1px solid #333 !important;
+            border-radius: 8px;
+            color: #cccccc !important;
+            padding: 8px 12px;
+            width: 100%;
+            font-family: inherit;
+            font-size: 0.95rem;
+        }
+        input:focus, select:focus { outline: none; border-color: #666; }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 16px;
+            align-items: end;
+        }
+        .form-grid .field { display: flex; flex-direction: column; gap: 4px; }
+        .form-grid .field label { font-size: 0.8rem; color: #888; }
+
+        /* ── Concept cards ── */
+        .concept-card {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+        }
+        .concept-card .head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .concept-card .head h4 { color: #aaa; margin: 0; }
+        .concept-card .head .score { color: #888; font-weight: 600; }
+        .concept-card .detail { font-size: 0.9rem; color: #888; }
+        .concept-card .progress {
+            background: #222;
+            border-radius: 5px;
+            height: 8px;
+            width: 100%;
+            margin: 6px 0;
+        }
+        .concept-card .progress .fill {
+            background: #888;
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.3s;
+        }
+        .concept-card .footer {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        /* ── Metrics ── */
+        .metrics {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        .metrics .metric {
+            background: #1a1a1a;
+            padding: 12px 20px;
+            border-radius: 12px;
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+        }
+        .metrics .metric .value { font-size: 1.8rem; font-weight: 600; color: #ccc; }
+        .metrics .metric .label { font-size: 0.8rem; color: #888; }
+
+        /* ── Ram response ── */
+        #ram-response {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 12px;
+            white-space: pre-wrap;
+            color: #aaa;
+            border-left: 3px solid #555;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid #222; }
+            .main { max-height: none; padding: 16px; }
+        }
+
+        /* ── Utility ── */
+        .hidden { display: none !important; }
+        .mt-12 { margin-top: 12px; }
+        .text-center { text-align: center; }
+        .flex { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
+        .flex-1 { flex: 1; }
     </style>
 </head>
 <body>
-    <div class="glass-panel">
-        <h1 style="color: #aaaaaa;">◈ Arc – Sai Engine</h1>
-        <p style="color: #888;">Architectural Intelligence &amp; East African Forex</p>
-    </div>
 
-    <div class="glass-panel">
-        <h3>💹 Live East African FX Rates</h3>
-        <div id="forex-chart" style="height: 300px;"></div>
+<!-- ─── SIDEBAR ─── -->
+<div class="sidebar">
+    <div class="logo">◈ Arc</div>
+    <nav>
+        <a href="#" class="active" data-tab="dashboard">📊 Dashboard</a>
+        <a href="#" data-tab="concepts">🏗️ Concepts</a>
+        <a href="#" data-tab="ram">🧠 Ram AI</a>
+    </nav>
+    <div style="margin-top: 40px; font-size: 0.7rem; color: #444; text-align: center;">
+        AI Powered · Data Driven
     </div>
+</div>
 
-    <div class="glass-panel flex">
-        <div class="col">
-            <label>Country</label>
-            <select id="country">
-                <option>Kenya</option><option>Uganda</option><option>Tanzania</option>
-                <option>South Sudan</option><option>Rwanda</option><option>Ethiopia</option>
-            </select>
-        </div>
-        <div class="col">
-            <label>Domain</label>
-            <select id="domain">
-                <option>Residential</option><option>Commercial</option><option>Industrial</option>
-            </select>
-        </div>
-        <div class="col">
-            <label>Typology</label>
-            <select id="typology">
-                <option>Luxury Villa</option><option>Modern Apartment</option><option>Townhouse Studio</option>
-                <option>Corporate Hub Block</option><option>Boutique Retail Space</option><option>Medical Clinic Center</option>
-                <option>Distribution Depot</option><option>Heavy Machinery Plant Warehouse</option>
-            </select>
-        </div>
-        <div class="col">
-            <label>Plot Area (m²)</label>
-            <input type="number" id="plot" value="800">
-        </div>
-        <div class="col">
-            <label>Floors</label>
-            <input type="number" id="floors" value="3">
-        </div>
-        <div class="col">
-            <label>Bathrooms</label>
-            <input type="number" id="baths" value="2">
-        </div>
-        <div class="col">
-            <label>Soil</label>
-            <select id="soil">
-                <option>Nairobi Red Coffee Clay</option>
-                <option>Kampala Red Lateritic Clay</option>
-                <option>Dar Coastal Sand / Coral Limestone</option>
-                <option>Generic Firm Sandy Gravel</option>
-                <option>Generic Soft Silt / Clay</option>
-                <option>Generic Hard Rock / Laterite</option>
-            </select>
-        </div>
-        <div class="col">
-            <button onclick="generateConcepts()">✨ Generate Concepts</button>
-        </div>
-    </div>
+<!-- ─── MAIN CONTENT ─── -->
+<div class="main">
 
-    <div id="concepts-output" style="display: none;" class="glass-panel">
-        <h3>Generated Concepts</h3>
-        <div id="concepts-container"></div>
-    </div>
+    <!-- ===== DASHBOARD ===== -->
+    <div id="tab-dashboard">
+        <div class="glass-panel text-center" style="margin-bottom:24px;">
+            <h2 style="margin:0;">Welcome back, Architect 👋</h2>
+            <p style="color:#888;">Create. Evolve. Perfect.</p>
+        </div>
 
-    <div class="glass-panel">
-        <h3>🧠 Ram AI – Ask a question</h3>
-        <div class="flex">
-            <div class="col" style="flex:4;">
-                <input type="text" id="ram-question" placeholder="Ask about soil, foundations, costs..." style="width:100%;">
+        <div class="glass-panel">
+            <h3>💹 Live East African FX Rates</h3>
+            <div id="forex-bar" style="height:300px;"></div>
+        </div>
+
+        <div class="glass-panel">
+            <h3>📈 East African FX History (60 days)</h3>
+            <div id="forex-history" style="height:300px;"></div>
+        </div>
+
+        <div class="glass-panel">
+            <h3>🌳 Forex Forest – Weekly Forecast</h3>
+            <p style="color:#888; font-size:0.9rem;">Monte Carlo simulation of possible rate paths over the next 7 days</p>
+            <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+                <label style="color:#888;">Country</label>
+                <select id="forest-country" style="width:auto; flex:1; min-width:150px;">
+                    <option>Kenya</option><option>Uganda</option><option>Tanzania</option>
+                    <option>South Sudan</option><option>Rwanda</option><option>Ethiopia</option>
+                </select>
+                <button class="btn btn-secondary" onclick="updateForest()">Update</button>
             </div>
-            <div class="col" style="flex:1;">
-                <button onclick="askRam()">Ask Ram</button>
+            <div id="forest-chart" style="height:300px; margin-top:12px;"></div>
+        </div>
+
+        <div class="glass-panel">
+            <div class="metrics">
+                <div class="metric"><div class="value" id="metric-blueprints">0</div><div class="label">Blueprints</div></div>
+                <div class="metric"><div class="value" id="metric-concepts">0</div><div class="label">Concepts</div></div>
+                <div class="metric"><div class="value" id="metric-logs">0</div><div class="label">Logs</div></div>
             </div>
         </div>
-        <div id="ram-response" style="margin-top:10px; color:#aaa;"></div>
     </div>
 
-    <script>
-        // ─── Load Forex ──────────────────────────────────────────
-        async function loadForex() {
-            try {
-                const res = await fetch('/api/forex');
-                const data = await res.json();
-                const countries = Object.keys(data);
-                const rates = Object.values(data);
-                const trace = {
-                    x: countries,
-                    y: rates,
-                    type: 'bar',
-                    marker: { color: '#888' }
+    <!-- ===== CONCEPTS ===== -->
+    <div id="tab-concepts" class="hidden">
+        <div class="glass-panel">
+            <h2>🔬 Evolution Engine</h2>
+            <p style="color:#888;">Configure and generate 5 unique design concepts evaluated by Sai AI Agents.</p>
+            <div class="form-grid" id="concept-form">
+                <div class="field">
+                    <label>Country</label>
+                    <select id="gen-country">
+                        <option>Kenya</option><option>Uganda</option><option>Tanzania</option>
+                        <option>South Sudan</option><option>Rwanda</option><option>Ethiopia</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Domain</label>
+                    <select id="gen-domain">
+                        <option>Residential</option><option>Commercial</option><option>Industrial</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Typology</label>
+                    <select id="gen-typology">
+                        <option>Luxury Villa</option><option>Modern Apartment</option><option>Townhouse Studio</option>
+                        <option>Corporate Hub Block</option><option>Boutique Retail Space</option><option>Medical Clinic Center</option>
+                        <option>Distribution Depot</option><option>Heavy Machinery Plant Warehouse</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Plot Area (m²)</label>
+                    <input type="number" id="gen-plot" value="800" />
+                </div>
+                <div class="field">
+                    <label>Floors</label>
+                    <input type="number" id="gen-floors" value="3" />
+                </div>
+                <div class="field">
+                    <label>Bathrooms</label>
+                    <input type="number" id="gen-baths" value="2" />
+                </div>
+                <div class="field">
+                    <label>Soil</label>
+                    <select id="gen-soil">
+                        <option>Nairobi Red Coffee Clay</option>
+                        <option>Kampala Red Lateritic Clay</option>
+                        <option>Dar Coastal Sand / Coral Limestone</option>
+                        <option>Generic Firm Sandy Gravel</option>
+                        <option>Generic Soft Silt / Clay</option>
+                        <option>Generic Hard Rock / Laterite</option>
+                    </select>
+                </div>
+                <div class="field" style="justify-content:flex-end;">
+                    <button class="btn" onclick="generateConcepts()">✨ Generate Concepts</button>
+                </div>
+            </div>
+            <div id="concepts-output" class="hidden mt-12">
+                <h3 style="color:#aaa;">Results</h3>
+                <div id="concepts-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== RAM AI ===== -->
+    <div id="tab-ram" class="hidden">
+        <div class="glass-panel">
+            <h2>🧠 Ram AI – Infinite Architectural Intelligence</h2>
+            <p style="color:#888;">Ask Ram anything about construction, soil, costs, or design in East Africa.</p>
+            <div style="display:flex; gap:12px; margin-top:12px;">
+                <input type="text" id="ram-question" placeholder="Ask Ram about soil, foundations, costs..." style="flex:1;" />
+                <button class="btn" onclick="askRam()">Ask</button>
+            </div>
+            <div id="ram-response"></div>
+        </div>
+    </div>
+
+    <div style="text-align:center; padding:20px 0; color:#444; font-size:0.8rem;">
+        AI Powered · Data Driven · Secure · Scalable
+    </div>
+</div>
+
+<script>
+    // ─── Navigation ────────────────────────────────────────────
+    document.querySelectorAll('.sidebar nav a').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.querySelectorAll('.sidebar nav a').forEach(a => a.classList.remove('active'));
+            this.classList.add('active');
+            const tab = this.dataset.tab;
+            document.querySelectorAll('.main > div[id^="tab-"]').forEach(el => el.classList.add('hidden'));
+            document.getElementById('tab-' + tab).classList.remove('hidden');
+            // Refresh charts if needed
+            if (tab === 'dashboard') {
+                // Re‑plot if not already
+                // We'll just rely on existing charts
+            }
+        });
+    });
+
+    // ─── Helpers ──────────────────────────────────────────────
+    function showError(id, msg) {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = `<p style="color:#888;">${msg}</p>`;
+    }
+
+    // ─── 1. Forex Bar ──────────────────────────────────────────
+    async function loadForexBar() {
+        try {
+            const res = await fetch('/api/forex');
+            const data = await res.json();
+            const countries = Object.keys(data);
+            const rates = Object.values(data);
+            const trace = {
+                x: countries,
+                y: rates,
+                type: 'bar',
+                marker: { color: '#888' },
+                text: rates.map(r => r.toFixed(2)),
+                textposition: 'outside'
+            };
+            const layout = {
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#aaaaaa' },
+                margin: { t: 30, b: 40, l: 50, r: 20 },
+                yaxis: { gridcolor: '#333' }
+            };
+            Plotly.newPlot('forex-bar', [trace], layout, { responsive: true });
+        } catch(e) {
+            showError('forex-bar', 'Failed to load forex data.');
+        }
+    }
+
+    // ─── 2. Forex History (60 days) ──────────────────────────
+    async function loadForexHistory() {
+        const end = new Date();
+        const start = new Date(); start.setDate(start.getDate() - 60);
+        const fmt = d => d.toISOString().slice(0,10);
+        const url = `https://api.exchangerate.host/timeseries?start_date=${fmt(start)}&end_date=${fmt(end)}&base=USD&symbols=KES,UGX,TZS,SSP,RWF,ETB`;
+        try {
+            const res = await fetch(url);
+            const json = await res.json();
+            const dates = Object.keys(json.rates).sort();
+            const symbols = ['KES','UGX','TZS','SSP','RWF','ETB'];
+            const traces = symbols.map(sym => {
+                const y = dates.map(d => json.rates[d][sym]);
+                return {
+                    x: dates,
+                    y: y,
+                    mode: 'lines',
+                    name: sym,
+                    line: { color: getColor(sym) }
                 };
-                Plotly.newPlot('forex-chart', [trace], {
-                    plot_bgcolor: 'rgba(0,0,0,0)',
-                    paper_bgcolor: 'rgba(0,0,0,0)',
-                    font: { color: '#aaaaaa' },
-                    margin: { t: 20, b: 40, l: 40, r: 20 }
-                });
-            } catch(e) {
-                document.getElementById('forex-chart').innerHTML = '<p style="color:#888;">Failed to load forex data.</p>';
-            }
-        }
-        loadForex();
-
-        // ─── Generate Concepts ──────────────────────────────────
-        async function generateConcepts() {
-            const payload = {
-                country: document.getElementById('country').value,
-                domain: document.getElementById('domain').value,
-                typology: document.getElementById('typology').value,
-                plot_size: parseInt(document.getElementById('plot').value),
-                floors: parseInt(document.getElementById('floors').value),
-                baths: parseInt(document.getElementById('baths').value),
-                soil_name: document.getElementById('soil').value
+            });
+            const layout = {
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#aaaaaa' },
+                margin: { t: 20, b: 40, l: 50, r: 20 },
+                legend: { orientation: 'h', y: 1.1 },
+                yaxis: { gridcolor: '#333' }
             };
-            try {
-                const res = await fetch('/api/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+            Plotly.newPlot('forex-history', traces, layout, { responsive: true });
+        } catch(e) {
+            showError('forex-history', 'History data unavailable. Showing simulated trend.');
+            // fallback: simulate
+            const dates = Array.from({length:60}, (_,i) => {
+                const d = new Date(); d.setDate(d.getDate() - (59-i)); return d.toISOString().slice(0,10);
+            });
+            const baseRates = {KES:129.49, UGX:3665.20, TZS:2625.00, SSP:4626.40, RWF:1330.00, ETB:125.00};
+            const traces = Object.keys(baseRates).map(sym => {
+                let val = baseRates[sym];
+                const y = dates.map(() => {
+                    val *= (1 + (Math.random() - 0.5) * 0.02);
+                    return val;
                 });
-                const concepts = await res.json();
-                const container = document.getElementById('concepts-container');
-                container.innerHTML = '';
-                concepts.forEach((c, idx) => {
-                    const card = document.createElement('div');
-                    card.className = 'concept-card';
-                    card.innerHTML = `
-                        <h4>${c.type} <span class="score">Composite: ${c.scores.composite}</span></h4>
-                        <div class="detail">${c.country} · ${c.floors} floors · ${c.total_gfa} m² · Soil: ${c.soil_name}</div>
-                        <div class="detail">Arch: ${c.scores.arch}% &nbsp;|&nbsp; Struct: ${c.scores.struct}% &nbsp;|&nbsp; Sust: ${c.scores.sust}% &nbsp;|&nbsp; Cost: ${c.scores.cost}%</div>
-                        <div class="progress-bar"><div class="progress-fill" style="width:${c.scores.composite}%;"></div></div>
-                        <div style="margin-top:5px; font-size:0.8em; color:#666;">${c.eurocode.uls_status} · USD ${c.total_usd.toLocaleString()}</div>
-                    `;
-                    container.appendChild(card);
-                });
-                document.getElementById('concepts-output').style.display = 'block';
-            } catch(e) {
-                alert('Failed to generate concepts. Check console.');
-                console.error(e);
-            }
+                return {
+                    x: dates, y: y, mode: 'lines', name: sym,
+                    line: { color: getColor(sym) }
+                };
+            });
+            Plotly.newPlot('forex-history', traces, {
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#aaaaaa' },
+                margin: { t: 20, b: 40, l: 50, r: 20 },
+                legend: { orientation: 'h', y: 1.1 },
+                yaxis: { gridcolor: '#333' }
+            }, { responsive: true });
         }
+    }
+    function getColor(sym) {
+        const map = {KES:'#888', UGX:'#aaa', TZS:'#666', SSP:'#999', RWF:'#777', ETB:'#555'};
+        return map[sym] || '#94a3b8';
+    }
 
-        // ─── Ram AI ──────────────────────────────────────────────
-        async function askRam() {
-            const q = document.getElementById('ram-question').value.trim();
-            if (!q) return;
-            const payload = {
-                q: q,
-                country: document.getElementById('country').value,
-                domain: document.getElementById('domain').value
-            };
-            try {
-                const res = await fetch('/api/ram', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+    // ─── 3. Forex Forest (Monte Carlo) ──────────────────────
+    let forestChart = null;
+    async function updateForest() {
+        const country = document.getElementById('forest-country').value;
+        // fetch current rate
+        try {
+            const res = await fetch('/api/forex');
+            const data = await res.json();
+            const base = data[country];
+            if (!base) { showError('forest-chart', 'No data for selected country.'); return; }
+            // Monte Carlo simulation in JS
+            const days = 7, paths = 100, vol = 0.008;
+            const sim = monteCarlo(base, days, paths, vol);
+            const x = Array.from({length: days}, (_,i) => i+1);
+            // compute percentiles
+            const pcts = [95, 80, 50];
+            const traces = [];
+            pcts.forEach(p => {
+                const lower = [], upper = [];
+                for (let d=0; d<days; d++) {
+                    const vals = sim.map(s => s[d]);
+                    vals.sort((a,b) => a-b);
+                    lower.push(vals[Math.floor((100-p)/2/100 * vals.length)]);
+                    upper.push(vals[Math.floor((100 - (100-p)/2)/100 * vals.length)]);
+                }
+                traces.push({
+                    x: x,
+                    y: upper,
+                    mode: 'lines',
+                    line: { width: 0 },
+                    showlegend: false,
+                    hoverinfo: 'skip'
                 });
-                const data = await res.json();
-                document.getElementById('ram-response').innerHTML = data.response.replace(/\*\*/g, '').replace(/\n/g, '<br>');
-            } catch(e) {
-                document.getElementById('ram-response').innerHTML = 'Error contacting Ram AI.';
-            }
+                traces.push({
+                    x: x,
+                    y: lower,
+                    mode: 'lines',
+                    fill: 'tonexty',
+                    fillcolor: `rgba(70,130,200,${p===95?0.08:p===80?0.15:0.25})`,
+                    line: { width: 0 },
+                    name: `${p}% confidence`,
+                    hoverinfo: 'skip'
+                });
+            });
+            // median
+            const median = sim.map(s => s.reduce((a,b) => a+b, 0)/s.length);
+            traces.push({
+                x: x,
+                y: median,
+                mode: 'lines+markers',
+                name: 'Median',
+                line: { color: '#7bb8ff', width: 2.5 },
+                marker: { color: '#b0d0ff', size: 6 }
+            });
+            const layout = {
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#aaaaaa' },
+                margin: { t: 20, b: 40, l: 50, r: 20 },
+                legend: { orientation: 'h', y: 1.1 },
+                yaxis: { gridcolor: '#333' },
+                xaxis: { title: 'Days ahead' }
+            };
+            Plotly.newPlot('forest-chart', traces, layout, { responsive: true });
+        } catch(e) {
+            showError('forest-chart', 'Error generating forecast.');
         }
-    </script>
+    }
+
+    function monteCarlo(base, days, paths, vol) {
+        const sims = [];
+        for (let p=0; p<paths; p++) {
+            let val = base;
+            const path = [];
+            for (let d=0; d<days; d++) {
+                val *= (1 + (Math.random() - 0.5) * 2 * vol);
+                path.push(val);
+            }
+            sims.push(path);
+        }
+        return sims;
+    }
+
+    // ─── 4. Generate Concepts ─────────────────────────────────
+    async function generateConcepts() {
+        const payload = {
+            country: document.getElementById('gen-country').value,
+            domain: document.getElementById('gen-domain').value,
+            typology: document.getElementById('gen-typology').value,
+            plot_size: parseInt(document.getElementById('gen-plot').value) || 800,
+            floors: parseInt(document.getElementById('gen-floors').value) || 3,
+            baths: parseInt(document.getElementById('gen-baths').value) || 2,
+            soil_name: document.getElementById('gen-soil').value
+        };
+        const container = document.getElementById('concepts-container');
+        container.innerHTML = '<p style="color:#888;">Generating concepts...</p>';
+        document.getElementById('concepts-output').classList.remove('hidden');
+
+        try {
+            const res = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const concepts = await res.json();
+            container.innerHTML = '';
+            if (!concepts.length) {
+                container.innerHTML = '<p style="color:#888;">No concepts generated.</p>';
+                return;
+            }
+            concepts.forEach((c, idx) => {
+                const card = document.createElement('div');
+                card.className = 'concept-card';
+                const score = c.scores.composite || 0;
+                const euroStatus = c.eurocode ? c.eurocode.uls_status : 'N/A';
+                card.innerHTML = `
+                    <div class="head">
+                        <h4>${c.type || 'Concept'}</h4>
+                        <span class="score">Composite: ${score}</span>
+                    </div>
+                    <div class="detail">${c.country} · ${c.floors} floors · ${c.total_gfa} m² · Soil: ${c.soil_name}</div>
+                    <div class="detail">Arch: ${c.scores.arch}% &nbsp;|&nbsp; Struct: ${c.scores.struct}% &nbsp;|&nbsp; Sust: ${c.scores.sust}% &nbsp;|&nbsp; Cost: ${c.scores.cost}%</div>
+                    <div class="progress"><div class="fill" style="width:${score}%;"></div></div>
+                    <div class="footer">
+                        <span>${euroStatus}</span>
+                        <span>USD ${(c.total_usd || 0).toLocaleString()}</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            // Update metrics
+            document.getElementById('metric-concepts').textContent = concepts.length;
+        } catch(e) {
+            container.innerHTML = '<p style="color:#888;">Error generating concepts. Check console.</p>';
+            console.error(e);
+        }
+    }
+
+    // ─── 5. Ram AI ─────────────────────────────────────────────
+    async function askRam() {
+        const q = document.getElementById('ram-question').value.trim();
+        if (!q) return;
+        const responseDiv = document.getElementById('ram-response');
+        responseDiv.innerHTML = 'Thinking...';
+        const payload = {
+            q: q,
+            country: document.getElementById('gen-country').value, // use selected country from concepts tab
+            domain: document.getElementById('gen-domain').value
+        };
+        try {
+            const res = await fetch('/api/ram', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            responseDiv.innerHTML = data.response.replace(/\*\*/g, '').replace(/\n/g, '<br>');
+        } catch(e) {
+            responseDiv.innerHTML = 'Error contacting Ram AI.';
+        }
+    }
+
+    // ─── 6. Dashboard Metrics (demo) ──────────────────────────
+    function updateMetrics() {
+        // Just a placeholder; you could fetch from /api/forex or other
+        document.getElementById('metric-blueprints').textContent = Math.floor(Math.random() * 5 + 1);
+        document.getElementById('metric-logs').textContent = Math.floor(Math.random() * 20 + 5);
+    }
+
+    // ─── Init ──────────────────────────────────────────────────
+    window.onload = function() {
+        loadForexBar();
+        loadForexHistory();
+        updateForest();
+        updateMetrics();
+        // Load initial concepts? maybe not.
+        // Show dashboard by default
+    };
+</script>
+
 </body>
 </html>
