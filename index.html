@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Arc – AI Engine</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body { background: #0a0a0a; color: #cccccc; font-family: 'Inter', sans-serif; margin: 0; padding: 20px; }
+        .glass-panel { background: #111111; border: 1px solid #333; border-radius: 18px; padding: 20px; margin-bottom: 20px; }
+        button { background: #333; color: #fff; border: none; border-radius: 10px; padding: 10px 20px; cursor: pointer; }
+        button:hover { background: #444; }
+        input, select { background: transparent; border: 1px solid #333; border-radius: 8px; color: #ccc; padding: 8px; }
+        .flex { display: flex; gap: 20px; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 200px; }
+    </style>
+</head>
+<body>
+    <div class="glass-panel">
+        <h1 style="color: #aaaaaa;">◈ Arc – Sai Engine</h1>
+        <p style="color: #888;">Architectural Intelligence &amp; East African Forex</p>
+    </div>
+
+    <div class="glass-panel">
+        <h3>💹 Live East African FX Rates</h3>
+        <div id="forex-chart" style="height: 300px;"></div>
+    </div>
+
+    <div class="glass-panel flex">
+        <div class="col">
+            <label>Country</label>
+            <select id="country">
+                <option>Kenya</option><option>Uganda</option><option>Tanzania</option>
+                <option>South Sudan</option><option>Rwanda</option><option>Ethiopia</option>
+            </select>
+        </div>
+        <div class="col">
+            <label>Domain</label>
+            <select id="domain">
+                <option>Residential</option><option>Commercial</option><option>Industrial</option>
+            </select>
+        </div>
+        <div class="col">
+            <label>Plot Area (m²)</label>
+            <input type="number" id="plot" value="800">
+        </div>
+        <div class="col">
+            <button onclick="generateConcepts()">✨ Generate Concepts</button>
+        </div>
+    </div>
+
+    <div id="concepts-output" class="glass-panel" style="display: none;">
+        <h3>Generated Concepts</h3>
+        <div id="concepts-container"></div>
+    </div>
+
+    <script>
+        // Fetch and plot forex rates
+        async function loadForex() {
+            const res = await fetch('/api/forex');
+            const data = await res.json();
+            const countries = Object.keys(data);
+            const rates = Object.values(data);
+            const trace = {
+                x: countries,
+                y: rates,
+                type: 'bar',
+                marker: { color: '#888' }
+            };
+            Plotly.newPlot('forex-chart', [trace], {
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#aaaaaa' },
+                margin: { t: 20, b: 40, l: 40, r: 20 }
+            });
+        }
+        loadForex();
+
+        // Generate concepts
+        async function generateConcepts() {
+            const payload = {
+                country: document.getElementById('country').value,
+                domain: document.getElementById('domain').value,
+                typology: 'Luxury Villa', // you can add a select for this
+                plot_size: parseInt(document.getElementById('plot').value),
+                floors: 3,
+                baths: 2,
+                soil_name: 'Nairobi Red Coffee Clay'
+            };
+            const res = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const concepts = await res.json();
+            // Render concepts (simplified)
+            const container = document.getElementById('concepts-container');
+            container.innerHTML = concepts.map(c => `<div>${c.type} – Score: ${c.scores.composite}</div>`).join('');
+            document.getElementById('concepts-output').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
