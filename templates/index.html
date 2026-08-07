@@ -18,6 +18,7 @@
         .progress-bar { background: #222; border-radius: 5px; height: 8px; width: 100%; }
         .progress-fill { background: #888; height: 100%; border-radius: 5px; }
         .metric { display: inline-block; margin-right: 20px; }
+        #ram-response { white-space: pre-wrap; }
     </style>
 </head>
 <body>
@@ -49,6 +50,8 @@
             <label>Typology</label>
             <select id="typology">
                 <option>Luxury Villa</option><option>Modern Apartment</option><option>Townhouse Studio</option>
+                <option>Corporate Hub Block</option><option>Boutique Retail Space</option><option>Medical Clinic Center</option>
+                <option>Distribution Depot</option><option>Heavy Machinery Plant Warehouse</option>
             </select>
         </div>
         <div class="col">
@@ -70,6 +73,8 @@
                 <option>Kampala Red Lateritic Clay</option>
                 <option>Dar Coastal Sand / Coral Limestone</option>
                 <option>Generic Firm Sandy Gravel</option>
+                <option>Generic Soft Silt / Clay</option>
+                <option>Generic Hard Rock / Laterite</option>
             </select>
         </div>
         <div class="col">
@@ -82,29 +87,46 @@
         <div id="concepts-container"></div>
     </div>
 
+    <div class="glass-panel">
+        <h3>🧠 Ram AI – Ask a question</h3>
+        <div class="flex">
+            <div class="col" style="flex:4;">
+                <input type="text" id="ram-question" placeholder="Ask about soil, foundations, costs..." style="width:100%;">
+            </div>
+            <div class="col" style="flex:1;">
+                <button onclick="askRam()">Ask Ram</button>
+            </div>
+        </div>
+        <div id="ram-response" style="margin-top:10px; color:#aaa;"></div>
+    </div>
+
     <script>
-        // Load forex
+        // ─── Load Forex ──────────────────────────────────────────
         async function loadForex() {
-            const res = await fetch('/api/forex');
-            const data = await res.json();
-            const countries = Object.keys(data);
-            const rates = Object.values(data);
-            const trace = {
-                x: countries,
-                y: rates,
-                type: 'bar',
-                marker: { color: '#888' }
-            };
-            Plotly.newPlot('forex-chart', [trace], {
-                plot_bgcolor: 'rgba(0,0,0,0)',
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                font: { color: '#aaaaaa' },
-                margin: { t: 20, b: 40, l: 40, r: 20 }
-            });
+            try {
+                const res = await fetch('/api/forex');
+                const data = await res.json();
+                const countries = Object.keys(data);
+                const rates = Object.values(data);
+                const trace = {
+                    x: countries,
+                    y: rates,
+                    type: 'bar',
+                    marker: { color: '#888' }
+                };
+                Plotly.newPlot('forex-chart', [trace], {
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    font: { color: '#aaaaaa' },
+                    margin: { t: 20, b: 40, l: 40, r: 20 }
+                });
+            } catch(e) {
+                document.getElementById('forex-chart').innerHTML = '<p style="color:#888;">Failed to load forex data.</p>';
+            }
         }
         loadForex();
 
-        // Generate concepts
+        // ─── Generate Concepts ──────────────────────────────────
         async function generateConcepts() {
             const payload = {
                 country: document.getElementById('country').value,
@@ -115,27 +137,54 @@
                 baths: parseInt(document.getElementById('baths').value),
                 soil_name: document.getElementById('soil').value
             };
-            const res = await fetch('/api/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const concepts = await res.json();
-            const container = document.getElementById('concepts-container');
-            container.innerHTML = '';
-            concepts.forEach((c, idx) => {
-                const card = document.createElement('div');
-                card.className = 'concept-card';
-                card.innerHTML = `
-                    <h4>${c.type} <span class="score">Composite: ${c.scores.composite}</span></h4>
-                    <div class="detail">${c.country} · ${c.floors} floors · ${c.total_gfa} m²</div>
-                    <div class="detail">Arch: ${c.scores.arch}% &nbsp;|&nbsp; Struct: ${c.scores.struct}% &nbsp;|&nbsp; Sust: ${c.scores.sust}% &nbsp;|&nbsp; Cost: ${c.scores.cost}%</div>
-                    <div class="progress-bar"><div class="progress-fill" style="width:${c.scores.composite}%;"></div></div>
-                    <div style="margin-top:5px; font-size:0.8em; color:#666;">${c.eurocode.uls_status} · USD ${c.total_usd.toLocaleString()}</div>
-                `;
-                container.appendChild(card);
-            });
-            document.getElementById('concepts-output').style.display = 'block';
+            try {
+                const res = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const concepts = await res.json();
+                const container = document.getElementById('concepts-container');
+                container.innerHTML = '';
+                concepts.forEach((c, idx) => {
+                    const card = document.createElement('div');
+                    card.className = 'concept-card';
+                    card.innerHTML = `
+                        <h4>${c.type} <span class="score">Composite: ${c.scores.composite}</span></h4>
+                        <div class="detail">${c.country} · ${c.floors} floors · ${c.total_gfa} m² · Soil: ${c.soil_name}</div>
+                        <div class="detail">Arch: ${c.scores.arch}% &nbsp;|&nbsp; Struct: ${c.scores.struct}% &nbsp;|&nbsp; Sust: ${c.scores.sust}% &nbsp;|&nbsp; Cost: ${c.scores.cost}%</div>
+                        <div class="progress-bar"><div class="progress-fill" style="width:${c.scores.composite}%;"></div></div>
+                        <div style="margin-top:5px; font-size:0.8em; color:#666;">${c.eurocode.uls_status} · USD ${c.total_usd.toLocaleString()}</div>
+                    `;
+                    container.appendChild(card);
+                });
+                document.getElementById('concepts-output').style.display = 'block';
+            } catch(e) {
+                alert('Failed to generate concepts. Check console.');
+                console.error(e);
+            }
+        }
+
+        // ─── Ram AI ──────────────────────────────────────────────
+        async function askRam() {
+            const q = document.getElementById('ram-question').value.trim();
+            if (!q) return;
+            const payload = {
+                q: q,
+                country: document.getElementById('country').value,
+                domain: document.getElementById('domain').value
+            };
+            try {
+                const res = await fetch('/api/ram', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                document.getElementById('ram-response').innerHTML = data.response.replace(/\*\*/g, '').replace(/\n/g, '<br>');
+            } catch(e) {
+                document.getElementById('ram-response').innerHTML = 'Error contacting Ram AI.';
+            }
         }
     </script>
 </body>
