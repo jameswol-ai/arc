@@ -1,42 +1,97 @@
+# =========================================================
+# Arc — ARCHITECTURAL INTELLECT & EAST AFRICAN FOREX ENGINE
+# Flask version – runs on Vercel
+# =========================================================
+
 from flask import Flask, request, jsonify, render_template
 import json, random, uuid, hashlib, requests
-import numpy as np, pandas as pd
-from datetime import datetime, timedelta
+import plotly.express as px
+import plotly.graph_objects as go
 from pathlib import Path
+from datetime import datetime, timedelta
+import numpy as np, pandas as pd
 
 app = Flask(__name__)
 
-# ──────────────────────────────────────────────
-# 1. UNIT CONVERSION
-# ──────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════
+#  ALL YOUR ORIGINAL FUNCTIONS (copied verbatim from streamlit_app.py)
+# ═══════════════════════════════════════════════════════════
+
+# ─── UNIT CONVERSION ──────────────────────────────────────
 M2_TO_FT2, M_TO_FT = 10.7639, 3.28084
 
 def to_display_length(m):
-    return (round(m * M_TO_FT, 1), "ft") if False else (round(m, 1), "m")  # unit system can be passed
+    # unit system not used in API; we keep for compatibility
+    return (round(m * M_TO_FT, 1), "ft") if False else (round(m, 1), "m")
 
-# ──────────────────────────────────────────────
-# 2. AUTH (simplified – in‑memory for demo)
-# ──────────────────────────────────────────────
-# For Vercel we can't write to files reliably, so we'll keep users in a dict.
-# This resets on cold start; you'll want a real DB for production.
-_users = {}
+def to_display_area(m2):
+    return (round(m2 * M2_TO_FT2, 1), "sq ft") if False else (round(m2, 1), "m²")
+
+# ─── AUTH & MEMORY (file‑based, note: Vercel doesn't persist files) ──
+DATA_DIR = Path("data")
+DATA_DIR.mkdir(exist_ok=True)
+USER_FILE = DATA_DIR / "arc_users.json"
+XP_PER_LEVEL = 100
 
 def hash_password(p): return hashlib.sha256((p + "arc_salt_42").encode()).hexdigest()
 
-def create_user(u, p):
-    if u in _users: raise ValueError("Username exists")
-    _users[u] = {"password_hash": hash_password(p), "level": 1, "xp": 0, "badges": []}
-    return _users[u]
+def load_users():
+    if USER_FILE.exists():
+        try: return json.load(open(USER_FILE))
+        except: return []
+    return []
 
-def authenticate(u, p):
-    user = _users.get(u)
-    if user and user["password_hash"] == hash_password(p):
-        return user
+def save_users(users): json.dump(users, open(USER_FILE, "w"), indent=2)
+
+def get_user(u):
+    for x in load_users():
+        if x["username"] == u: return x
     return None
 
-# ──────────────────────────────────────────────
-# 3. SOIL SYSTEM
-# ──────────────────────────────────────────────
+def create_user(u, p, role="user"):
+    if get_user(u): raise ValueError("Username exists")
+    users = load_users()
+    users.append({"username": u, "password_hash": hash_password(p), "role": role, "level": 1, "xp": 0, "badges": [], "created": datetime.now().isoformat()})
+    save_users(users)
+    return users[-1]
+
+def authenticate(u, p):
+    user = get_user(u)
+    return user if user and user["password_hash"] == hash_password(p) else None
+
+def xp_for_level(lvl): return lvl * XP_PER_LEVEL
+
+def add_xp(username, amount):
+    user = get_user(username)
+    if not user: return False
+    user["xp"] += amount
+    old = user["level"]
+    while user["xp"] >= xp_for_level(user["level"]):
+        user["xp"] -= xp_for_level(user["level"]); user["level"] += 1
+    if user["level"] > old:
+        badge = f"level_{user['level']}"
+        if user["level"] % 5 == 0 and badge not in user["badges"]: user["badges"].append(badge)
+        update_users = load_users()
+        for u in update_users:
+            if u["username"] == username: u.update(user); break
+        save_users(update_users)
+        return True
+    return False
+
+def load_memory(username):
+    path = DATA_DIR / f"{username}_arc_memory.json"
+    if path.exists():
+        try: return json.load(open(path, "r", encoding="utf-8"))
+        except: pass
+    return {"designs": [], "concepts": [], "logs": []}
+
+def save_memory(username, mem): json.dump(mem, open(DATA_DIR / f"{username}_arc_memory.json", "w", encoding="utf-8"), indent=2)
+
+def log_event(username, mem, msg):
+    mem["logs"].append({"time": datetime.now().isoformat(), "msg": msg})
+    save_memory(username, mem)
+
+# ─── SOIL SYSTEM ──────────────────────────────────────────
 SOIL_TYPES = {
     "Nairobi Red Coffee Clay":             {"multiplier": 1.0,  "cat": "Medium", "region": "Kenya"},
     "Kampala Red Lateritic Clay":          {"multiplier": 1.6,  "cat": "Soft",   "region": "Uganda"},
@@ -65,9 +120,7 @@ def get_soil_multiplier(soil_name):
 def get_soil_category(soil_name):
     return SOIL_TYPES.get(soil_name, {"cat": "Medium"})["cat"]
 
-# ──────────────────────────────────────────────
-# 4. SAI ENGINE (spatial model, Eurocode, scores)
-# ──────────────────────────────────────────────
+# ─── SAI ENGINE ───────────────────────────────────────────
 ARCH_DOMAINS = {
     "Residential": ["Luxury Villa", "Modern Apartment", "Townhouse Studio"],
     "Commercial": ["Corporate Hub Block", "Boutique Retail Space", "Medical Clinic Center"],
@@ -144,9 +197,7 @@ def calculate_ai_scores(asset, ec, total_usd, prompt=None, weights=(0.25,0.25,0.
     composite = round(arch*w[0] + struct*w[1] + sust*w[2] + cost*w[3])
     return arch, struct, sust, cost, composite
 
-# ──────────────────────────────────────────────
-# 5. FOREX
-# ──────────────────────────────────────────────
+# ─── FOREX ────────────────────────────────────────────────
 STATIC_FX = {"Kenya":129.49, "Uganda":3665.20, "Tanzania":2625.00, "South Sudan":4626.40, "Rwanda":1330.00, "Ethiopia":125.00}
 BASE_FX = {
     "Kenya": ("KES","KSh",1.00,"East Africa"), "Uganda": ("UGX","USh",0.95,"East Africa"),
@@ -167,6 +218,16 @@ def get_fx(country):
     cur, sym, mult, reg = BASE_FX[country]
     return {"currency": cur, "symbol": sym, "rate": rate, "multiplier": mult, "region": reg}
 
+def get_all_countries(): return list(STATIC_FX.keys())
+
+def convert_currency(amount, frm, to):
+    # we need current rates; we'll fetch live each time or keep a global cache
+    # For simplicity, we'll use STATIC_FX if live unavailable
+    rates = _fetch_live()
+    if frm == to: return amount
+    usd = amount if frm == "USD" else amount / rates.get(frm, STATIC_FX[frm])
+    return usd if to == "USD" else usd * rates.get(to, STATIC_FX[to])
+
 def compute_boq(d, country):
     gfa = d["total_gfa"]; fx = get_fx(country); soil_m = d.get("soil_multiplier", 1.0)
     items = [("Substructure Excavation", int(gfa*0.15), 150*soil_m), ("C30 Concrete (m³)", int(gfa*0.35), 210),
@@ -176,9 +237,11 @@ def compute_boq(d, country):
     total_local = total_usd * fx["rate"]
     return total_usd, total_local, fx
 
-# ──────────────────────────────────────────────
-# 6. RAM AI
-# ──────────────────────────────────────────────
+# ─── FX HISTORY & FOREST (these functions need Plotly and pandas) ──
+# We keep them, but the frontend will use Plotly.js, so we won't call them from the backend.
+# However, we may expose data endpoints if needed.
+
+# ─── RAM AI ────────────────────────────────────────────────
 WISDOM = {
     "soil": ["For soft clay, use raft/pile foundations. Black cotton soil expands when wet—add moisture barrier.",
              "Lateritic soils (Uganda/Rwanda) need erosion protection; strip footings with cover.",
@@ -197,7 +260,7 @@ TIPS = {"Kenya":"Nairobi altitude reduces curing time.", "Uganda":"Termite attac
         "Tanzania":"Sulphate‑resistant cement for coral limestone.", "South Sudan":"Compaction/soil replacement needed.",
         "Rwanda":"Volcanic soil stable; focus on cooling.", "Ethiopia":"Seismic ductile detailing per Eurocode 8."}
 
-def ram_ai(q, country):
+def ram_ai(q, country, domain):
     q = q.lower()
     pool = WISDOM.get("soil" if "soil" in q or "ground" in q else
                       "foundation" if "foundation" in q else
@@ -205,9 +268,9 @@ def ram_ai(q, country):
                       "sustainability" if any(w in q for w in ("sustain","green","eco")) else "default")
     return f"**Ram AI:** {random.choice(pool)}\n\n📌 *{country}*: {TIPS.get(country, '')}"
 
-# ──────────────────────────────────────────────
-# 7. FLASK ROUTES
-# ──────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════
+#  FLASK ROUTES – serve the frontend and API endpoints
+# ═══════════════════════════════════════════════════════════
 
 @app.route('/')
 def index():
@@ -215,7 +278,8 @@ def index():
 
 @app.route('/api/forex')
 def forex():
-    rates = {c: get_fx(c)["rate"] for c in STATIC_FX.keys()}
+    # Return all country rates
+    rates = {c: get_fx(c)["rate"] for c in get_all_countries()}
     return jsonify(rates)
 
 @app.route('/api/generate', methods=['POST'])
@@ -223,12 +287,12 @@ def generate():
     data = request.json
     domain = data.get('domain', 'Residential')
     typology = data.get('typology', 'Luxury Villa')
-    plot_size = data.get('plot_size', 800)
-    floors = data.get('floors', 3)
-    baths = data.get('baths', 2)
+    plot_size = int(data.get('plot_size', 800))
+    floors = int(data.get('floors', 3))
+    baths = int(data.get('baths', 2))
     country = data.get('country', 'Kenya')
     soil_name = data.get('soil_name', 'Nairobi Red Coffee Clay')
-    weights = data.get('weights', [0.25,0.25,0.25,0.25])
+    weights = data.get('weights', [0.25, 0.25, 0.25, 0.25])
 
     concepts = []
     for i in range(5):
@@ -244,12 +308,20 @@ def generate():
         d["total_usd"] = total_usd
         d["total_local"] = total_local
         d["fx"] = fx
-        # Remove large objects for JSON serialization (rooms, plan can be large)
-        # We'll keep them but it's okay for small data.
-        concepts.append(d)
-
+        # Keep only needed fields to reduce payload
+        concepts.append({
+            "id": d["id"],
+            "type": d["type"],
+            "floors": d["floors"],
+            "total_gfa": d["total_gfa"],
+            "country": d["country"],
+            "scores": d["scores"],
+            "total_usd": d["total_usd"],
+            "eurocode": d["eurocode"],
+            "rooms_count": len(d["rooms"]),
+            "soil_name": d["soil_name"]
+        })
     concepts.sort(key=lambda x: x["scores"]["composite"], reverse=True)
-    # Return simplified version (omit heavy plan details if needed)
     return jsonify(concepts)
 
 @app.route('/api/ram', methods=['POST'])
@@ -257,8 +329,18 @@ def ram_endpoint():
     data = request.json
     q = data.get('q', '')
     country = data.get('country', 'Kenya')
-    response = ram_ai(q, country)
+    domain = data.get('domain', 'Residential')
+    response = ram_ai(q, country, domain)
     return jsonify({"response": response})
+
+@app.route('/api/convert', methods=['POST'])
+def convert():
+    data = request.json
+    amount = float(data.get('amount', 0))
+    frm = data.get('from', 'USD')
+    to = data.get('to', 'USD')
+    result = convert_currency(amount, frm, to)
+    return jsonify({"result": result})
 
 # Optional: health check
 @app.route('/api/health')
