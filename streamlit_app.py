@@ -1,6 +1,7 @@
 # =========================================================
 # Arc — AEC INTELLIGENCE
-# Enhanced with Structural Design & Construction Planning
+# Full Suite: Structural Design, Construction Planning,
+# Solar, Water, Green Rating, and more.
 # =========================================================
 
 import streamlit as st
@@ -307,12 +308,10 @@ def compute_materials(d):
     }
 
 # ════════════════════════════════════════════════
-#  6. NEW: STRUCTURAL DESIGN DETAILS
+#  6. STRUCTURAL DESIGN DETAILS
 # ════════════════════════════════════════════════
 def compute_structural_design(d, ec):
     span = d["structural"]["span"]
-    floors = d["floors"]
-    storey_height = d["structural"]["storey_height"]
     gfa = d["total_gfa"]
     soil_bearing = get_soil_bearing_capacity(d["soil_name"])
     col_width = max(0.3, span / 15)
@@ -355,7 +354,7 @@ def compute_structural_design(d, ec):
     }
 
 # ════════════════════════════════════════════════
-#  7. NEW: CONSTRUCTION PLANNING
+#  7. CONSTRUCTION PLANNING
 # ════════════════════════════════════════════════
 def compute_construction_schedule(d):
     floors = d["floors"]
@@ -413,12 +412,10 @@ def compute_construction_schedule(d):
     return pd.DataFrame(schedule)
 
 # ════════════════════════════════════════════════
-#  8. NEW: COST BY TRADE
+#  8. COST BY TRADE
 # ════════════════════════════════════════════════
 def compute_cost_by_trade(d, country):
     fx = get_fx(country)
-    gfa = d["total_gfa"]
-    soil_m = d.get("soil_multiplier", 1.0)
     trades = {
         "Excavation": {"items": ["Site Clearance & Excavation"], "labour_pct": 0.4, "equip_pct": 0.3},
         "Concrete": {"items": ["Substructure (Foundations)", "Superstructure Concrete"], "labour_pct": 0.3, "equip_pct": 0.1},
@@ -450,7 +447,106 @@ def compute_cost_by_trade(d, country):
     return df
 
 # ════════════════════════════════════════════════
-#  9. FOREX MODULE (unchanged)
+#  9. NEW: SOLAR & ENERGY ANALYSIS
+# ════════════════════════════════════════════════
+def compute_solar_potential(d):
+    roof_area = d["total_gfa"]
+    irradiation = 1800
+    pv_efficiency = 0.18
+    capacity_factor = 0.15
+    installed_capacity = roof_area * pv_efficiency * 0.1
+    annual_energy = installed_capacity * 8760 * capacity_factor
+    grid_emission = 0.5
+    co2_savings = annual_energy * grid_emission / 1000
+    return {
+        "roof_area": round(roof_area, 1),
+        "installed_capacity": round(installed_capacity, 2),
+        "annual_energy": round(annual_energy, 0),
+        "co2_savings": round(co2_savings, 2)
+    }
+
+# ════════════════════════════════════════════════
+#  10. NEW: WATER EFFICIENCY
+# ════════════════════════════════════════════════
+def compute_water_harvesting(d):
+    roof_area = d["total_gfa"]
+    rainfall_map = {
+        "Kenya": 600,
+        "Uganda": 1200,
+        "Tanzania": 900,
+        "South Sudan": 800,
+        "Rwanda": 1200,
+        "Ethiopia": 700
+    }
+    country = d["country"]
+    rainfall_mm = rainfall_map.get(country, 800)
+    runoff_coeff = 0.8
+    rainfall_m = rainfall_mm / 1000
+    harvestable = roof_area * rainfall_m * runoff_coeff
+    typical_consumption = 100
+    savings_pct = min(100, (harvestable / typical_consumption) * 100)
+    return {
+        "harvestable_volume": round(harvestable, 1),
+        "savings_percentage": round(min(100, savings_pct), 1),
+        "rainfall": rainfall_mm
+    }
+
+# ════════════════════════════════════════════════
+#  11. NEW: GREEN BUILDING RATING
+# ════════════════════════════════════════════════
+def compute_green_rating(d, ec):
+    score = 0
+    window_ratio = d["windows"] / d["total_gfa"] if d["total_gfa"] > 0 else 0
+    if window_ratio > 0.2:
+        score += 10
+    elif window_ratio > 0.15:
+        score += 7
+    else:
+        score += 4
+    water = compute_water_harvesting(d)
+    if water["savings_percentage"] > 50:
+        score += 15
+    elif water["savings_percentage"] > 30:
+        score += 10
+    else:
+        score += 5
+    carbon = d["materials"]["embodied_carbon_t"] / d["total_gfa"] if d["total_gfa"] > 0 else 1
+    if carbon < 0.3:
+        score += 15
+    elif carbon < 0.5:
+        score += 10
+    else:
+        score += 5
+    solar = compute_solar_potential(d)
+    if solar["installed_capacity"] > 5:
+        score += 15
+    elif solar["installed_capacity"] > 2:
+        score += 10
+    else:
+        score += 5
+    score += 10  # waste management
+    if window_ratio > 0.15:
+        score += 10
+    else:
+        score += 5
+    if d["structural"]["foundation"] in ["Raft Foundation", "Pile Foundation"]:
+        score += 5
+    score = min(100, score)
+    if score >= 85:
+        rating = "Platinum (LEED) / Excellent (BREEAM)"
+    elif score >= 70:
+        rating = "Gold / Very Good"
+    elif score >= 55:
+        rating = "Silver / Good"
+    else:
+        rating = "Certified / Pass"
+    return {
+        "score": score,
+        "rating": rating
+    }
+
+# ════════════════════════════════════════════════
+#  12. FOREX MODULE
 # ════════════════════════════════════════════════
 STATIC_FX = {"Kenya":129.49, "Uganda":3665.20, "Tanzania":2625.00, "South Sudan":4626.40, "Rwanda":1330.00, "Ethiopia":125.00}
 BASE_FX = {
@@ -519,7 +615,7 @@ def compute_boq(d, country):
     return total_usd, total_local, fx, breakdown
 
 # ════════════════════════════════════════════════
-#  10. FX HISTORY & FOREST (unchanged)
+#  13. FX HISTORY & FOREST
 # ════════════════════════════════════════════════
 @st.cache_data(ttl=3600)
 def fetch_hist(start, end):
@@ -570,7 +666,7 @@ def forest(base, days=7, n_paths=100, vol=0.008):
     return fig
 
 # ════════════════════════════════════════════════
-#  11. RAM AI (unchanged)
+#  14. RAM AI
 # ════════════════════════════════════════════════
 WISDOM = {
     "soil": ["For soft clay, use raft/pile foundations. Black cotton soil expands when wet—add moisture barrier.",
@@ -599,7 +695,7 @@ def ram_ai(q, country, domain):
     return f"**Ram AI:** {random.choice(pool)}\n\n📌 *{country}*: {TIPS.get(country, '')}"
 
 # ════════════════════════════════════════════════
-#  12. RENDERERS (existing, with added Gantt for schedule)
+#  15. RENDERERS
 # ════════════════════════════════════════════════
 def render_floorplan(plan, span=6.0):
     corridor = next((r for r in plan if r["type"]=="Corridor"), plan[0])
@@ -741,7 +837,7 @@ def plot_schedule_gantt(df):
     return fig
 
 # ════════════════════════════════════════════════
-#  13. UI – STREAMLIT APP
+#  16. UI – STREAMLIT APP
 # ════════════════════════════════════════════════
 st.set_page_config(page_title="Arc – AEC Engine", page_icon="◈", layout="wide")
 
@@ -1028,7 +1124,7 @@ elif nav == "Concepts":
                     st.markdown("#### 💰 Detailed BOQ")
                     st.dataframe(pd.DataFrame(c['boq_breakdown']), use_container_width=True)
 
-                    # ---- NEW STRUCTURAL DESIGN SECTION ----
+                    # ---- STRUCTURAL MEMBER SIZING ----
                     st.markdown("#### 🏗️ Structural Member Sizing")
                     sd = compute_structural_design(c, ec)
                     col_s1, col_s2, col_s3 = st.columns(3)
@@ -1044,18 +1140,46 @@ elif nav == "Concepts":
                         st.write(f"**Slab Rebar:** {sd['slab_bars']}×12mm @200mm")
                         st.write(f"**Footing Rebar:** {sd['footing_bars']}×16mm")
 
-                    # ---- NEW CONSTRUCTION SCHEDULE ----
+                    # ---- CONSTRUCTION SCHEDULE ----
                     st.markdown("#### 📅 Construction Schedule")
                     schedule_df = compute_construction_schedule(c)
                     st.dataframe(schedule_df[["Task", "Duration", "Start", "Finish", "Predecessors"]], use_container_width=True)
                     st.plotly_chart(plot_schedule_gantt(schedule_df), use_container_width=True)
 
-                    # ---- NEW COST BY TRADE ----
+                    # ---- COST BY TRADE ----
                     st.markdown("#### 💵 Cost by Trade")
                     cost_df = compute_cost_by_trade(c, c["country"])
                     st.dataframe(cost_df.style.format({"Material": "${:,.0f}", "Labour": "${:,.0f}", "Equipment": "${:,.0f}", "Total": "${:,.0f}", "Total Local": "{:,.0f}"}), use_container_width=True)
 
-                    # ---- EXISTING RISKS & QUALITY ----
+                    # ---- NEW: SOLAR & ENERGY ----
+                    st.markdown("#### ☀️ Solar & Energy Analysis")
+                    solar = compute_solar_potential(c)
+                    col_e1, col_e2, col_e3 = st.columns(3)
+                    with col_e1:
+                        st.metric("Roof Area", f"{format_area(solar['roof_area'])}")
+                        st.metric("Installed PV", f"{solar['installed_capacity']} kWp")
+                    with col_e2:
+                        st.metric("Annual Energy", f"{solar['annual_energy']:,} kWh")
+                        st.metric("CO₂ Savings", f"{solar['co2_savings']} tonnes/yr")
+                    with col_e3:
+                        st.caption("PV Performance")
+                        st.progress(min(1.0, solar['annual_energy'] / 5000), text=f"{solar['annual_energy']} kWh/yr")
+
+                    # ---- NEW: WATER EFFICIENCY ----
+                    st.markdown("#### 💧 Water Efficiency & Rainwater Harvesting")
+                    water = compute_water_harvesting(c)
+                    st.write(f"**Rainfall:** {water['rainfall']} mm/year")
+                    st.write(f"**Harvestable Volume:** {water['harvestable_volume']} m³/year")
+                    st.progress(water['savings_percentage']/100, text=f"{water['savings_percentage']}% of typical water use")
+                    st.caption(f"Typical building water use: 100 m³/year")
+
+                    # ---- NEW: GREEN BUILDING RATING ----
+                    st.markdown("#### 🏅 Green Building Rating")
+                    rating = compute_green_rating(c, ec)
+                    st.metric("Score", f"{rating['score']}/100", delta=rating['rating'])
+                    st.progress(rating['score']/100, text=f"{rating['score']}%")
+
+                    # ---- RISK REGISTER ----
                     st.markdown("#### ⚠️ Risk Register")
                     risks = [
                         {"Risk": "Foundation settlement", "Likelihood": "Medium", "Impact": "High", "Mitigation": "Soil improvement"},
@@ -1066,6 +1190,7 @@ elif nav == "Concepts":
                     ]
                     st.table(pd.DataFrame(risks))
 
+                    # ---- QUALITY CHECKLIST ----
                     st.markdown("#### ✅ Quality Checklist")
                     checklist = [
                         {"Phase": "Foundation", "Item": "Excavation depth", "Status": "✅ Pass"},
@@ -1146,4 +1271,3 @@ elif nav == "Ram AI":
             st.markdown(f'**🧠 {speaker}:** {msg}')
 
 st.markdown("<div style='text-align:center;padding:20px 0;color:#444'>AI Powered · Data Driven · Secure · Scalable</div>", unsafe_allow_html=True)
-
