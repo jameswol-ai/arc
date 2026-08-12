@@ -1,0 +1,18 @@
+arc/
+├── streamlit_app.py
+├── modules/
+│   ├── __init__.py          # (empty file)
+│   ├── config.py
+│   ├── auth.py
+│   ├── soil.py
+│   ├── aec_engine.py
+│   ├── materials.py
+│   ├── structural.py
+│   ├── construction.py
+│   ├── cost.py
+│   ├── forex.py
+│   ├── solar.py
+│   ├── water.py
+│   ├── green_rating.py
+│   ├── ram_ai.py
+│   └── renderers.py
