@@ -1,6 +1,7 @@
 # =========================================================
 # Core AEC Engine: spatial model, Eurocode, AI scores
 # Fixed weights (no sliders)
+# Added: Wind Load Analysis, Seismic Check
 # =========================================================
 
 import random, uuid
@@ -48,10 +49,8 @@ def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soi
     ]
 
     # ─── User‑selected room types ────────────────────────────
-    # Define default room types if none given
     if not room_types:
         room_types = []
-    # Map type to display name and default sizes
     room_type_map = {
         "Bedroom": {"w": (4, 5), "h": (3.5, 4.5), "color": "#2a1a3a"},
         "Bathroom": {"w": (2.5, 3.5), "h": (2, 3), "color": "#4a2a2a"},
@@ -65,7 +64,6 @@ def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soi
         "Storage": {"w": (2, 3), "h": (2, 3), "color": "#3a3a2a"},
     }
 
-    # Ensure at least one of each selected type appears
     for room_type in room_types:
         if room_type in room_type_map:
             specs = room_type_map[room_type]
@@ -79,7 +77,7 @@ def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soi
                 "color": specs["color"]
             })
 
-    # ─── Additional domain‑specific rooms (if any) ───────────
+    # ─── Additional domain‑specific rooms ────────────────────
     domain_rooms = []
     if domain == "Residential":
         domain_rooms = [
@@ -96,12 +94,11 @@ def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soi
             {"name": "Main Production Bay Floor", "type": "Manufacturing", "w": rng.uniform(16, 20), "h": rng.uniform(10, 14), "color": "#2a1a1a"},
             {"name": "Logistics Dispatch Terminal", "type": "Loading Bay", "w": rng.uniform(7, 9), "h": rng.uniform(7, 9), "color": "#3a2a1a"},
         ]
-    # Add domain rooms if not already present (by name)
     for dr in domain_rooms:
         if not any(r["name"] == dr["name"] for r in rooms):
             rooms.append(dr)
 
-    # ─── Bathrooms (user may have selected them, but we add extra if baths > 0) ───
+    # ─── Bathrooms from user baths slider ────────────────────
     for b in range(baths):
         if not any(r["type"] == "Bathroom" and r["name"].endswith(str(b+1)) for r in rooms):
             rooms.append({
@@ -185,14 +182,11 @@ def calculate_ai_scores(asset, ec, total_usd, prompt=None):
     composite = round(arch*0.25 + struct*0.25 + sust*0.25 + cost*0.25)
     return arch, struct, sust, cost, composite
 
-
-# ─── Add at the end of aec_engine.py ─────────────────────────
-
-# Wind load (simplified Eurocode)
+# ─── NEW: Wind Load Analysis (simplified Eurocode) ──────────
 def compute_wind_load(d, country):
     """
     Returns wind pressure (kN/m²) and base shear (kN).
-    Uses simplified assumptions.
+    Uses simplified assumptions based on country wind speeds.
     """
     # Basic wind speed (m/s) per country (approximate)
     wind_speeds = {
@@ -217,7 +211,7 @@ def compute_wind_load(d, country):
         "base_shear": round(base_shear, 0)
     }
 
-# Seismic check (simplified)
+# ─── NEW: Seismic Check (simplified) ────────────────────────
 def compute_seismic_check(d, country):
     """
     Returns seismic base shear (kN) and a pass/fail status.
