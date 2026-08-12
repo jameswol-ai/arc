@@ -1,9 +1,12 @@
 # =========================================================
-# Core AEC generation: spatial model, Eurocode, AI scores
+# Core AEC Engine: spatial model, Eurocode, AI scores
+# Fixed weights (no sliders)
 # =========================================================
+
 import random, uuid
 from .soil import get_soil_multiplier
 
+# ─── Domain definitions ────────────────────────────────────────
 ARCH_DOMAINS = {
     "Residential": ["Luxury Villa", "Modern Apartment", "Townhouse Studio"],
     "Commercial": ["Corporate Hub Block", "Boutique Retail Space", "Medical Clinic Center"],
@@ -22,6 +25,7 @@ SLAB_SYSTEMS = {
     "Industrial": ["Heavy-duty Slab", "Composite Slab"],
 }
 
+# ─── Generate spatial model ───────────────────────────────────
 def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soil_name, seed=0):
     rng = random.Random(seed)
     plot = max(200, plot_size + rng.randint(-300, 300))
@@ -37,7 +41,7 @@ def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soi
     storey_height = rng.uniform(3.0, 4.2)
     wall_type = "Reinforced Concrete" if rng.random() > 0.3 else "Masonry"
 
-    # Generate rooms (simplified – full code from original)
+    # ─── Rooms ──────────────────────────────────────────────
     rooms = [
         {"name": "Central Corridor Gallery", "type": "Corridor", "w": 2.5, "h": 14.0, "color": "#3a3a4a"},
         {"name": "Main Staircase Core", "type": "Stairs", "w": 4.5, "h": 4.0, "color": "#4a4a5a"},
@@ -86,6 +90,7 @@ def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soi
         }
     }
 
+# ─── Eurocode analysis ──────────────────────────────────────
 def run_eurocode_analysis(d, domain):
     span = d["structural"]["span"]
     gk = random.uniform(4.5, 6.5)
@@ -106,7 +111,8 @@ def run_eurocode_analysis(d, domain):
         "d_eff_used": round(d_eff)
     }
 
-def calculate_ai_scores(asset, ec, total_usd, prompt=None, weights=(0.25,0.25,0.25,0.25)):
+# ─── AI scores (fixed weights: 0.25 each) ──────────────────
+def calculate_ai_scores(asset, ec, total_usd, prompt=None):
     arch = 40 + min(30, asset['floors']*4) + min(20, len(asset['rooms'])*2.5) + random.randint(-10,10)
     arch = min(100, arch)
     try:
@@ -123,6 +129,5 @@ def calculate_ai_scores(asset, ec, total_usd, prompt=None, weights=(0.25,0.25,0.
     sust = min(100, sust)
     cost = 50 + (30 if total_usd/asset['total_gfa'] < 400 else (20 if total_usd/asset['total_gfa'] < 600 else 5)) + random.randint(-5,5)
     cost = min(100, int(cost))
-    w = weights
-    composite = round(arch*w[0] + struct*w[1] + sust*w[2] + cost*w[3])
+    composite = round(arch*0.25 + struct*0.25 + sust*0.25 + cost*0.25)
     return arch, struct, sust, cost, composite
