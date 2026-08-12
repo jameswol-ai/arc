@@ -1,6 +1,7 @@
 import streamlit as st
 from datetime import datetime, timedelta
 import random, pandas as pd, plotly.graph_objects as go
+import numpy as np  # ← FIXED: was missing
 
 # ─── Import from modules ──────────────────────────────────────
 from modules.config import M2_TO_FT2, to_display_length, to_display_area, format_length, format_area
@@ -32,7 +33,7 @@ from modules.renderers import (
 # ─── Page config ──────────────────────────────────────────────
 st.set_page_config(page_title="Arc – AEC Engine", page_icon="◈", layout="wide")
 
-# ─── Custom CSS (unchanged) ──────────────────────────────────
+# ─── Custom CSS ───────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -166,6 +167,25 @@ with st.sidebar:
         weights = (w_arch, w_struct, w_sust, w_cost)
         st.caption(f"Norm: arch {w_arch:.2f} struct {w_struct:.2f} sust {w_sust:.2f} cost {w_cost:.2f}")
 
+    # ─── NEW: Modules overview expander ──────────────────────
+    with st.expander("📦 Available Modules", expanded=False):
+        st.markdown("""
+        - **config** – unit conversion helpers
+        - **auth** – login, user memory
+        - **soil** – soil types, bearing capacity
+        - **aec_engine** – spatial model, Eurocode, AI scores
+        - **materials** – material quantities, embodied carbon
+        - **structural** – member sizing, rebar
+        - **construction** – schedule generation
+        - **cost** – BOQ, cost by trade
+        - **forex** – live rates, history, forest
+        - **solar** – PV potential, CO₂ savings
+        - **water** – rainwater harvesting
+        - **green_rating** – LEED/BREEAM score
+        - **ram_ai** – expert advice
+        - **renderers** – all charts and 3D views
+        """)
+
     # ─── Generate button ──────────────────────────────────────
     if st.button("✨ Generate Concepts", use_container_width=True):
         with st.spinner("Synthesizing 5 concepts..."):
@@ -262,7 +282,7 @@ if nav == "Dashboard":
             sim = {}
             dates = [start_date + timedelta(days=i) for i in range(61)]
             for c, r in base_rates.items():
-                rng = np.random.default_rng(42)
+                rng = np.random.default_rng(42)          # ← uses numpy (now imported)
                 steps = rng.normal(0, 0.005, len(dates) - 1)
                 vals = [r]
                 for s in steps:
