@@ -142,9 +142,7 @@ def get_soil_category(soil_name):
     return SOIL_TYPES.get(soil_name, {"cat": "Medium"})["cat"]
 
 def get_soil_bearing_capacity(soil_name):
-    """Return bearing capacity in kPa based on soil category."""
     cat = get_soil_category(soil_name)
-    # Conservative estimates
     if cat == "Rock":
         return 300
     elif cat == "Medium":
@@ -312,46 +310,32 @@ def compute_materials(d):
 #  6. NEW: STRUCTURAL DESIGN DETAILS
 # ════════════════════════════════════════════════
 def compute_structural_design(d, ec):
-    """Compute member sizes and reinforcement based on concept data."""
     span = d["structural"]["span"]
     floors = d["floors"]
     storey_height = d["structural"]["storey_height"]
     gfa = d["total_gfa"]
     soil_bearing = get_soil_bearing_capacity(d["soil_name"])
-    # Column size: assume square, width ≈ span/15 (min 0.3m)
     col_width = max(0.3, span / 15)
     col_depth = col_width
-    # Beam depth: span/12, width = depth/2
     beam_depth = max(0.3, span / 12)
     beam_width = beam_depth / 2
-    # Slab thickness: span/30 for flat slab
     slab_thickness = max(0.15, span / 30)
-    # Footing size: estimate total load (kN) = total GFA * 10 kN/m² (typical)
-    total_load = gfa * 10  # kN
-    # Footing width for strip footing (simplified): assume 1m strip, width = total_load / (soil_bearing * 1)
-    footing_width = max(0.5, total_load / (soil_bearing * 1000))  # soil_bearing in kPa, convert to kN/m²
-    # Reinforcement estimates (simplified)
-    # Beam rebar: As = M_ed / (0.87 * fy * 0.9*d) where fy = 500 MPa, d ~ beam_depth - cover
-    fy = 500  # MPa
-    m_ed = float(ec["m_ed"].split()[0])  # in kNm
-    d_beam = beam_depth - 0.05  # effective depth in m
+    total_load = gfa * 10
+    footing_width = max(0.5, total_load / (soil_bearing * 1000))
+    fy = 500
+    m_ed = float(ec["m_ed"].split()[0])
+    d_beam = beam_depth - 0.05
     if d_beam > 0 and m_ed > 0:
-        as_beam = (m_ed * 10**6) / (0.87 * fy * 0.9 * d_beam * 1000)  # in mm² (approx)
+        as_beam = (m_ed * 10**6) / (0.87 * fy * 0.9 * d_beam * 1000)
     else:
         as_beam = 0
     as_beam = max(0, as_beam)
-    # Column rebar: assume 1% of gross area
-    as_col = 0.01 * (col_width * 1000) * (col_depth * 1000)  # mm²
-    # Slab rebar: assume 0.2% of slab cross-section per m width
-    as_slab = 0.002 * (slab_thickness * 1000) * 1000  # mm² per m width
-    # Footing rebar: assume 0.15% of footing cross-section
-    as_footing = 0.0015 * (footing_width * 1000) * (slab_thickness * 1000)  # mm² per m length
-
-    # Choose bar sizes (simplified: 16mm, 20mm, 25mm)
+    as_col = 0.01 * (col_width * 1000) * (col_depth * 1000)
+    as_slab = 0.002 * (slab_thickness * 1000) * 1000
+    as_footing = 0.0015 * (footing_width * 1000) * (slab_thickness * 1000)
     def bar_count(area, dia):
         bar_area = np.pi * (dia/2)**2
         return max(1, int(area / bar_area + 0.5))
-
     return {
         "column_width": round(col_width, 2),
         "column_depth": round(col_depth, 2),
@@ -359,25 +343,23 @@ def compute_structural_design(d, ec):
         "beam_depth": round(beam_depth, 2),
         "slab_thickness": round(slab_thickness, 2),
         "footing_width": round(footing_width, 2),
-        "footing_depth": 0.3,  # assume 300mm
+        "footing_depth": 0.3,
         "as_beam": round(as_beam, 0),
         "as_column": round(as_col, 0),
         "as_slab": round(as_slab, 0),
         "as_footing": round(as_footing, 0),
-        "beam_bars": bar_count(as_beam, 20),  # 20mm bars
-        "column_bars": bar_count(as_col, 25),  # 25mm bars
-        "slab_bars": bar_count(as_slab, 12),  # 12mm bars
-        "footing_bars": bar_count(as_footing, 16)  # 16mm bars
+        "beam_bars": bar_count(as_beam, 20),
+        "column_bars": bar_count(as_col, 25),
+        "slab_bars": bar_count(as_slab, 12),
+        "footing_bars": bar_count(as_footing, 16)
     }
 
 # ════════════════════════════════════════════════
 #  7. NEW: CONSTRUCTION PLANNING
 # ════════════════════════════════════════════════
 def compute_construction_schedule(d):
-    """Generate a project schedule with tasks, durations, and dependencies."""
     floors = d["floors"]
     gfa = d["total_gfa"]
-    # Task list with base durations (in days)
     tasks = [
         {"id": "A", "name": "Mobilization", "duration": 5, "predecessors": []},
         {"id": "B", "name": "Site Clearance", "duration": 3, "predecessors": ["A"]},
@@ -389,51 +371,32 @@ def compute_construction_schedule(d):
         {"id": "G2", "name": "Floor 1 Slab", "duration": 4, "predecessors": ["G1"]},
         {"id": "H1", "name": "Floor 2 Columns", "duration": 3, "predecessors": ["G2"]},
         {"id": "H2", "name": "Floor 2 Slab", "duration": 4, "predecessors": ["H1"]},
-        # Add more floors if needed (we'll loop)
         {"id": "I", "name": "Roof", "duration": max(5, int(gfa / 400)), "predecessors": ["H2" if floors >= 2 else "G2"]},
         {"id": "J", "name": "Finishes", "duration": max(6, int(gfa / 200)), "predecessors": ["I"]},
-        {"id": "K", "name": "MEP Installation", "duration": max(5, int(gfa / 250)), "predecessors": ["F"]},  # can start early
+        {"id": "K", "name": "MEP Installation", "duration": max(5, int(gfa / 250)), "predecessors": ["F"]},
         {"id": "L", "name": "External Works", "duration": 5, "predecessors": ["J"]},
         {"id": "M", "name": "Commissioning", "duration": 4, "predecessors": ["J", "K", "L"]},
         {"id": "N", "name": "Handover", "duration": 2, "predecessors": ["M"]},
     ]
-    # For floors > 2, add intermediate floors
-    base_tasks = tasks.copy()
-    if floors > 2:
-        # Remove the fixed G1,G2,H1,H2 and rebuild
-        # We'll just keep a generic loop: for each floor from 2 to floors-1
-        # We'll simplify: we already have G and H, we'll keep them and add more if needed.
-        # For simplicity, we'll not add more; we'll just adjust durations based on floors.
-        # But we can dynamically build tasks
-        pass
-    # For now, we'll keep the fixed tasks, but adjust durations for 'Finishes' based on floors
-    # We'll compute start/finish using forward pass
-    # Build dependency dict
-    for t in tasks:
-        t["predecessor_ids"] = t["predecessors"]
-    # Compute schedule
     start = datetime.today()
-    schedule = []
-    # We'll do a simple forward pass
     task_dict = {t["id"]: t for t in tasks}
-    # Topological sort (simple)
     visited = set()
     ordered = []
     def visit(n):
         if n in visited: return
         visited.add(n)
-        for pred in task_dict[n]["predecessor_ids"]:
+        for pred in task_dict[n]["predecessors"]:
             if pred in task_dict:
                 visit(pred)
         ordered.append(n)
     for t in tasks:
         if t["id"] not in visited:
             visit(t["id"])
-    # Now compute start/finish
     finish = {}
+    schedule = []
     for tid in ordered:
         t = task_dict[tid]
-        pred_finish = [finish[p] for p in t["predecessor_ids"] if p in finish]
+        pred_finish = [finish[p] for p in t["predecessors"] if p in finish]
         if pred_finish:
             start_date = max(pred_finish)
         else:
@@ -445,20 +408,17 @@ def compute_construction_schedule(d):
             "Duration": t["duration"],
             "Start": start_date,
             "Finish": finish_date,
-            "Predecessors": ", ".join(t["predecessor_ids"])
+            "Predecessors": ", ".join(t["predecessors"])
         })
-    df = pd.DataFrame(schedule)
-    return df
+    return pd.DataFrame(schedule)
 
 # ════════════════════════════════════════════════
 #  8. NEW: COST BY TRADE
 # ════════════════════════════════════════════════
 def compute_cost_by_trade(d, country):
-    """Break down BOQ items into trade categories and add labour/equipment."""
     fx = get_fx(country)
     gfa = d["total_gfa"]
     soil_m = d.get("soil_multiplier", 1.0)
-    # Define trade mapping and unit costs (USD per unit)
     trades = {
         "Excavation": {"items": ["Site Clearance & Excavation"], "labour_pct": 0.4, "equip_pct": 0.3},
         "Concrete": {"items": ["Substructure (Foundations)", "Superstructure Concrete"], "labour_pct": 0.3, "equip_pct": 0.1},
@@ -469,12 +429,10 @@ def compute_cost_by_trade(d, country):
         "MEP": {"items": ["MEP (Electrical, Plumbing)"], "labour_pct": 0.35, "equip_pct": 0.1},
         "External": {"items": ["External Works"], "labour_pct": 0.4, "equip_pct": 0.2},
     }
-    # Compute total costs per trade
     trade_cost = {}
     for trade, info in trades.items():
         total = 0
         for item_name in info["items"]:
-            # find the BOQ item
             for boq_item in d["boq_breakdown"]:
                 if boq_item["Item"] == item_name:
                     total += boq_item["Total USD"]
@@ -487,14 +445,12 @@ def compute_cost_by_trade(d, country):
             "Equipment": equip,
             "Total": total
         }
-    # Create DataFrame
     df = pd.DataFrame(trade_cost).T.reset_index().rename(columns={"index": "Trade"})
-    # Add local currency
     df["Total Local"] = df["Total"] * fx["rate"]
     return df
 
 # ════════════════════════════════════════════════
-#  9. FOREX MODULE (existing, unchanged)
+#  9. FOREX MODULE (unchanged)
 # ════════════════════════════════════════════════
 STATIC_FX = {"Kenya":129.49, "Uganda":3665.20, "Tanzania":2625.00, "South Sudan":4626.40, "Rwanda":1330.00, "Ethiopia":125.00}
 BASE_FX = {
@@ -646,23 +602,137 @@ def ram_ai(q, country, domain):
 #  12. RENDERERS (existing, with added Gantt for schedule)
 # ════════════════════════════════════════════════
 def render_floorplan(plan, span=6.0):
-    # ... (same as before, omitted for brevity – keep your existing code)
-    # We'll include it in the final file but for space we keep it minimal here.
-    # In the actual file you'll have the full functions.
-    pass
+    corridor = next((r for r in plan if r["type"]=="Corridor"), plan[0])
+    stairs = next((r for r in plan if r["type"]=="Stairs"), None)
+    others = [r for r in plan if r not in (corridor, stairs)]
+    unit = "ft" if st.session_state.get("unit_system")=="imperial" else "m"
+    fig = go.Figure()
+    def add_room(x0, y0, x1, y1, color, name, w_m, d_m):
+        w_d, _ = to_display_length(w_m); d_d, _ = to_display_length(d_m)
+        fig.add_shape(type="rect", x0=x0, y0=y0, x1=x1, y1=y1, fillcolor=color, line=dict(color="#555", width=2), opacity=0.7)
+        fig.add_annotation(x=(x0+x1)/2, y=(y0+y1)/2,
+                           text=f"<b>{name}</b><br>{w_d}×{d_d} {unit}",
+                           showarrow=False, font=dict(size=10, color="#cccccc"),
+                           bgcolor="rgba(0,0,0,0.7)")
+    cl, cw = corridor["h"], corridor["w"]
+    max_x = cl + 5; max_y = cw + sum(r["h"] for r in others) + 5
+    for x in np.arange(0, max_x + span, span):
+        fig.add_shape(type="line", x0=x, y0=-max_y, x1=x, y1=max_y,
+                      line=dict(color="rgba(100,100,100,0.2)", width=1), layer="below")
+    for y in np.arange(-max_y, max_y, span):
+        fig.add_shape(type="line", x0=0, y0=y, x1=max_x, y1=y,
+                      line=dict(color="rgba(100,100,100,0.2)", width=1), layer="below")
+    add_room(0, -cw/2, cl, cw/2, corridor["color"], corridor["name"], corridor["w"], corridor["h"])
+    cx, side = 1.5, 1
+    for room in others:
+        rw, rd = room["w"], room["h"]
+        if cx + rw > cl:
+            cx, side = 1.5, -side
+        y0 = cw/2 + 0.5 if side==1 else -cw/2 - 0.5 - rd
+        y1 = y0 + rd
+        add_room(cx, y0, cx + rw, y1, room["color"], room["name"], rw, rd)
+        door_x, door_y = cx + rw/2, cw/2 if side==1 else -cw/2
+        fig.add_shape(type="path",
+                      path=f"M {door_x-0.3},{door_y} Q {door_x-0.3},{door_y+(0.6 if side==1 else -0.6)} {door_x+0.3},{door_y+(0.6 if side==1 else -0.6)} Q {door_x+0.3},{door_y} {door_x-0.3},{door_y}",
+                      line=dict(color="#888", width=2), fillcolor="rgba(100,100,100,0.2)")
+        fig.add_annotation(x=(door_x), y=(y0+y1)/2, ax=door_x, ay=door_y,
+                           xref="x", yref="y", axref="x", ayref="y",
+                           text="", showarrow=True, arrowhead=3, arrowcolor="#888")
+        cx += rw + 0.8; side *= -1
+    if stairs:
+        sx = cl + 0.5
+        add_room(sx, -cw/2, sx+stairs["w"], cw/2, stairs["color"], stairs["name"], stairs["w"], stairs["h"])
+        fig.add_annotation(x=sx+stairs["w"]/2, y=0, ax=cl-0.5, ay=0,
+                           xref="x", yref="y", axref="x", ayref="y",
+                           text="", showarrow=True, arrowhead=3, arrowcolor="#888")
+    fig.add_annotation(x=0.5, y=0, ax=-1, ay=0,
+                       xref="x", yref="y", axref="x", ayref="y",
+                       text="<b>ENTRANCE</b>", showarrow=True, arrowhead=3, arrowcolor="#888",
+                       font=dict(color="#888"))
+    fig.update_layout(title="🗺️ 2D Floor Plan",
+                      xaxis=dict(visible=False), yaxis=dict(visible=False, scaleanchor="x", scaleratio=1),
+                      plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                      margin=dict(l=20,r=20,t=40,b=20), showlegend=False, width=800, height=500)
+    return fig
 
 def render_3d(plan, floors=1, span=6.0):
-    # ... (same)
-    pass
+    traces = []
+    min_x = min_y = float('inf'); max_x = max_y = -float('inf')
+    for i, r in enumerate(plan):
+        xc = (i%3)*12; yc = (i//3)*10
+        min_x = min(min_x, xc - r["w"]/2); max_x = max(max_x, xc + r["w"]/2)
+        min_y = min(min_y, yc - r["h"]/2); max_y = max(max_y, yc + r["h"]/2)
+    gs = span*2
+    for x in range(int(min_x/gs)*int(gs), int(max_x/gs+1)*int(gs)+1, int(gs)):
+        traces.append(go.Scatter3d(x=[x,x], y=[min_y, max_y], z=[0,0],
+                                   mode='lines', line=dict(color='#333', width=1), showlegend=False))
+    for y in range(int(min_y/gs)*int(gs), int(max_y/gs+1)*int(gs)+1, int(gs)):
+        traces.append(go.Scatter3d(x=[min_x, max_x], y=[y,y], z=[0,0],
+                                   mode='lines', line=dict(color='#333', width=1), showlegend=False))
+    for i, r in enumerate(plan):
+        xc = (i%3)*12; yc = (i//3)*10
+        w, d, c = r["w"], r["h"], r["color"]
+        for f in range(floors):
+            zb = f*3; zt = zb+2.7
+            xb = [xc-w/2, xc+w/2, xc+w/2, xc-w/2, xc-w/2]
+            yb = [yc-d/2, yc-d/2, yc+d/2, yc+d/2, yc-d/2]
+            traces.append(go.Scatter3d(x=xb, y=yb, z=[zb]*5, mode='lines',
+                                       line=dict(color=c, width=2), showlegend=False))
+            traces.append(go.Scatter3d(x=xb, y=yb, z=[zt]*5, mode='lines',
+                                       line=dict(color=c, width=2), showlegend=False))
+            for cx, cy in [(xc-w/2,yc-d/2),(xc+w/2,yc-d/2),(xc+w/2,yc+d/2),(xc-w/2,yc+d/2)]:
+                traces.append(go.Scatter3d(x=[cx,cx], y=[cy,cy], z=[zb,zt],
+                                           mode='lines', line=dict(color=c, width=2), showlegend=False))
+    for gx in range(int(min_x/gs)*int(gs), int(max_x/gs+1)*int(gs)+1, int(gs)):
+        for gy in range(int(min_y/gs)*int(gs), int(max_y/gs+1)*int(gs)+1, int(gs)):
+            traces.append(go.Scatter3d(x=[gx,gx], y=[gy,gy], z=[0, floors*3],
+                                       mode='lines', line=dict(color='#555', width=2, dash='dot'), showlegend=False))
+    fig = go.Figure(data=traces)
+    fig.update_layout(scene=dict(xaxis=dict(visible=False), yaxis=dict(visible=False), zaxis=dict(visible=False),
+                                 bgcolor='#0a0a0a'),
+                      paper_bgcolor='#0a0a0a', margin=dict(l=0,r=0,b=0,t=20),
+                      showlegend=False, title="3D Massing", title_font=dict(color='#aaaaaa', size=14))
+    return fig
 
 def render_isometric(plan, span=6.0):
-    # ... (same)
-    pass
+    w_, h_ = 800, 380
+    unit = "ft" if st.session_state.get("unit_system")=="imperial" else "m"
+    js = f"ctx.strokeStyle='rgba(100,100,100,0.1)';ctx.lineWidth=1;const step={span*2};for(let x=0;x<{w_};x+=step){{ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,{h_});ctx.stroke();}}for(let y=0;y<{h_};y+=step){{ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo({w_},y);ctx.stroke();}}"
+    for i, r in enumerate(plan):
+        ox = (i%3)*170+100; oy = (i//3)*110+130
+        rw = min(115, int(r["w"]*14)); rh = min(95, int(r["h"]*14)); c = r["color"]
+        wd, _ = to_display_length(r["w"]); hd, _ = to_display_length(r["h"])
+        js += f"ctx.fillStyle='{c}';ctx.beginPath();ctx.moveTo({ox},{oy});ctx.lineTo({ox+rw},{oy-rh/2});ctx.lineTo({ox+rw+rw},{oy});ctx.lineTo({ox+rw},{oy+rh/2});ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(200,200,200,0.3)';ctx.stroke();ctx.fillStyle='rgba(200,200,200,0.06)';ctx.beginPath();ctx.moveTo({ox},{oy});ctx.lineTo({ox},{oy-40});ctx.lineTo({ox+rw},{oy+rh/2-40});ctx.lineTo({ox+rw},{oy+rh/2});ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#ccc';ctx.font='bold 11px Space Grotesk';ctx.fillText('{r["name"]} ({wd}×{hd} {unit})',{ox+15},{oy-2});"
+    return f"<canvas width='{w_}' height='{h_}' style='max-width:100%;background:#0a0a0a;'></canvas><script>const c=document.querySelector('canvas');const ctx=c.getContext('2d');{js}</script>"
 
-# We already have gantt_chart for project schedule, but we'll reuse it.
-# We'll also have a function to plot the schedule Gantt with dependencies (using Plotly).
+def gantt_chart(asset):
+    gfa = asset["total_gfa"]
+    fl = asset["floors"]
+    s = datetime.today()
+    tasks = [("Mobilization",5),("Substructure",int(gfa*0.15))] + [(f"Floor {i+1}",20) for i in range(fl)] + [("Roofing",12),("Finishes",int(gfa*0.02)),("Commissioning",14),("Handover",3)]
+    df = pd.DataFrame(tasks, columns=["Task","Duration"])
+    ends = [s]
+    [ends.append(ends[-1] + timedelta(days=d)) for d in df["Duration"]]
+    df["Start"] = ends[:-1]
+    df["Finish"] = ends[1:]
+    fig = px.timeline(df, x_start="Start", x_end="Finish", y="Task", title="📅 Gantt Chart")
+    fig.update_yaxes(autorange="reversed")
+    fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                      font=dict(color='#aaaaaa'))
+    return fig
+
+def radar_chart(scores):
+    categories = ['Architecture', 'Structural', 'Sustainability', 'Cost Efficiency']
+    values = [scores['arch'], scores['struct'], scores['sust'], scores['cost']]
+    fig = go.Figure()
+    fig.add_trace(go.Scatterpolar(r=values, theta=categories, fill='toself',
+                                  marker=dict(color='#888'), line=dict(color='#aaa')))
+    fig.update_layout(polar=dict(radialaxis=dict(range=[0,100], gridcolor='#333')),
+                      plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                      font=dict(color='#aaaaaa'), margin=dict(l=40,r=40,t=20,b=20))
+    return fig
+
 def plot_schedule_gantt(df):
-    """Plot Gantt chart from schedule DataFrame."""
     fig = px.timeline(df, x_start="Start", x_end="Finish", y="Task",
                       color="Predecessors", title="📅 Construction Schedule")
     fig.update_yaxes(autorange="reversed")
@@ -671,39 +741,408 @@ def plot_schedule_gantt(df):
     return fig
 
 # ════════════════════════════════════════════════
-#  13. UI – STREAMLIT APP (same as before, but with new sections)
+#  13. UI – STREAMLIT APP
 # ════════════════════════════════════════════════
-# The UI part remains largely unchanged; we'll add new expandable sections.
-# We'll only modify the AEC Details expander to include the new tabs.
+st.set_page_config(page_title="Arc – AEC Engine", page_icon="◈", layout="wide")
 
-# Since the full file is long, I'll provide the modified parts only for the UI.
-# However, for completeness, I'll give the full code in the next message.
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+html,body,.stApp{background:#0a0a0a;color:#cccccc;font-family:'Inter',sans-serif}
+.glass-panel{background:#111111;border:1px solid #333333;border-radius:18px;padding:20px}
+.stButton>button{background:#333333;color:#ffffff;border:none;border-radius:10px;font-weight:600;padding:8px 20px;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,0.5)}
+.stButton>button:hover{background:#444444;box-shadow:0 4px 12px rgba(0,0,0,0.8)}
+[data-testid="stSidebar"]{background:#0a0a0a;border-right:1px solid #222}
+.stTextInput>div>div>input,.stNumberInput input,.stSelectbox>div>div,.stTextArea textarea{background:transparent!important;border:1px solid #333!important;border-radius:8px;color:#cccccc!important}
+.metric-bar-bg{background:#222;border-radius:5px;height:6px}
+.metric-bar-fg{border-radius:5px;background:#888;height:6px}
+.stMetric .stMetricLabel{color:#aaaaaa!important}
+.stMetric .stMetricValue{color:#cccccc!important}
+div[data-testid="stMetricDelta"]{color:#aaaaaa!important}
+</style>
+""", unsafe_allow_html=True)
 
-# For brevity, I'll assume you have the existing UI code and I'll show the additions.
+# Session init
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in, st.session_state.username, st.session_state.user_data = False, None, None
+    st.session_state.memory = {"designs": [], "concepts": [], "logs": []}
+    st.session_state.generated_concepts, st.session_state.active_design = [], None
+    st.session_state.unit_system, st.session_state.ram_history = "metric", []
+    st.session_state.selected_soil_name = "Nairobi Red Coffee Clay"
 
-# ====================================================================
-#  In the AEC Details expander, after the existing sections, add:
-# ====================================================================
-st.markdown("#### 🏗️ Structural Member Sizing")
-sd = compute_structural_design(c, ec)
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.write(f"**Columns:** {format_length(sd['column_width'])} × {format_length(sd['column_depth'])}")
-    st.write(f"**Beams:** {format_length(sd['beam_width'])} × {format_length(sd['beam_depth'])}")
-with col2:
-    st.write(f"**Slab:** {format_length(sd['slab_thickness'])} thick")
-    st.write(f"**Footing:** {format_length(sd['footing_width'])} wide")
-with col3:
-    st.write(f"**Beam Rebar:** {sd['beam_bars']}×20mm bars")
-    st.write(f"**Column Rebar:** {sd['column_bars']}×25mm bars")
-    st.write(f"**Slab Rebar:** {sd['slab_bars']}×12mm @200mm")
-    st.write(f"**Footing Rebar:** {sd['footing_bars']}×16mm")
+if not load_users():
+    create_user("admin", "admin123")
 
-st.markdown("#### 📅 Construction Schedule")
-schedule_df = compute_construction_schedule(c)
-st.dataframe(schedule_df[["Task", "Duration", "Start", "Finish", "Predecessors"]], use_container_width=True)
-st.plotly_chart(plot_schedule_gantt(schedule_df), use_container_width=True)
+# ─── LOGIN ────────────────────────────────────────────────────
+if not st.session_state.logged_in:
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        st.markdown("<div style='text-align:center;font-size:2rem;font-weight:300;color:#aaaaaa;'>◈ Arc</div>", unsafe_allow_html=True)
+        with st.form("auth"):
+            username = st.text_input("Username")
+            password = st.text_input("Password", type="password")
+            c1, c2 = st.columns(2)
+            with c1:
+                login_btn = st.form_submit_button("Login")
+            with c2:
+                reg_btn = st.form_submit_button("Sign up")
+            if login_btn:
+                user = authenticate(username, password)
+                if user:
+                    st.session_state.logged_in, st.session_state.username, st.session_state.user_data = True, username, user
+                    st.session_state.memory = load_memory(username)
+                    st.rerun()
+                else:
+                    st.error("Invalid credentials.")
+            if reg_btn:
+                if not username or not password:
+                    st.error("Fill all fields.")
+                else:
+                    try:
+                        create_user(username, password)
+                        st.success("Account created! Log in now.")
+                    except ValueError as e:
+                        st.error(str(e))
+    st.stop()
 
-st.markdown("#### 💵 Cost by Trade")
-cost_df = compute_cost_by_trade(c, c["country"])
-st.dataframe(cost_df.style.format({"Material": "${:,.0f}", "Labour": "${:,.0f}", "Equipment": "${:,.0f}", "Total": "${:,.0f}", "Total Local": "{:,.0f}"}), use_container_width=True)
+# ─── SIDEBAR ──────────────────────────────────────────────────
+username = st.session_state.username
+user = st.session_state.user_data
+mem = st.session_state.memory
+
+with st.sidebar:
+    st.markdown("<div style='text-align:center;font-size:1.4rem;font-weight:300;color:#aaaaaa;'>◈ Arc</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align:center;font-size:0.9rem;color:#888;'>{username} · Lvl {user['level']}</div>", unsafe_allow_html=True)
+    lvl, xp = user["level"], user["xp"]
+    needed = xp_for_level(lvl)
+    prog = xp/needed if needed else 1
+    st.markdown(f"""<div style='display:flex;align-items:center;gap:6px;margin:10px 0'>
+                  <span style='font-size:10px;color:#888;'>LVL {lvl}</span>
+                  <div style='flex:1;height:5px;background:#222;border-radius:2px'>
+                    <div style='width:{prog*100}%;height:100%;background:#888;border-radius:2px'></div>
+                  </div>
+                  <span style='font-size:9px;color:#666;'>{xp}/{needed} XP</span>
+                </div>""", unsafe_allow_html=True)
+    unit = st.selectbox("📏 Unit System", ["Metric (m, m²)", "Imperial (ft, sq ft)"])
+    st.session_state.unit_system = "metric" if "Metric" in unit else "imperial"
+    nav = st.radio("Navigate", ["Dashboard", "Concepts", "Ram AI"])
+    st.markdown("---")
+
+    with st.expander("📐 Arc Configuration", expanded=True):
+        st.markdown("**Trade Region · East African Countries**")
+        country = st.selectbox("Country", list(STATIC_FX.keys()))
+        domain = st.selectbox("Domain", list(ARCH_DOMAINS.keys()))
+        typology = st.selectbox("Typology", ARCH_DOMAINS[domain])
+        plot = st.slider("Plot Area (m²)", 200, 5000, 800, step=50)
+        if st.session_state.unit_system == "imperial":
+            st.caption(f"= {round(plot*M2_TO_FT2,0)} sq ft")
+        floors = st.slider("Floors", 1, 12, 3)
+        baths = st.slider("Bathrooms", 1, 10, 2)
+
+        soil_options = REGION_SOIL_OPTIONS.get(country, ["Generic Firm Sandy Gravel"])
+        soil_names = soil_options
+        default_idx = 0
+        prev_soil = st.session_state.selected_soil_name
+        if prev_soil in soil_names:
+            default_idx = soil_names.index(prev_soil)
+        selected_soil = st.selectbox("🌱 Soil Condition", soil_names, index=default_idx,
+                                     format_func=lambda x: f"{x} ({get_soil_category(x)}, {get_soil_multiplier(x)}x)")
+        st.session_state.selected_soil_name = selected_soil
+
+    with st.expander("⚖️ AI Weights", expanded=False):
+        w_arch = st.slider("Architecture", 0.0, 1.0, 0.25, 0.05)
+        w_struct = st.slider("Structural", 0.0, 1.0, 0.25, 0.05)
+        w_sust = st.slider("Sustainability", 0.0, 1.0, 0.25, 0.05)
+        w_cost = st.slider("Cost", 0.0, 1.0, 0.25, 0.05)
+        total_w = w_arch+w_struct+w_sust+w_cost
+        if total_w>0:
+            w_arch/=total_w; w_struct/=total_w; w_sust/=total_w; w_cost/=total_w
+        weights = (w_arch, w_struct, w_sust, w_cost)
+        st.caption(f"Norm: arch {w_arch:.2f} struct {w_struct:.2f} sust {w_sust:.2f} cost {w_cost:.2f}")
+
+    if st.button("✨ Generate Concepts", use_container_width=True):
+        with st.spinner("Synthesizing 5 concepts..."):
+            concepts = []
+            soil_name = st.session_state.selected_soil_name
+            for i in range(5):
+                d = generate_spatial_model(domain, typology, plot+random.randint(-400,400),
+                                           max(1, floors+random.randint(-2,2)), max(1, baths+random.randint(-2,2)),
+                                           country, soil_name, seed=i)
+                d["plan"] = d["rooms"]
+                ec = run_eurocode_analysis(d, domain)
+                d["eurocode"] = ec
+                total_usd, total_local, fx, boq_breakdown = compute_boq(d, country)
+                arch, struct, sust, cost, comp = calculate_ai_scores(d, ec, total_usd, "", weights)
+                materials = compute_materials(d)
+                d["scores"] = {"arch":arch,"struct":struct,"sust":sust,"cost":cost,"composite":comp}
+                d["total_usd"] = total_usd
+                d["total_local"] = total_local
+                d["fx"] = fx
+                d["boq_breakdown"] = boq_breakdown
+                d["materials"] = materials
+                concepts.append(d)
+            concepts.sort(key=lambda x: x["scores"]["composite"], reverse=True)
+            st.session_state.generated_concepts = concepts
+            st.session_state.active_design = concepts[0]
+            log_event(username, mem, f"Generated 5 concepts. Alpha: {concepts[0]['id']}")
+            leveled_up = add_xp(username, 20)
+            st.session_state.user_data = get_user(username)
+            if leveled_up:
+                st.balloons()
+            st.rerun()
+
+    with st.expander("💱 Forex Converter", expanded=False):
+        if st.button("🔄 Refresh Rates", use_container_width=True):
+            init_fx.clear()
+            init_fx()
+            st.rerun()
+        curr_list = ["USD"] + list(STATIC_FX.keys())
+        from_cur = st.selectbox("From", curr_list, key="conv_from")
+        to_cur = st.selectbox("To", curr_list, key="conv_to")
+        amount = st.number_input("Amount", value=1000.0, step=100.0)
+        res = convert_currency(amount, from_cur, to_cur)
+        sym_from = "$" if from_cur=="USD" else get_fx(from_cur)["symbol"]
+        sym_to = "$" if to_cur=="USD" else get_fx(to_cur)["symbol"]
+        st.metric(f"{sym_from} {amount:,.2f}", f"{sym_to} {res:,.2f}")
+
+    if st.button("🚪 Logout", use_container_width=True):
+        save_memory(username, mem)
+        st.session_state.logged_in = False
+        st.rerun()
+
+# ─── MAIN CONTENT ────────────────────────────────────────────
+if nav == "Dashboard":
+    st.markdown("""<div class='glass-panel' style='text-align:center;margin-bottom:24px;'>
+                    <h2 style='margin:0;color:#aaaaaa;'>Welcome back, Architect 👋</h2>
+                    <p style='color:#888;'>Create. Evolve. Perfect.</p>
+                  </div>""", unsafe_allow_html=True)
+    st.markdown("### 💹 Live East African FX Rates")
+    cols = st.columns(6)
+    for i, c in enumerate(get_all_countries()):
+        data = get_fx(c)
+        rate = data["rate"]
+        base = _BASELINE_RATES[c]
+        change = ((rate - base) / base) * 100
+        color = "#888" if change>=0 else "#555"
+        with cols[i]:
+            st.markdown(f"""<div class='glass-panel' style='padding:12px 4px;text-align:center;'>
+                            <div style='font-size:0.75rem;color:#888;'>{c}</div>
+                            <div style='font-size:1.3rem;font-weight:600;color:#ccc;'>{data['symbol']} {rate:.2f}</div>
+                            <div style='font-size:0.7rem;color:{color};'>{'+' if change>=0 else ''}{change:.2f}%</div>
+                          </div>""", unsafe_allow_html=True)
+    st.markdown("---")
+    with st.expander("📈 East African FX History (60 days)", expanded=True):
+        end_date = datetime.today()
+        start_date = end_date - timedelta(days=60)
+        df_hist = fetch_hist(start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
+        if df_hist is not None and not df_hist.empty:
+            st.plotly_chart(plot_hist(df_hist), use_container_width=True)
+        else:
+            st.info("Live data unavailable – showing simulated trends.")
+            base_rates = {c: _CURRENT_RATES[c] for c in get_all_countries()}
+            sim = {}
+            dates = [start_date + timedelta(days=i) for i in range(61)]
+            for c, r in base_rates.items():
+                rng = np.random.default_rng(42)
+                steps = rng.normal(0, 0.005, len(dates)-1)
+                vals = [r]
+                for s in steps:
+                    vals.append(vals[-1] * (1 + s))
+                sim[c] = vals[1:]
+            df_sim = pd.DataFrame(sim, index=dates[1:])
+            st.plotly_chart(plot_hist(df_sim), use_container_width=True)
+    st.markdown("---")
+    st.markdown("### 🌳 Forex Forest – Weekly Forecast")
+    st.caption("Monte Carlo simulation of possible rate paths over the next 7 days")
+    fc = st.selectbox("Country", get_all_countries(), key="forest")
+    fig_forest = forest(_CURRENT_RATES[fc])
+    st.plotly_chart(fig_forest, use_container_width=True)
+    st.markdown("---")
+    c1,c2,c3 = st.columns(3)
+    c1.metric("Blueprints", len(mem["designs"]), delta="+1")
+    c2.metric("Concepts", len(mem["designs"])*5, delta="Evolving")
+    c3.metric("Logs", len(mem["logs"]))
+
+elif nav == "Concepts":
+    if st.session_state.generated_concepts:
+        concepts = st.session_state.generated_concepts
+        st.markdown("## 🔬 Evolution Engine Results")
+        st.caption("5 unique design concepts evaluated by Sai AI Agents")
+        names = ["Alpha","Beta","Gamma","Delta","Epsilon"]
+        colors = ["#888","#999","#777","#666","#555"]
+        tabs = st.tabs(names[:len(concepts)])
+        for idx, (tab, c) in enumerate(zip(tabs, concepts)):
+            with tab:
+                sc = c["scores"]
+                ec = c["eurocode"]
+                st.markdown(f"**Design brief:** {c['type']}, {c['floors']}‑storey, {len(c['rooms'])} rooms, {c['country']}. Soil: {c['soil_name']}. GFA: {format_area(c['total_gfa'])}")
+                col1, col2 = st.columns([3,2])
+                with col1:
+                    st.markdown("### 🗺️ 2D Floor Plan")
+                    st.plotly_chart(render_floorplan(c["plan"], c["structural"]["span"]), use_container_width=True, key=f"fp_{c['id']}")
+                    st.caption(f"Floor Area: {format_area(c['floor_area'])} | {c['floors']} floors | {c['country']}")
+                    with st.expander("🧱 Material Breakdown"):
+                        st.dataframe(pd.DataFrame(c['boq_breakdown']), use_container_width=True)
+                with col2:
+                    for lbl, key, col in [("🏛️ Architect AI","arch","#888"),("⚙️ Structural AI","struct","#aaa"),("🌱 Sustainability AI","sust","#777"),("💰 Cost AI","cost","#999")]:
+                        st.markdown(f"""<div style='margin-bottom:6px;'>
+                                        <div style='display:flex;align-items:center;font-size:12px;color:#888'>{lbl} {sc[key]}%</div>
+                                        <div class='metric-bar-bg'><div class='metric-bar-fg' style='width:{sc[key]}%;background:{col};'></div></div>
+                                      </div>""", unsafe_allow_html=True)
+                    st.metric("USD Total", f"${c['total_usd']:,.0f}")
+                    st.metric(f"Local ({c['fx']['currency']})", f"{c['fx']['symbol']} {c['total_local']:,.0f}")
+                    st.markdown("### 📦 3D Massing")
+                    view = st.radio("View", ["Isometric","Interactive"], horizontal=True, key=f"view_{c['id']}")
+                    if view == "Isometric":
+                        st.components.v1.html(render_isometric(c["plan"], c["structural"]["span"]), height=400)
+                    else:
+                        st.plotly_chart(render_3d(c["plan"], c["floors"], c["structural"]["span"]), use_container_width=True, key=f"plot_{c['id']}")
+
+                # AEC DETAILS
+                with st.expander("🧰 AEC Details (Structural, Materials, Carbon, Risks, Quality)", expanded=False):
+                    st.markdown("#### 🧱 Structural Design")
+                    st.write(f"**Foundation:** {c['structural']['foundation']}")
+                    st.write(f"**Slab System:** {c['structural']['slab_system']}")
+                    st.write(f"**Storey Height:** {format_length(c['structural']['storey_height'])}")
+                    st.write(f"**Wall Type:** {c['structural']['wall_type']}")
+                    st.write(f"**Concrete Grade:** {c['structural']['concrete_grade']}")
+                    st.write(f"**Steel Grade:** {c['structural']['steel_grade']}")
+                    st.write(f"**Columns:** {c['structural']['columns']}")
+                    st.write(f"**Beams:** {c['structural']['beams']}")
+                    st.write(f"**Typical Span:** {format_length(c['structural']['span'])}")
+
+                    st.markdown("#### 📐 Eurocode Check")
+                    st.write(f"**Design Load:** {ec['design_load']}")
+                    st.write(f"**M_ed:** {ec['m_ed']}")
+                    st.write(f"**M_rd:** {ec['m_rd']}")
+                    st.write(f"**Status:** {ec['uls_status']}")
+
+                    st.markdown("#### 📦 Material Quantities & Embodied Carbon")
+                    mats = c['materials']
+                    st.write(f"**Concrete:** {mats['concrete_volume']} m³")
+                    st.write(f"**Steel:** {mats['steel_weight']} kg")
+                    st.write(f"**Brick:** {mats['brick_units']} units")
+                    st.write(f"**Finishes:** {format_area(mats['finish_area'])}")
+                    st.write(f"**Embodied Carbon:** {mats['embodied_carbon_t']} t CO₂e")
+
+                    st.markdown("#### 💰 Detailed BOQ")
+                    st.dataframe(pd.DataFrame(c['boq_breakdown']), use_container_width=True)
+
+                    # ---- NEW STRUCTURAL DESIGN SECTION ----
+                    st.markdown("#### 🏗️ Structural Member Sizing")
+                    sd = compute_structural_design(c, ec)
+                    col_s1, col_s2, col_s3 = st.columns(3)
+                    with col_s1:
+                        st.write(f"**Columns:** {format_length(sd['column_width'])} × {format_length(sd['column_depth'])}")
+                        st.write(f"**Beams:** {format_length(sd['beam_width'])} × {format_length(sd['beam_depth'])}")
+                    with col_s2:
+                        st.write(f"**Slab:** {format_length(sd['slab_thickness'])} thick")
+                        st.write(f"**Footing:** {format_length(sd['footing_width'])} wide")
+                    with col_s3:
+                        st.write(f"**Beam Rebar:** {sd['beam_bars']}×20mm bars")
+                        st.write(f"**Column Rebar:** {sd['column_bars']}×25mm bars")
+                        st.write(f"**Slab Rebar:** {sd['slab_bars']}×12mm @200mm")
+                        st.write(f"**Footing Rebar:** {sd['footing_bars']}×16mm")
+
+                    # ---- NEW CONSTRUCTION SCHEDULE ----
+                    st.markdown("#### 📅 Construction Schedule")
+                    schedule_df = compute_construction_schedule(c)
+                    st.dataframe(schedule_df[["Task", "Duration", "Start", "Finish", "Predecessors"]], use_container_width=True)
+                    st.plotly_chart(plot_schedule_gantt(schedule_df), use_container_width=True)
+
+                    # ---- NEW COST BY TRADE ----
+                    st.markdown("#### 💵 Cost by Trade")
+                    cost_df = compute_cost_by_trade(c, c["country"])
+                    st.dataframe(cost_df.style.format({"Material": "${:,.0f}", "Labour": "${:,.0f}", "Equipment": "${:,.0f}", "Total": "${:,.0f}", "Total Local": "{:,.0f}"}), use_container_width=True)
+
+                    # ---- EXISTING RISKS & QUALITY ----
+                    st.markdown("#### ⚠️ Risk Register")
+                    risks = [
+                        {"Risk": "Foundation settlement", "Likelihood": "Medium", "Impact": "High", "Mitigation": "Soil improvement"},
+                        {"Risk": "Steel supply delay", "Likelihood": "High", "Impact": "Medium", "Mitigation": "Pre-order steel"},
+                        {"Risk": "Labour shortage", "Likelihood": "Low", "Impact": "Medium", "Mitigation": "Local hiring plan"},
+                        {"Risk": "Weather disruption", "Likelihood": "Medium", "Impact": "Low", "Mitigation": "Flexible schedule"},
+                        {"Risk": "Cost overrun", "Likelihood": "High", "Impact": "High", "Mitigation": "10% contingency"}
+                    ]
+                    st.table(pd.DataFrame(risks))
+
+                    st.markdown("#### ✅ Quality Checklist")
+                    checklist = [
+                        {"Phase": "Foundation", "Item": "Excavation depth", "Status": "✅ Pass"},
+                        {"Phase": "Foundation", "Item": "Reinforcement placement", "Status": "✅ Pass"},
+                        {"Phase": "Foundation", "Item": "Concrete pour", "Status": "✅ Pass"},
+                        {"Phase": "Structure", "Item": "Column alignment", "Status": "✅ Pass"},
+                        {"Phase": "Structure", "Item": "Beam formwork", "Status": "✅ Pass"},
+                        {"Phase": "Structure", "Item": "Slab curing", "Status": "✅ Pass"},
+                        {"Phase": "Finishes", "Item": "Floor flatness", "Status": "✅ Pass"},
+                        {"Phase": "Finishes", "Item": "Wall plaster", "Status": "✅ Pass"},
+                        {"Phase": "Finishes", "Item": "Painting", "Status": "✅ Pass"},
+                        {"Phase": "MEP", "Item": "Electrical conduit", "Status": "✅ Pass"},
+                        {"Phase": "MEP", "Item": "Plumbing layout", "Status": "✅ Pass"},
+                        {"Phase": "MEP", "Item": "HVAC", "Status": "✅ Pass"},
+                        {"Phase": "External", "Item": "Drainage", "Status": "✅ Pass"},
+                        {"Phase": "External", "Item": "Landscaping", "Status": "✅ Pass"},
+                        {"Phase": "External", "Item": "Access roads", "Status": "✅ Pass"}
+                    ]
+                    st.table(pd.DataFrame(checklist))
+
+        with st.expander("📊 AI Score Radar (all concepts)", expanded=False):
+            radar_df = pd.DataFrame([{"Concept":f"{names[i]} ({c['type']})",
+                                      "Architecture":c["scores"]["arch"],
+                                      "Structural":c["scores"]["struct"],
+                                      "Sustainability":c["scores"]["sust"],
+                                      "Cost Efficiency":c["scores"]["cost"]}
+                                     for i,c in enumerate(concepts)])
+            cats = list(radar_df.columns[1:])
+            fig_radar = go.Figure()
+            for i, row in radar_df.iterrows():
+                fig_radar.add_trace(go.Scatterpolar(r=row[cats].values, theta=cats,
+                                                    fill='toself', name=row["Concept"],
+                                                    line_color=colors[i]))
+            fig_radar.update_layout(polar=dict(radialaxis=dict(range=[0,100])),
+                                    paper_bgcolor='rgba(0,0,0,0)', font_color='#aaaaaa')
+            st.plotly_chart(fig_radar, use_container_width=True)
+
+        asset = concepts[0]
+        st.markdown("---")
+        st.markdown("### 🏆 TOP RECOMMENDATION: CONCEPT ALPHA")
+        col_save, col_export = st.columns(2)
+        if col_save.button("💾 Save to Library"):
+            mem["designs"].append({"id":asset["id"],"type":asset["type"],
+                                   "country":asset["country"],"soil":asset["soil_name"],
+                                   "total_gfa":asset["total_gfa"],"scores":asset["scores"],
+                                   "plan":asset["plan"],
+                                   "timestamp":datetime.now().isoformat()})
+            save_memory(username, mem)
+            st.success("Design saved!")
+        with col_export:
+            exp = pd.DataFrame([{"ID":c["id"],"Type":c["type"],"Country":c["country"],
+                                 "Soil":c["soil_name"],"GFA":c["total_gfa"],
+                                 "Floors":c["floors"],"Rooms":len(c["rooms"]),
+                                 "Cost USD":c["total_usd"],"Cost Local":c["total_local"],
+                                 "Arch%":c["scores"]["arch"],"Struct%":c["scores"]["struct"],
+                                 "Sust%":c["scores"]["sust"],"CostEff%":c["scores"]["cost"],
+                                 "Composite":c["scores"]["composite"]} for c in concepts])
+            st.download_button("📥 Export CSV", exp.to_csv(index=False).encode(),
+                               file_name="arc_concepts.csv", mime="text/csv")
+    else:
+        st.info("No designs generated yet. Configure parameters in sidebar and click **Generate Concepts**.")
+
+elif nav == "Ram AI":
+    st.markdown("## 🧠 Ram AI – Infinite Architectural Intelligence")
+    st.markdown("Ask Ram anything about construction, soil, costs, or design in East Africa.")
+    with st.form("ram_form"):
+        q = st.text_input("Your question:", placeholder="Ask Ram about soil, foundations, costs...")
+        submitted = st.form_submit_button("Ask Ram AI")
+    if submitted and q:
+        with st.spinner("Ram is thinking..."):
+            resp = ram_ai(q, country, domain)
+            st.session_state.ram_history.append(("You", q))
+            st.session_state.ram_history.append(("Ram", resp))
+    for speaker, msg in st.session_state.ram_history:
+        if speaker == "You":
+            st.markdown(f"**👤 {speaker}:** {msg}")
+        else:
+            st.markdown(f'**🧠 {speaker}:** {msg}')
+
+st.markdown("<div style='text-align:center;padding:20px 0;color:#444'>AI Powered · Data Driven · Secure · Scalable</div>", unsafe_allow_html=True)
