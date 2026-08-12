@@ -13,3 +13,12 @@ def to_display_area(m2, unit_system="metric"):
     if unit_system == "imperial":
         return (round(m2 * M2_TO_FT2, 1), "sq ft")
     return (round(m2, 1), "m²")
+
+# NEW helpers for formatted strings
+def format_length(m, unit_system="metric"):
+    val, unit = to_display_length(m, unit_system)
+    return f"{val} {unit}"
+
+def format_area(m2, unit_system="metric"):
+    val, unit = to_display_area(m2, unit_system)
+    return f"{val} {unit}"
