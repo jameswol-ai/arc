@@ -1,5 +1,31 @@
-# modules/aec_engine.py (excerpt – replace the function)
+# =========================================================
+# Core AEC Engine: spatial model, Eurocode, AI scores
+# Fixed weights (no sliders)
+# =========================================================
 
+import random, uuid
+from .soil import get_soil_multiplier
+
+# ─── Domain definitions ────────────────────────────────────────
+ARCH_DOMAINS = {
+    "Residential": ["Luxury Villa", "Modern Apartment", "Townhouse Studio"],
+    "Commercial": ["Corporate Hub Block", "Boutique Retail Space", "Medical Clinic Center"],
+    "Industrial": ["Distribution Depot", "Heavy Machinery Plant Warehouse"],
+}
+
+FOUNDATION_TYPES = {
+    "Residential": ["Strip Footing", "Raft Foundation", "Pile Foundation"],
+    "Commercial": ["Raft Foundation", "Pile Foundation", "Mat Foundation"],
+    "Industrial": ["Pile Foundation", "Deep Strip", "Mat Foundation"],
+}
+
+SLAB_SYSTEMS = {
+    "Residential": ["Flat Slab", "Beam-and-Slab"],
+    "Commercial": ["Flat Slab", "Post-Tensioned Slab", "Composite Slab"],
+    "Industrial": ["Heavy-duty Slab", "Composite Slab"],
+}
+
+# ─── Generate spatial model ───────────────────────────────────
 def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soil_name, room_types=None, seed=0):
     rng = random.Random(seed)
     plot = max(200, plot_size + rng.randint(-300, 300))
@@ -54,9 +80,6 @@ def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soi
             })
 
     # ─── Additional domain‑specific rooms (if any) ───────────
-    # You can keep the old domain logic or replace it.
-    # For simplicity, we now rely on user selection, but we can add a few extras.
-    # We'll add some common rooms based on domain if not already present.
     domain_rooms = []
     if domain == "Residential":
         domain_rooms = [
@@ -73,15 +96,13 @@ def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soi
             {"name": "Main Production Bay Floor", "type": "Manufacturing", "w": rng.uniform(16, 20), "h": rng.uniform(10, 14), "color": "#2a1a1a"},
             {"name": "Logistics Dispatch Terminal", "type": "Loading Bay", "w": rng.uniform(7, 9), "h": rng.uniform(7, 9), "color": "#3a2a1a"},
         ]
-    # Add domain rooms if not already present (by type or name)
+    # Add domain rooms if not already present (by name)
     for dr in domain_rooms:
-        # Only add if we don't already have a room with that name or type
         if not any(r["name"] == dr["name"] for r in rooms):
             rooms.append(dr)
 
     # ─── Bathrooms (user may have selected them, but we add extra if baths > 0) ───
     for b in range(baths):
-        # Check if we already have a bathroom with that number
         if not any(r["type"] == "Bathroom" and r["name"].endswith(str(b+1)) for r in rooms):
             rooms.append({
                 "name": f"Sanitary Bathroom {b+1}",
@@ -90,9 +111,6 @@ def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soi
                 "h": rng.uniform(2, 3),
                 "color": "#4a2a2a"
             })
-
-    # ─── Ensure minimum number of bedrooms if user selected them ───
-    # Not needed – user selection already ensures at least one.
 
     doors = len(rooms) + floors * rng.randint(1, 3)
     windows = max(4, int(gfa / rng.randint(12, 20)))
@@ -124,3 +142,45 @@ def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soi
             "steel_grade": rng.choice(["B500B", "B500C"])
         }
     }
+
+# ─── Eurocode analysis ──────────────────────────────────────
+def run_eurocode_analysis(d, domain):
+    span = d["structural"]["span"]
+    gk = random.uniform(4.5, 6.5)
+    qk = 2.0 if domain == "Residential" else (3.5 if domain == "Commercial" else 7.5)
+    qk *= random.uniform(0.9, 1.1)
+    f_ck, b, d_eff = random.uniform(25, 35), random.uniform(250, 350), random.uniform(400, 500)
+    design_load = 1.35 * gk + 1.50 * qk
+    w_ed = design_load * random.uniform(4.0, 5.0)
+    m_ed = (w_ed * span**2) / 8
+    m_rd = (0.167 * f_ck * b * d_eff**2) / 10**6
+    return {
+        "design_load": f"{design_load:.2f} kN/m²",
+        "m_ed": f"{m_ed:.1f} kNm",
+        "m_rd": f"{m_rd:.1f} kNm",
+        "uls_status": "PASS ✅" if m_rd > m_ed else "FAIL ❌",
+        "f_ck_used": round(f_ck,1),
+        "b_used": round(b),
+        "d_eff_used": round(d_eff)
+    }
+
+# ─── AI scores (fixed weights: 0.25 each) ──────────────────
+def calculate_ai_scores(asset, ec, total_usd, prompt=None):
+    arch = 40 + min(30, asset['floors']*4) + min(20, len(asset['rooms'])*2.5) + random.randint(-10,10)
+    arch = min(100, arch)
+    try:
+        m_ed = float(ec['m_ed'].split()[0]); m_rd = float(ec['m_rd'].split()[0])
+        struct = 70 + min(30, (m_rd - m_ed) / m_ed * 20)
+    except:
+        struct = 50
+    if ec['uls_status'] != "PASS ✅":
+        struct -= random.randint(20,40)
+    struct = min(100, max(0, int(struct + random.randint(-5,5))))
+    sust = 40 + min(40, int(asset['windows']*2.0)) + random.randint(0,15)
+    if prompt and 'sustain' in prompt.lower():
+        sust += 10
+    sust = min(100, sust)
+    cost = 50 + (30 if total_usd/asset['total_gfa'] < 400 else (20 if total_usd/asset['total_gfa'] < 600 else 5)) + random.randint(-5,5)
+    cost = min(100, int(cost))
+    composite = round(arch*0.25 + struct*0.25 + sust*0.25 + cost*0.25)
+    return arch, struct, sust, cost, composite
