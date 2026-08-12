@@ -1146,3 +1146,4 @@ elif nav == "Ram AI":
             st.markdown(f'**🧠 {speaker}:** {msg}')
 
 st.markdown("<div style='text-align:center;padding:20px 0;color:#444'>AI Powered · Data Driven · Secure · Scalable</div>", unsafe_allow_html=True)
+
