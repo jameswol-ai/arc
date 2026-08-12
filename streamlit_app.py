@@ -1,3 +1,9 @@
+# =========================================================
+# Arc — AEC INTELLIGENCE (Modular)
+# No Dashboard, No AI Weights, No Forex UI
+# Room Types selector added to Arc Configuration
+# =========================================================
+
 import streamlit as st
 from datetime import datetime, timedelta
 import random, pandas as pd, plotly.graph_objects as go
@@ -59,6 +65,7 @@ if "logged_in" not in st.session_state:
     st.session_state.unit_system = "metric"
     st.session_state.ram_history = []
     st.session_state.selected_soil_name = "Nairobi Red Coffee Clay"
+    st.session_state.selected_room_types = ["Bedroom", "Bathroom", "Living Room", "Kitchen"]  # default
 
 # Ensure at least one admin user exists
 if not load_users():
@@ -149,18 +156,36 @@ with st.sidebar:
         )
         st.session_state.selected_soil_name = selected_soil
 
+        # ─── NEW: Room Types ────────────────────────────────────
+        st.markdown("**🏠 Room Types to Include**")
+        room_type_options = [
+            "Bedroom", "Bathroom", "Ensuite", "Corridor", "Balcony",
+            "Living Room", "Kitchen", "Dining Room", "Office", "Storage"
+        ]
+        # Use session state to remember selection across reruns
+        current_rooms = st.session_state.selected_room_types
+        selected_rooms = st.multiselect(
+            "Select room types (at least one of each will be generated)",
+            options=room_type_options,
+            default=current_rooms
+        )
+        st.session_state.selected_room_types = selected_rooms
+
     # ─── Generate button ──────────────────────────────────────
     if st.button("✨ Generate Concepts", use_container_width=True):
         with st.spinner("Synthesizing 4 concepts..."):
             concepts = []
             soil_name = st.session_state.selected_soil_name
+            room_types = st.session_state.selected_room_types
             for i in range(4):
                 d = generate_spatial_model(
                     domain, typology,
                     plot + random.randint(-400, 400),
                     max(1, floors + random.randint(-2, 2)),
                     max(1, baths + random.randint(-2, 2)),
-                    country, soil_name, seed=i
+                    country, soil_name,
+                    room_types=room_types,  # <-- pass the selected types
+                    seed=i
                 )
                 d["plan"] = d["rooms"]  # compatibility
                 ec = run_eurocode_analysis(d, domain)
@@ -228,7 +253,7 @@ if nav == "Concepts":
                     else:
                         st.plotly_chart(render_3d(c["plan"], c["floors"], c["structural"]["span"]), use_container_width=True, key=f"plot_{c['id']}")
 
-                # AEC Details (unchanged)
+                # AEC Details
                 with st.expander("🧰 AEC Details (Structural, Materials, Carbon, Risks, Quality)", expanded=False):
                     st.markdown("#### 🧱 Structural Design")
                     st.write(f"**Foundation:** {c['structural']['foundation']}")
