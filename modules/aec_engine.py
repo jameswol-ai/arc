@@ -184,3 +184,68 @@ def calculate_ai_scores(asset, ec, total_usd, prompt=None):
     cost = min(100, int(cost))
     composite = round(arch*0.25 + struct*0.25 + sust*0.25 + cost*0.25)
     return arch, struct, sust, cost, composite
+
+
+# ─── Add at the end of aec_engine.py ─────────────────────────
+
+# Wind load (simplified Eurocode)
+def compute_wind_load(d, country):
+    """
+    Returns wind pressure (kN/m²) and base shear (kN).
+    Uses simplified assumptions.
+    """
+    # Basic wind speed (m/s) per country (approximate)
+    wind_speeds = {
+        "Kenya": 25,
+        "Uganda": 22,
+        "Tanzania": 28,
+        "South Sudan": 20,
+        "Rwanda": 18,
+        "Ethiopia": 24
+    }
+    v_b = wind_speeds.get(country, 22)  # m/s
+    # Terrain category: assume open country (category II)
+    # Exposure factor ~ 0.8, shape factor ~ 0.85, etc.
+    # Simplified: q_p = 0.5 * rho * v^2 * 0.8 * 0.85
+    rho = 1.25  # kg/m³
+    q_p = 0.5 * rho * (v_b**2) * 0.8 * 0.85 / 1000  # kN/m²
+    # Base shear: q_p * total_gfa * 0.8 (simplified)
+    base_shear = q_p * d["total_gfa"] * 0.8
+    return {
+        "wind_speed": v_b,
+        "wind_pressure": round(q_p, 2),
+        "base_shear": round(base_shear, 0)
+    }
+
+# Seismic check (simplified)
+def compute_seismic_check(d, country):
+    """
+    Returns seismic base shear (kN) and a pass/fail status.
+    Uses simplified seismic zone factors.
+    """
+    # Seismic zone factors (0.1 to 0.4) per country
+    seismic_zones = {
+        "Kenya": 0.25,
+        "Uganda": 0.20,
+        "Tanzania": 0.30,
+        "South Sudan": 0.15,
+        "Rwanda": 0.35,
+        "Ethiopia": 0.25
+    }
+    z = seismic_zones.get(country, 0.20)
+    # Importance factor (assume 1.0), soil factor (assume 1.2), damping (assume 5%)
+    # Simplified seismic base shear = z * I * S * W / R
+    # W = total weight (kN): assume 10 kN/m² per floor
+    W = d["total_gfa"] * 10  # kN
+    I = 1.0
+    S = 1.2  # soil type C
+    R = 4.0  # response reduction factor for concrete frame
+    V = z * I * S * W / R
+    # Check: V should be less than 0.1 * W (simplified)
+    status = "PASS" if V < 0.1 * W else "FAIL (increase ductility)"
+    return {
+        "seismic_zone": z,
+        "base_shear": round(V, 0),
+        "weight": round(W, 0),
+        "status": status
+    }
