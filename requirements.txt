@@ -1,7 +1,5 @@
-streamlit
-plotly
-pandas
-numpy
-requests
-reportlab
 Flask
+requests
+numpy
+pandas
+plotly
