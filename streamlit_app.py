@@ -1,5 +1,5 @@
 # =========================================================
-# Arc — AEC INTELLIGENCE
+# Arc — AEC INTELLIGENCE (FIXED)
 # Complete: PDF reports, sharing, version history,
 # cost optimisation, advanced seismic, detailed wind
 # =========================================================
@@ -33,8 +33,6 @@ from modules.renderers import (
     render_floorplan, render_3d, render_isometric,
     gantt_chart, radar_chart, plot_schedule_gantt
 )
-
-# ─── New modules for extra features ──────────────────────────
 from modules.pdf_generator import generate_pdf_report
 from modules.sharing import create_share_link
 from modules.optimisation import optimise_cost
@@ -268,7 +266,6 @@ with st.sidebar:
     # ─── Cost Optimisation ──────────────────────────────────
     if st.button("Optimise Cost", use_container_width=True):
         with st.spinner("Optimising..."):
-            from modules.optimisation import optimise_cost
             best, cost = optimise_cost(
                 domain, typology, country, selected_soil,
                 st.session_state.selected_room_types,
@@ -276,7 +273,6 @@ with st.sidebar:
             )
             if best:
                 st.success(f"Optimised concept found! Cost: ${cost:,.0f}")
-                # Replace generated concepts with optimised one
                 st.session_state.generated_concepts = [best]
                 st.rerun()
             else:
@@ -305,6 +301,7 @@ if nav == "Concepts":
         colors = ["#888","#999","#777","#666"]
         tabs = st.tabs(names[:len(concepts)])
 
+        # FIXED LOOP: ensure both tab and concept are correctly paired
         for idx, (tab, c) in enumerate(zip(tabs, concepts)):
             with tab:
                 sc = c["scores"]
@@ -561,7 +558,6 @@ if nav == "Concepts":
         with col_actions:
             # ─── PDF Export ──────────────────────────────────
             if st.button("Export PDF Report"):
-                from modules.pdf_generator import generate_pdf_report
                 pdf_buffer = generate_pdf_report(
                     asset, asset["scores"], asset["eurocode"],
                     asset["materials"], asset["boq_breakdown"],
@@ -581,7 +577,6 @@ if nav == "Concepts":
 
             # ─── Share Design ────────────────────────────────
             if st.button("Share Design"):
-                from modules.sharing import create_share_link
                 link = create_share_link(asset, base_url="https://your-app.streamlit.app")
                 st.write("Share this link:")
                 st.code(link)
