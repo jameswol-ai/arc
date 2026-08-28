@@ -1,6 +1,6 @@
-Flask
 streamlit
 plotly
 pandas
 numpy
 requests
+reportlab
