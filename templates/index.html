@@ -4,21 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Arc – AEC Engine</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
     <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <style>
+        /* Same minimal, modern CSS as before */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #0a0a0a; color: #ccc; font-family: 'Inter', sans-serif; display: flex; min-height: 100vh; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #1a1a1a; }
-        ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
-
+        body {
+            background: #0f0f0f;
+            color: #e0e0e0;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            min-height: 100vh;
+        }
         .sidebar {
             width: 250px;
-            background: #0a0a0a;
-            border-right: 1px solid #222;
+            background: #0f0f0f;
+            border-right: 1px solid #2a2a2a;
             padding: 24px 16px;
             flex-shrink: 0;
             height: 100vh;
@@ -28,7 +29,7 @@
             display: flex;
             flex-direction: column;
         }
-        .sidebar .logo { font-size: 1.6rem; font-weight: 300; color: #aaa; text-align: center; margin-bottom: 28px; letter-spacing: 2px; }
+        .sidebar .logo { font-size: 1.4rem; font-weight: 300; color: #e0e0e0; text-align: center; margin-bottom: 28px; letter-spacing: 2px; }
         .sidebar nav a {
             display: block;
             padding: 10px 14px;
@@ -41,29 +42,14 @@
             font-size: 0.95rem;
         }
         .sidebar nav a:hover { background: #1a1a1a; color: #ddd; }
-        .sidebar nav a.active { background: #222; color: #fff; }
+        .sidebar nav a.active { background: #2a2a2a; color: #fff; }
         .sidebar .user-area {
             margin-top: auto;
             padding-top: 20px;
-            border-top: 1px solid #222;
+            border-top: 1px solid #2a2a2a;
             font-size: 0.9rem;
             color: #888;
         }
-        .sidebar .user-area .username { color: #ccc; font-weight: 500; }
-        .sidebar .user-area .logout-btn {
-            background: transparent;
-            border: 1px solid #333;
-            color: #888;
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            margin-top: 8px;
-            width: 100%;
-            transition: 0.2s;
-        }
-        .sidebar .user-area .logout-btn:hover { background: #222; color: #ddd; }
-
         .main {
             flex: 1;
             padding: 24px 32px 40px;
@@ -71,50 +57,33 @@
             max-height: 100vh;
         }
         .glass-panel {
-            background: #111;
-            border: 1px solid #333;
-            border-radius: 18px;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
             padding: 20px 24px;
             margin-bottom: 24px;
-            transition: border-color 0.2s;
         }
-        .glass-panel:hover { border-color: #444; }
-        .glass-panel h2 { color: #aaa; margin-bottom: 8px; font-weight: 400; }
-        .glass-panel h3 { color: #aaa; margin-bottom: 12px; font-weight: 400; }
-        .glass-panel p { color: #888; }
-
         .btn {
-            background: #333;
+            background: #2a2a2a;
             color: #fff;
             border: none;
-            border-radius: 10px;
-            padding: 10px 24px;
-            font-weight: 600;
+            border-radius: 8px;
+            padding: 8px 20px;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-            font-size: 0.95rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
+            transition: background 0.2s;
         }
-        .btn:hover { background: #444; box-shadow: 0 4px 12px rgba(0,0,0,0.8); }
-        .btn-secondary { background: #222; }
-        .btn-secondary:hover { background: #333; }
-        .btn-sm { padding: 6px 14px; font-size: 0.85rem; }
-
+        .btn:hover { background: #3a3a3a; }
         input, select {
             background: transparent !important;
             border: 1px solid #333 !important;
-            border-radius: 8px;
-            color: #ccc !important;
+            border-radius: 6px;
+            color: #e0e0e0 !important;
             padding: 8px 12px;
             width: 100%;
             font-family: inherit;
             font-size: 0.95rem;
         }
-        input:focus, select:focus { outline: none; border-color: #666; }
-
         .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
@@ -123,831 +92,195 @@
         }
         .form-grid .field { display: flex; flex-direction: column; gap: 4px; }
         .form-grid .field label { font-size: 0.8rem; color: #888; }
-
         .concept-card {
             background: #1a1a1a;
             border: 1px solid #444;
             border-radius: 12px;
             padding: 16px 20px;
             margin-bottom: 12px;
-            cursor: pointer;
-            transition: border-color 0.2s, background 0.2s;
         }
-        .concept-card:hover { border-color: #666; background: #1e1e1e; }
-        .concept-card .head {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
+        .concept-card .head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
         .concept-card .head h4 { color: #aaa; margin: 0; }
-        .concept-card .head .score { color: #888; font-weight: 600; }
+        .concept-card .score { color: #888; font-weight: 600; }
         .concept-card .detail { font-size: 0.9rem; color: #888; }
-        .concept-card .progress {
-            background: #222;
-            border-radius: 5px;
-            height: 6px;
-            width: 100%;
-            margin: 6px 0;
-        }
-        .concept-card .progress .fill {
-            background: #888;
-            height: 100%;
-            border-radius: 5px;
-            transition: width 0.3s;
-        }
-        .concept-card .footer {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: 4px;
-        }
-        .concept-card .expand-btn {
-            background: transparent;
-            border: 1px solid #444;
-            color: #888;
-            padding: 2px 12px;
-            border-radius: 12px;
-            cursor: pointer;
-            font-size: 0.75rem;
-            transition: 0.2s;
-        }
-        .concept-card .expand-btn:hover { background: #333; color: #ddd; }
-
-        .concept-detail {
-            display: none;
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid #333;
-            font-size: 0.9rem;
-        }
-        .concept-detail.open { display: block; }
-        .concept-detail .row { display: flex; gap: 20px; flex-wrap: wrap; }
-        .concept-detail .row > div { flex: 1; min-width: 200px; }
-        .concept-detail table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        .concept-detail table td, .concept-detail table th { padding: 4px 8px; border-bottom: 1px solid #333; text-align: left; }
-        .concept-detail table th { color: #888; font-weight: 400; }
-        .concept-detail .section-title { color: #aaa; font-weight: 500; margin: 12px 0 6px; }
-
-        .metrics {
-            display: flex;
-            gap: 24px;
-            flex-wrap: wrap;
-        }
-        .metrics .metric {
-            background: #1a1a1a;
-            padding: 12px 20px;
-            border-radius: 12px;
-            flex: 1;
-            min-width: 100px;
-            text-align: center;
-        }
+        .concept-card .progress { background: #222; border-radius: 5px; height: 6px; width: 100%; margin: 6px 0; }
+        .concept-card .progress .fill { background: #888; height: 100%; border-radius: 5px; }
+        .concept-card .footer { display: flex; justify-content: space-between; font-size: 0.8rem; color: #666; margin-top: 4px; }
+        .metrics { display: flex; gap: 24px; flex-wrap: wrap; }
+        .metrics .metric { background: #1a1a1a; padding: 12px 20px; border-radius: 12px; flex: 1; min-width: 100px; text-align: center; }
         .metrics .metric .value { font-size: 1.8rem; font-weight: 600; color: #ccc; }
         .metrics .metric .label { font-size: 0.8rem; color: #888; }
-
-        #ram-response {
-            background: #1a1a1a;
-            border-radius: 12px;
-            padding: 16px;
-            margin-top: 12px;
-            white-space: pre-wrap;
-            color: #aaa;
-            border-left: 3px solid #555;
-        }
-
-        #login-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.85);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            backdrop-filter: blur(4px);
-        }
-        #login-overlay .login-box {
-            background: #111;
-            border: 1px solid #333;
-            border-radius: 24px;
-            padding: 40px 48px;
-            width: 100%;
-            max-width: 400px;
-        }
-        #login-overlay .login-box h2 { text-align: center; color: #aaa; font-weight: 300; margin-bottom: 24px; }
-        #login-overlay .login-box .field { margin-bottom: 16px; }
-        #login-overlay .login-box .field label { display: block; color: #888; font-size: 0.8rem; margin-bottom: 4px; }
-        #login-overlay .login-box .btn { width: 100%; justify-content: center; }
-        .login-error { color: #cc5555; font-size: 0.85rem; margin-top: 8px; text-align: center; }
-
-        .modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.9);
-            z-index: 2000;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal.open { display: flex; }
-        .modal .modal-content {
-            background: #111;
-            border: 1px solid #333;
-            border-radius: 20px;
-            padding: 20px;
-            width: 90%;
-            max-width: 900px;
-            height: 80vh;
-            position: relative;
-        }
-        .modal .modal-content .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 20px;
-            background: transparent;
-            border: none;
-            color: #aaa;
-            font-size: 1.8rem;
-            cursor: pointer;
-        }
-        .modal .modal-content #three-container {
-            width: 100%;
-            height: 100%;
-        }
-
+        #ram-response { background: #1a1a1a; border-radius: 12px; padding: 16px; margin-top: 12px; white-space: pre-wrap; color: #aaa; border-left: 3px solid #555; }
         .hidden { display: none !important; }
         .mt-12 { margin-top: 12px; }
-        .text-center { text-align: center; }
         .flex { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
-        .flex-1 { flex: 1; }
-        .gap-8 { gap: 8px; }
-
         @media (max-width: 768px) {
             body { flex-direction: column; }
-            .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid #222; padding: 16px; }
+            .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid #2a2a2a; padding: 16px; }
             .main { max-height: none; padding: 16px; }
             .form-grid { grid-template-columns: 1fr 1fr; }
         }
     </style>
 </head>
 <body>
-
-<!-- LOGIN -->
-<div id="login-overlay">
-    <div class="login-box">
-        <h2>◈ Arc</h2>
-        <div class="field"><label>Username</label><input type="text" id="login-username" value="admin" /></div>
-        <div class="field"><label>Password</label><input type="password" id="login-password" value="admin123" /></div>
-        <button class="btn" onclick="login()">Sign In</button>
-        <div id="login-error" class="login-error hidden"></div>
-        <p style="text-align:center; color:#666; font-size:0.8rem; margin-top:12px;">Demo: admin/admin123</p>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">Arc</div>
+        <nav>
+            <a href="#" class="active" data-tab="concepts">Concepts</a>
+            <a href="#" data-tab="ram">Ram AI</a>
+        </nav>
+        <div class="user-area">
+            <div>Guest</div>
+        </div>
     </div>
-</div>
 
-<!-- SIDEBAR -->
-<div class="sidebar">
-    <div class="logo">◈ Arc</div>
-    <nav>
-        <a href="#" class="active" data-tab="dashboard">📊 Dashboard</a>
-        <a href="#" data-tab="concepts">🏗️ Concepts</a>
-        <a href="#" data-tab="ram">🧠 Ram AI</a>
-    </nav>
-    <div class="user-area">
-        <div><span class="username" id="sidebar-username">Guest</span></div>
-        <button class="logout-btn" onclick="logout()">🚪 Logout</button>
-    </div>
-</div>
-
-<!-- MAIN -->
-<div class="main">
-
-    <!-- Dashboard -->
-    <div id="tab-dashboard">
-        <div class="glass-panel text-center" style="margin-bottom:24px;">
-            <h2 style="margin:0;">Welcome back, <span id="welcome-username">Architect</span> 👋</h2>
-            <p style="color:#888;">AEC Intelligence for East Africa</p>
-        </div>
-        <div class="glass-panel">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-                <h3 style="margin:0;">💹 Live East African FX Rates</h3>
-                <button class="btn btn-secondary btn-sm" onclick="loadForexBar()">🔄 Refresh</button>
-            </div>
-            <div id="forex-bar" style="height:280px;"></div>
-        </div>
-        <div class="glass-panel">
-            <h3>📈 East African FX History (60 days)</h3>
-            <div id="forex-history" style="height:280px;"></div>
-        </div>
-        <div class="glass-panel">
-            <h3>🌳 Forex Forest – Weekly Forecast</h3>
-            <p style="color:#888; font-size:0.9rem;">Monte Carlo simulation of possible rate paths over the next 7 days</p>
-            <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-                <label style="color:#888;">Country</label>
-                <select id="forest-country" style="width:auto; flex:1; min-width:150px;">
-                    <option>Kenya</option><option>Uganda</option><option>Tanzania</option>
-                    <option>South Sudan</option><option>Rwanda</option><option>Ethiopia</option>
-                </select>
-                <button class="btn btn-secondary btn-sm" onclick="updateForest()">Update</button>
-            </div>
-            <div id="forest-chart" style="height:280px; margin-top:12px;"></div>
-        </div>
-        <div class="glass-panel">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-                <h3 style="margin:0;">🌍 Country Tip</h3>
-                <div style="display:flex; gap:12px; align-items:center;">
-                    <label style="color:#888; font-size:0.8rem;">Unit system</label>
-                    <select id="unit-toggle" style="width:auto; padding:4px 8px; font-size:0.8rem;">
-                        <option value="metric">Metric</option>
-                        <option value="imperial">Imperial</option>
-                    </select>
+    <!-- Main content -->
+    <div class="main">
+        <!-- Concepts tab -->
+        <div id="tab-concepts">
+            <div class="glass-panel">
+                <h2>Evolution Engine</h2>
+                <p style="color:#888;">Configure and generate 4 unique design concepts.</p>
+                <div class="form-grid" id="concept-form">
+                    <div class="field"><label>Country</label><select id="gen-country">
+                        <option>Kenya</option><option>Uganda</option><option>Tanzania</option>
+                        <option>South Sudan</option><option>Rwanda</option><option>Ethiopia</option>
+                    </select></div>
+                    <div class="field"><label>Domain</label><select id="gen-domain">
+                        <option>Residential</option><option>Commercial</option><option>Industrial</option>
+                    </select></div>
+                    <div class="field"><label>Typology</label><select id="gen-typology">
+                        <option>Luxury Villa</option><option>Modern Apartment</option><option>Townhouse Studio</option>
+                        <option>Corporate Hub Block</option><option>Boutique Retail Space</option><option>Medical Clinic Center</option>
+                        <option>Distribution Depot</option><option>Heavy Machinery Plant Warehouse</option>
+                    </select></div>
+                    <div class="field"><label>Plot Area (m²)</label><input type="number" id="gen-plot" value="800" /></div>
+                    <div class="field"><label>Floors</label><input type="number" id="gen-floors" value="3" /></div>
+                    <div class="field"><label>Bathrooms</label><input type="number" id="gen-baths" value="2" /></div>
+                    <div class="field"><label>Soil</label><select id="gen-soil"></select></div>
+                    <div class="field"><label>Room Types</label><select id="gen-rooms" multiple></select></div>
+                    <div class="field" style="justify-content:flex-end;"><button class="btn" onclick="generate()">Generate Concepts</button></div>
                 </div>
-            </div>
-            <div id="country-tip" style="background:#1a1a1a; border-radius:12px; padding:12px 16px; color:#aaa; border-left:3px solid #555;"></div>
-        </div>
-        <div class="glass-panel">
-            <div class="metrics">
-                <div class="metric"><div class="value" id="metric-blueprints">0</div><div class="label">Blueprints</div></div>
-                <div class="metric"><div class="value" id="metric-concepts">0</div><div class="label">Concepts</div></div>
-                <div class="metric"><div class="value" id="metric-logs">0</div><div class="label">Logs</div></div>
+                <div id="concepts-output" class="hidden mt-12"><div id="concepts-container"></div></div>
             </div>
         </div>
-    </div>
 
-    <!-- Concepts -->
-    <div id="tab-concepts" class="hidden">
-        <div class="glass-panel">
-            <h2>🔬 Evolution Engine</h2>
-            <p style="color:#888;">Configure and generate 5 unique design concepts with AEC-level detail.</p>
-            <div class="form-grid" id="concept-form">
-                <div class="field"><label>Country</label><select id="gen-country">
-                    <option>Kenya</option><option>Uganda</option><option>Tanzania</option>
-                    <option>South Sudan</option><option>Rwanda</option><option>Ethiopia</option>
-                </select></div>
-                <div class="field"><label>Domain</label><select id="gen-domain">
-                    <option>Residential</option><option>Commercial</option><option>Industrial</option>
-                </select></div>
-                <div class="field"><label>Typology</label><select id="gen-typology">
-                    <option>Luxury Villa</option><option>Modern Apartment</option><option>Townhouse Studio</option>
-                    <option>Corporate Hub Block</option><option>Boutique Retail Space</option><option>Medical Clinic Center</option>
-                    <option>Distribution Depot</option><option>Heavy Machinery Plant Warehouse</option>
-                </select></div>
-                <div class="field"><label>Plot Area (m²)</label><input type="number" id="gen-plot" value="800" /></div>
-                <div class="field"><label>Floors</label><input type="number" id="gen-floors" value="3" /></div>
-                <div class="field"><label>Bathrooms</label><input type="number" id="gen-baths" value="2" /></div>
-                <div class="field"><label>Soil</label><select id="gen-soil"></select></div>
-                <div class="field" style="justify-content:flex-end;"><button class="btn" onclick="generateConcepts()">✨ Generate</button></div>
-            </div>
-            <div id="concepts-output" class="hidden mt-12">
-                <h3 style="color:#aaa;">Results</h3>
-                <div id="concepts-container"></div>
+        <!-- Ram AI tab -->
+        <div id="tab-ram" class="hidden">
+            <div class="glass-panel">
+                <h2>Ram AI</h2>
+                <p style="color:#888;">Ask Ram about construction, soil, costs, or design.</p>
+                <div style="display:flex; gap:12px; margin-top:12px;">
+                    <input type="text" id="ram-question" placeholder="Ask Ram..." style="flex:1;" />
+                    <button class="btn" onclick="askRam()">Ask</button>
+                </div>
+                <div id="ram-response"></div>
             </div>
         </div>
     </div>
 
-    <!-- Ram AI -->
-    <div id="tab-ram" class="hidden">
-        <div class="glass-panel">
-            <h2>🧠 Ram AI – Infinite Architectural Intelligence</h2>
-            <p style="color:#888;">Ask Ram anything about construction, soil, costs, or design in East Africa.</p>
-            <div style="display:flex; gap:12px; margin-top:12px;">
-                <input type="text" id="ram-question" placeholder="Ask Ram..." style="flex:1;" />
-                <button class="btn" onclick="askRam()">Ask</button>
-            </div>
-            <div id="ram-response"></div>
-        </div>
-    </div>
-
-    <div style="text-align:center; padding:20px 0; color:#444; font-size:0.8rem;">
-        AI Powered · Data Driven · Secure · Scalable
-    </div>
-</div>
-
-<!-- 3D Modal -->
-<div id="three-modal" class="modal">
-    <div class="modal-content">
-        <button class="close-btn" onclick="close3D()">✕</button>
-        <div id="three-container"></div>
-    </div>
-</div>
-
-<script>
-    // ─── GLOBALS ──────────────────────────────────────────────
-    let currentUsername = localStorage.getItem('arc_username') || null;
-    let conceptsData = [];
-
-    // ─── UNIT CONVERSION ──────────────────────────────────────
-    const M2_TO_FT2 = 10.7639;
-    const M_TO_FT = 3.28084;
-    function getUnitSystem() { return document.getElementById('unit-toggle').value; }
-    function formatArea(m2) {
-        if (getUnitSystem() === 'imperial') return (m2 * M2_TO_FT2).toFixed(1) + ' sq ft';
-        return m2.toFixed(1) + ' m²';
-    }
-    function formatLength(m) {
-        if (getUnitSystem() === 'imperial') return (m * M_TO_FT).toFixed(1) + ' ft';
-        return m.toFixed(1) + ' m';
-    }
-
-    // ─── AUTH ──────────────────────────────────────────────────
-    function login() {
-        const username = document.getElementById('login-username').value.trim();
-        const password = document.getElementById('login-password').value.trim();
-        if (!username || !password) { showLoginError('Please fill in both fields.'); return; }
-        if (username === 'admin' && password === 'admin123') {
-            localStorage.setItem('arc_username', username);
-            currentUsername = username;
-            document.getElementById('login-overlay').classList.add('hidden');
-            updateUserUI();
-            loadDashboard();
-        } else {
-            showLoginError('Invalid credentials. Try admin/admin123.');
-        }
-    }
-    function showLoginError(msg) {
-        const el = document.getElementById('login-error');
-        el.textContent = msg;
-        el.classList.remove('hidden');
-    }
-    function logout() {
-        localStorage.removeItem('arc_username');
-        currentUsername = null;
-        document.getElementById('login-overlay').classList.remove('hidden');
-        document.getElementById('login-error').classList.add('hidden');
-    }
-    function updateUserUI() {
-        document.getElementById('sidebar-username').textContent = currentUsername || 'Guest';
-        document.getElementById('welcome-username').textContent = currentUsername || 'Architect';
-    }
-
-    // ─── NAVIGATION ──────────────────────────────────────────
-    document.querySelectorAll('.sidebar nav a').forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            document.querySelectorAll('.sidebar nav a').forEach(a => a.classList.remove('active'));
-            this.classList.add('active');
-            const tab = this.dataset.tab;
-            document.querySelectorAll('.main > div[id^="tab-"]').forEach(el => el.classList.add('hidden'));
-            document.getElementById('tab-' + tab).classList.remove('hidden');
+    <script>
+        // ─── Navigation ──────────────────────────────────────────
+        document.querySelectorAll('.sidebar nav a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelectorAll('.sidebar nav a').forEach(a => a.classList.remove('active'));
+                this.classList.add('active');
+                const tab = this.dataset.tab;
+                document.querySelectorAll('.main > div[id^="tab-"]').forEach(el => el.classList.add('hidden'));
+                document.getElementById('tab-' + tab).classList.remove('hidden');
+            });
         });
-    });
 
-    // ─── DASHBOARD ─────────────────────────────────────────────
-    async function loadDashboard() {
-        await loadForexBar();
-        await loadForexHistory();
-        await updateForest();
-        await updateCountryTip(document.getElementById('forest-country').value);
-        updateMetrics();
-    }
-
-    async function loadForexBar() {
-        try {
-            const res = await fetch('/api/forex');
-            const data = await res.json();
-            const countries = Object.keys(data);
-            const rates = Object.values(data);
-            const trace = { x: countries, y: rates, type: 'bar', marker: { color: '#888' }, text: rates.map(r => r.toFixed(2)), textposition: 'outside' };
-            const layout = { plot_bgcolor: 'rgba(0,0,0,0)', paper_bgcolor: 'rgba(0,0,0,0)', font: { color: '#aaaaaa' }, margin: { t: 30, b: 40, l: 50, r: 20 }, yaxis: { gridcolor: '#333' } };
-            Plotly.newPlot('forex-bar', [trace], layout, { responsive: true });
-        } catch(e) {
-            document.getElementById('forex-bar').innerHTML = '<p style="color:#888;">Failed to load forex data.</p>';
-        }
-    }
-
-    async function loadForexHistory() {
-        const end = new Date();
-        const start = new Date(); start.setDate(start.getDate() - 60);
-        const fmt = d => d.toISOString().slice(0,10);
-        const url = `https://api.exchangerate.host/timeseries?start_date=${fmt(start)}&end_date=${fmt(end)}&base=USD&symbols=KES,UGX,TZS,SSP,RWF,ETB`;
-        try {
-            const res = await fetch(url);
-            const json = await res.json();
-            const dates = Object.keys(json.rates).sort();
-            const symbols = ['KES','UGX','TZS','SSP','RWF','ETB'];
-            const traces = symbols.map(sym => {
-                const y = dates.map(d => json.rates[d][sym]);
-                return { x: dates, y: y, mode: 'lines', name: sym, line: { color: getColor(sym) } };
-            });
-            const layout = { plot_bgcolor: 'rgba(0,0,0,0)', paper_bgcolor: 'rgba(0,0,0,0)', font: { color: '#aaaaaa' }, margin: { t: 20, b: 40, l: 50, r: 20 }, legend: { orientation: 'h', y: 1.1 }, yaxis: { gridcolor: '#333' } };
-            Plotly.newPlot('forex-history', traces, layout, { responsive: true });
-        } catch(e) {
-            // fallback simulation
-            const dates = Array.from({length:60}, (_,i) => { const d = new Date(); d.setDate(d.getDate() - (59-i)); return d.toISOString().slice(0,10); });
-            const baseRates = {KES:129.49, UGX:3665.20, TZS:2625.00, SSP:4626.40, RWF:1330.00, ETB:125.00};
-            const traces = Object.keys(baseRates).map(sym => {
-                let val = baseRates[sym];
-                const y = dates.map(() => { val *= (1 + (Math.random() - 0.5) * 0.02); return val; });
-                return { x: dates, y: y, mode: 'lines', name: sym, line: { color: getColor(sym) } };
-            });
-            Plotly.newPlot('forex-history', traces, { plot_bgcolor: 'rgba(0,0,0,0)', paper_bgcolor: 'rgba(0,0,0,0)', font: { color: '#aaaaaa' }, margin: { t: 20, b: 40, l: 50, r: 20 }, legend: { orientation: 'h', y: 1.1 }, yaxis: { gridcolor: '#333' } }, { responsive: true });
-        }
-    }
-    function getColor(sym) {
-        const map = {KES:'#888', UGX:'#aaa', TZS:'#666', SSP:'#999', RWF:'#777', ETB:'#555'};
-        return map[sym] || '#94a3b8';
-    }
-
-    async function updateForest() {
-        const country = document.getElementById('forest-country').value;
-        try {
-            const res = await fetch('/api/forex');
-            const data = await res.json();
-            const base = data[country];
-            if (!base) { document.getElementById('forest-chart').innerHTML = '<p style="color:#888;">No data for selected country.</p>'; return; }
-            const days = 7, paths = 100, vol = 0.008;
-            const sim = monteCarlo(base, days, paths, vol);
-            const x = Array.from({length: days}, (_,i) => i+1);
-            const pcts = [95, 80, 50];
-            const traces = [];
-            pcts.forEach(p => {
-                const lower = [], upper = [];
-                for (let d=0; d<days; d++) {
-                    const vals = sim.map(s => s[d]);
-                    vals.sort((a,b) => a-b);
-                    lower.push(vals[Math.floor((100-p)/2/100 * vals.length)]);
-                    upper.push(vals[Math.floor((100 - (100-p)/2)/100 * vals.length)]);
-                }
-                traces.push({ x: x, y: upper, mode: 'lines', line: { width: 0 }, showlegend: false, hoverinfo: 'skip' });
-                traces.push({ x: x, y: lower, mode: 'lines', fill: 'tonexty', fillcolor: `rgba(70,130,200,${p===95?0.08:p===80?0.15:0.25})`, line: { width: 0 }, name: `${p}% confidence`, hoverinfo: 'skip' });
-            });
-            const median = sim.map(s => s.reduce((a,b) => a+b, 0)/s.length);
-            traces.push({ x: x, y: median, mode: 'lines+markers', name: 'Median', line: { color: '#7bb8ff', width: 2.5 }, marker: { color: '#b0d0ff', size: 6 } });
-            const layout = { plot_bgcolor: 'rgba(0,0,0,0)', paper_bgcolor: 'rgba(0,0,0,0)', font: { color: '#aaaaaa' }, margin: { t: 20, b: 40, l: 50, r: 20 }, legend: { orientation: 'h', y: 1.1 }, yaxis: { gridcolor: '#333' }, xaxis: { title: 'Days ahead' } };
-            Plotly.newPlot('forest-chart', traces, layout, { responsive: true });
-        } catch(e) {
-            document.getElementById('forest-chart').innerHTML = '<p style="color:#888;">Error generating forecast.</p>';
-        }
-    }
-
-    function monteCarlo(base, days, paths, vol) {
-        const sims = [];
-        for (let p=0; p<paths; p++) {
-            let val = base;
-            const path = [];
-            for (let d=0; d<days; d++) {
-                val *= (1 + (Math.random() - 0.5) * 2 * vol);
-                path.push(val);
-            }
-            sims.push(path);
-        }
-        return sims;
-    }
-
-    const TIPS = { Kenya: "Nairobi altitude reduces curing time.", Uganda: "Termite attack risk on timber.", Tanzania: "Sulphate‑resistant cement for coral limestone.", "South Sudan": "Compaction/soil replacement needed.", Rwanda: "Volcanic soil stable; focus on cooling.", Ethiopia: "Seismic ductile detailing per Eurocode 8." };
-    async function updateCountryTip(country) {
-        const tip = TIPS[country] || 'General advice: start with site analysis.';
-        document.getElementById('country-tip').innerHTML = `<strong>${country}</strong> – ${tip}`;
-    }
-
-    function updateMetrics() {
-        document.getElementById('metric-blueprints').textContent = Math.floor(Math.random() * 5 + 1);
-        document.getElementById('metric-logs').textContent = Math.floor(Math.random() * 20 + 5);
-    }
-
-    // ─── SOIL OPTIONS ──────────────────────────────────────────
-    const soilMap = {
-        Kenya: ['Nairobi Red Coffee Clay', 'Generic Firm Sandy Gravel', 'Generic Soft Silt / Clay', 'Generic Hard Rock / Laterite'],
-        Uganda: ['Kampala Red Lateritic Clay', 'Wetland Silts (Kampala)', 'Generic Firm Sandy Gravel', 'Generic Hard Rock / Laterite'],
-        Tanzania: ['Dar Coastal Sand / Coral Limestone', 'Generic Firm Sandy Gravel', 'Generic Soft Silt / Clay'],
-        'South Sudan': ['Juba Black Cotton Soil (Expansive)', 'Generic Firm Sandy Gravel', 'Generic Hard Rock / Laterite'],
-        Rwanda: ['Kigali Volcanic Andosols', 'Generic Firm Sandy Gravel', 'Generic Soft Silt / Clay'],
-        Ethiopia: ['Addis Clayey Soils & Volcanic Tuff', 'Generic Firm Sandy Gravel', 'Generic Hard Rock / Laterite']
-    };
-    function updateSoilOptions(country) {
-        const select = document.getElementById('gen-soil');
-        const options = soilMap[country] || ['Generic Firm Sandy Gravel'];
-        select.innerHTML = options.map(s => `<option value="${s}">${s}</option>`).join('');
-    }
-
-    // ─── GENERATE CONCEPTS ─────────────────────────────────────
-    async function generateConcepts() {
-        const payload = {
-            country: document.getElementById('gen-country').value,
-            domain: document.getElementById('gen-domain').value,
-            typology: document.getElementById('gen-typology').value,
-            plot_size: parseInt(document.getElementById('gen-plot').value) || 800,
-            floors: parseInt(document.getElementById('gen-floors').value) || 3,
-            baths: parseInt(document.getElementById('gen-baths').value) || 2,
-            soil_name: document.getElementById('gen-soil').value
+        // ─── Soil & room type options ──────────────────────────
+        const soilMap = {
+            Kenya: ['Nairobi Red Coffee Clay', 'Generic Firm Sandy Gravel', 'Generic Soft Silt / Clay', 'Generic Hard Rock / Laterite'],
+            Uganda: ['Kampala Red Lateritic Clay', 'Wetland Silts (Kampala)', 'Generic Firm Sandy Gravel', 'Generic Hard Rock / Laterite'],
+            Tanzania: ['Dar Coastal Sand / Coral Limestone', 'Generic Firm Sandy Gravel', 'Generic Soft Silt / Clay'],
+            'South Sudan': ['Juba Black Cotton Soil (Expansive)', 'Generic Firm Sandy Gravel', 'Generic Hard Rock / Laterite'],
+            Rwanda: ['Kigali Volcanic Andosols', 'Generic Firm Sandy Gravel', 'Generic Soft Silt / Clay'],
+            Ethiopia: ['Addis Clayey Soils & Volcanic Tuff', 'Generic Firm Sandy Gravel', 'Generic Hard Rock / Laterite']
         };
-        const container = document.getElementById('concepts-container');
-        container.innerHTML = '<p style="color:#888;">Generating concepts...</p>';
-        document.getElementById('concepts-output').classList.remove('hidden');
+        const roomOptions = ['Bedroom','Bathroom','Ensuite','Corridor','Balcony','Living Room','Kitchen','Dining Room','Office','Storage'];
 
-        try {
-            const res = await fetch('/api/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const concepts = await res.json();
-            conceptsData = concepts;
-            container.innerHTML = '';
-            if (!concepts.length) {
-                container.innerHTML = '<p style="color:#888;">No concepts generated.</p>';
-                return;
-            }
-            concepts.forEach((c, idx) => {
-                const card = document.createElement('div');
-                card.className = 'concept-card';
-                const score = c.scores.composite || 0;
-                const euroStatus = c.eurocode ? c.eurocode.uls_status : 'N/A';
-                card.innerHTML = `
-                    <div class="head">
-                        <h4>${c.type || 'Concept'}</h4>
-                        <span class="score">Composite: ${score}</span>
-                        <button class="expand-btn" data-idx="${idx}">Details</button>
-                    </div>
-                    <div class="detail">${c.country} · ${c.floors} floors · ${formatArea(c.total_gfa)} · Soil: ${c.soil_name}</div>
-                    <div class="detail">Arch: ${c.scores.arch}% &nbsp;|&nbsp; Struct: ${c.scores.struct}% &nbsp;|&nbsp; Sust: ${c.scores.sust}% &nbsp;|&nbsp; Cost: ${c.scores.cost}%</div>
-                    <div class="progress"><div class="fill" style="width:${score}%;"></div></div>
-                    <div class="footer">
-                        <span>${euroStatus}</span>
-                        <span>USD ${(c.total_usd || 0).toLocaleString()}</span>
-                    </div>
-                    <div class="concept-detail" id="detail-${idx}"></div>
-                `;
-                container.appendChild(card);
-                card.querySelector('.expand-btn').addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    const idx = parseInt(this.dataset.idx);
-                    toggleDetail(idx);
+        function updateSoilAndRooms() {
+            const country = document.getElementById('gen-country').value;
+            const soilSelect = document.getElementById('gen-soil');
+            soilSelect.innerHTML = soilMap[country].map(s => `<option value="${s}">${s}</option>`).join('');
+            const roomSelect = document.getElementById('gen-rooms');
+            roomSelect.innerHTML = roomOptions.map(r => `<option value="${r}">${r}</option>`).join('');
+            // Select default rooms
+            const defaults = ['Bedroom','Bathroom','Living Room','Kitchen'];
+            Array.from(roomSelect.options).forEach(opt => opt.selected = defaults.includes(opt.value));
+        }
+        document.getElementById('gen-country').addEventListener('change', updateSoilAndRooms);
+        updateSoilAndRooms();
+
+        // ─── Generate Concepts ──────────────────────────────────
+        async function generate() {
+            const payload = {
+                country: document.getElementById('gen-country').value,
+                domain: document.getElementById('gen-domain').value,
+                typology: document.getElementById('gen-typology').value,
+                plot_size: parseInt(document.getElementById('gen-plot').value) || 800,
+                floors: parseInt(document.getElementById('gen-floors').value) || 3,
+                baths: parseInt(document.getElementById('gen-baths').value) || 2,
+                soil_name: document.getElementById('gen-soil').value,
+                room_types: Array.from(document.getElementById('gen-rooms').selectedOptions).map(o => o.value)
+            };
+            const container = document.getElementById('concepts-container');
+            container.innerHTML = '<p style="color:#888;">Generating concepts...</p>';
+            document.getElementById('concepts-output').classList.remove('hidden');
+
+            try {
+                const res = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
-            });
-            document.getElementById('metric-concepts').textContent = concepts.length;
-        } catch(e) {
-            container.innerHTML = '<p style="color:#888;">Error generating concepts. Check console.</p>';
-            console.error(e);
+                const concepts = await res.json();
+                container.innerHTML = '';
+                if (!concepts.length) { container.innerHTML = '<p style="color:#888;">No concepts generated.</p>'; return; }
+                concepts.forEach((c, i) => {
+                    const card = document.createElement('div');
+                    card.className = 'concept-card';
+                    card.innerHTML = `
+                        <div class="head">
+                            <h4>${c.type}</h4>
+                            <span class="score">Composite: ${c.scores.composite}</span>
+                        </div>
+                        <div class="detail">${c.country} · ${c.floors} floors · ${c.total_gfa} m² · Soil: ${c.soil_name}</div>
+                        <div class="detail">Arch: ${c.scores.arch}% · Struct: ${c.scores.struct}% · Sust: ${c.scores.sust}% · Cost: ${c.scores.cost}%</div>
+                        <div class="progress"><div class="fill" style="width:${c.scores.composite}%;"></div></div>
+                        <div class="footer"><span>${c.eurocode.uls_status}</span><span>USD ${c.total_usd.toLocaleString()}</span></div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch(e) {
+                container.innerHTML = '<p style="color:#888;">Error generating concepts.</p>';
+                console.error(e);
+            }
         }
-    }
 
-    // ─── CONCEPT DETAIL ──────────────────────────────────────
-    function toggleDetail(idx) {
-        const detailDiv = document.getElementById(`detail-${idx}`);
-        if (detailDiv.classList.contains('open')) {
-            detailDiv.classList.remove('open');
-            return;
+        // ─── Ram AI ──────────────────────────────────────────────
+        async function askRam() {
+            const q = document.getElementById('ram-question').value.trim();
+            if (!q) return;
+            const respDiv = document.getElementById('ram-response');
+            respDiv.innerHTML = 'Thinking...';
+            try {
+                const res = await fetch('/api/ram', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ q, country: document.getElementById('gen-country').value, domain: document.getElementById('gen-domain').value })
+                });
+                const data = await res.json();
+                respDiv.innerHTML = data.response.replace(/\*\*/g, '').replace(/\n/g, '<br>');
+            } catch(e) {
+                respDiv.innerHTML = 'Error contacting Ram AI.';
+            }
         }
-        document.querySelectorAll('.concept-detail.open').forEach(d => d.classList.remove('open'));
-        const c = conceptsData[idx];
-        if (!c) return;
-
-        let html = `
-            <div class="section-title">🧱 Structural Design</div>
-            <div class="row">
-                <div><strong>Foundation:</strong> ${c.structural.foundation}</div>
-                <div><strong>Slab System:</strong> ${c.structural.slab_system}</div>
-                <div><strong>Storey Height:</strong> ${formatLength(c.structural.storey_height)}</div>
-                <div><strong>Wall Type:</strong> ${c.structural.wall_type}</div>
-                <div><strong>Concrete Grade:</strong> ${c.structural.concrete_grade}</div>
-                <div><strong>Steel Grade:</strong> ${c.structural.steel_grade}</div>
-                <div><strong>Columns:</strong> ${c.structural.columns}</div>
-                <div><strong>Beams:</strong> ${c.structural.beams}</div>
-                <div><strong>Typical Span:</strong> ${formatLength(c.structural.span)}</div>
-            </div>
-
-            <div class="section-title">📐 Eurocode Check</div>
-            <div class="row">
-                <div><strong>Design Load:</strong> ${c.eurocode.design_load}</div>
-                <div><strong>M_ed:</strong> ${c.eurocode.m_ed}</div>
-                <div><strong>M_rd:</strong> ${c.eurocode.m_rd}</div>
-                <div><strong>Status:</strong> ${c.eurocode.uls_status}</div>
-            </div>
-
-            <div class="section-title">📦 Material Quantities & Embodied Carbon</div>
-            <div class="row">
-                <div><strong>Concrete:</strong> ${c.materials.concrete_volume} m³</div>
-                <div><strong>Steel:</strong> ${c.materials.steel_weight} kg</div>
-                <div><strong>Brick:</strong> ${c.materials.brick_units} units</div>
-                <div><strong>Finishes:</strong> ${formatArea(c.materials.finish_area)}</div>
-                <div><strong>Embodied Carbon:</strong> ${c.materials.embodied_carbon_t} t CO₂e</div>
-            </div>
-
-            <div class="section-title">💰 BOQ Breakdown</div>
-            <table>
-                <tr><th>Item</th><th>Qty</th><th>Unit USD</th><th>Total USD</th></tr>
-                ${c.boq_breakdown.map(item => `<tr><td>${item.item}</td><td>${item.quantity}</td><td>$${item.unit_usd}</td><td>$${item.total_usd}</td></tr>`).join('')}
-            </table>
-            <div style="margin-top:6px;"><strong>Grand Total:</strong> $${c.total_usd.toLocaleString()} (${c.total_local.toLocaleString()} local)</div>
-
-            <div class="section-title">🏠 Rooms</div>
-            <table>
-                <tr><th>Name</th><th>Type</th><th>Width</th><th>Length</th></tr>
-                ${c.rooms.map(r => `<tr><td>${r.name}</td><td>${r.type}</td><td>${formatLength(r.w)}</td><td>${formatLength(r.h)}</td></tr>`).join('')}
-            </table>
-
-            <div class="section-title">📊 AI Scores Radar</div>
-            <div id="radar-${idx}" style="height:200px; margin-top:6px;"></div>
-
-            <div class="section-title">📅 Construction Schedule (Gantt)</div>
-            <div id="gantt-${idx}" style="height:160px; margin-top:6px;"></div>
-
-            <div class="section-title">⚠️ Risk Register</div>
-            <table>
-                <tr><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Mitigation</th></tr>
-                ${[
-                    {Risk:'Foundation settlement', Likelihood:'Medium', Impact:'High', Mitigation:'Soil improvement'},
-                    {Risk:'Steel supply delay', Likelihood:'High', Impact:'Medium', Mitigation:'Pre-order steel'},
-                    {Risk:'Labour shortage', Likelihood:'Low', Impact:'Medium', Mitigation:'Local hiring plan'},
-                    {Risk:'Weather disruption', Likelihood:'Medium', Impact:'Low', Mitigation:'Flexible schedule'},
-                    {Risk:'Cost overrun', Likelihood:'High', Impact:'High', Mitigation:'10% contingency'}
-                ].map(r => `<tr><td>${r.Risk}</td><td>${r.Likelihood}</td><td>${r.Impact}</td><td>${r.Mitigation}</td></tr>`).join('')}
-            </table>
-
-            <div class="section-title">✅ Quality Checklist</div>
-            <table>
-                <tr><th>Phase</th><th>Item</th><th>Status</th></tr>
-                ${[
-                    ['Foundation','Excavation depth','✅ Pass'],
-                    ['Foundation','Reinforcement placement','✅ Pass'],
-                    ['Foundation','Concrete pour','✅ Pass'],
-                    ['Structure','Column alignment','✅ Pass'],
-                    ['Structure','Beam formwork','✅ Pass'],
-                    ['Structure','Slab curing','✅ Pass'],
-                    ['Finishes','Floor flatness','✅ Pass'],
-                    ['Finishes','Wall plaster','✅ Pass'],
-                    ['Finishes','Painting','✅ Pass'],
-                    ['MEP','Electrical conduit','✅ Pass'],
-                    ['MEP','Plumbing layout','✅ Pass'],
-                    ['MEP','HVAC','✅ Pass'],
-                    ['External','Drainage','✅ Pass'],
-                    ['External','Landscaping','✅ Pass'],
-                    ['External','Access roads','✅ Pass']
-                ].map(row => `<tr><td>${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td></tr>`).join('')}
-            </table>
-
-            <div style="margin-top:12px;">
-                <button class="btn btn-secondary btn-sm" onclick="open3D('${c.id}')">🔮 View 3D Massing</button>
-            </div>
-        `;
-        detailDiv.innerHTML = html;
-        detailDiv.classList.add('open');
-
-        // Radar chart
-        const scores = c.scores;
-        const radarTrace = {
-            type: 'scatterpolar',
-            r: [scores.arch, scores.struct, scores.sust, scores.cost],
-            theta: ['Architecture','Structural','Sustainability','Cost Efficiency'],
-            fill: 'toself',
-            marker: { color: '#888' },
-            line: { color: '#aaa' }
-        };
-        Plotly.newPlot(`radar-${idx}`, [radarTrace], {
-            polar: { radialaxis: { range: [0,100], gridcolor: '#333' } },
-            plot_bgcolor: 'rgba(0,0,0,0)',
-            paper_bgcolor: 'rgba(0,0,0,0)',
-            font: { color: '#aaaaaa' },
-            margin: { l: 40, r: 40, t: 20, b: 20 }
-        }, { responsive: true });
-
-        // Gantt chart
-        const tasks = ['Mobilization','Substructure','Floor 1','Floor 2','Roofing','Finishes','Commissioning'];
-        const durations = [5, 10, 15, 15, 12, 8, 7];
-        const ganttTrace = {
-            y: tasks,
-            x: durations,
-            type: 'bar',
-            orientation: 'h',
-            marker: { color: '#555' }
-        };
-        Plotly.newPlot(`gantt-${idx}`, [ganttTrace], {
-            plot_bgcolor: 'rgba(0,0,0,0)',
-            paper_bgcolor: 'rgba(0,0,0,0)',
-            font: { color: '#aaaaaa' },
-            margin: { l: 80, r: 20, t: 10, b: 20 },
-            xaxis: { gridcolor: '#333', title: 'Days' },
-            yaxis: { gridcolor: '#333' }
-        }, { responsive: true });
-    }
-
-    // ─── 3D VIEWER ──────────────────────────────────────────
-    let scene, camera, renderer;
-    function open3D(id) {
-        const modal = document.getElementById('three-modal');
-        modal.classList.add('open');
-        const container = document.getElementById('three-container');
-        const width = container.clientWidth;
-        const height = container.clientHeight;
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0a0a0a);
-        camera = new THREE.PerspectiveCamera(45, width/height, 0.1, 1000);
-        camera.position.set(15, 10, 20);
-        camera.lookAt(0, 0, 0);
-        renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(width, height);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        container.appendChild(renderer.domElement);
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.target.set(0, 3, 0);
-        const ambient = new THREE.AmbientLight(0x404060);
-        scene.add(ambient);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-        dirLight.position.set(5, 10, 7);
-        scene.add(dirLight);
-
-        const concept = conceptsData.find(c => c.id === id);
-        if (!concept) return;
-        const floors = concept.floors || 3;
-        const gfa = concept.total_gfa || 500;
-        const size = Math.sqrt(gfa / floors);
-        const width2 = size * 0.8;
-        const depth = size * 0.6;
-
-        const floorHeight = 3.0;
-        const color = 0x666666;
-        for (let f=0; f<floors; f++) {
-            const geometry = new THREE.BoxGeometry(width2, 0.3, depth);
-            const material = new THREE.MeshPhongMaterial({ color: color, transparent: true, opacity: 0.8 });
-            const box = new THREE.Mesh(geometry, material);
-            box.position.set(0, f * floorHeight + 0.15, 0);
-            scene.add(box);
-            const colPositions = [
-                [-width2/2+0.5, -depth/2+0.5],
-                [width2/2-0.5, -depth/2+0.5],
-                [-width2/2+0.5, depth/2-0.5],
-                [width2/2-0.5, depth/2-0.5]
-            ];
-            colPositions.forEach(([x,z]) => {
-                const colGeom = new THREE.CylinderGeometry(0.2, 0.2, floorHeight, 6);
-                const colMat = new THREE.MeshPhongMaterial({ color: 0x888888 });
-                const col = new THREE.Mesh(colGeom, colMat);
-                col.position.set(x, f * floorHeight + floorHeight/2, z);
-                scene.add(col);
-            });
-        }
-        const roofGeom = new THREE.BoxGeometry(width2, 0.2, depth);
-        const roofMat = new THREE.MeshPhongMaterial({ color: 0x555555 });
-        const roof = new THREE.Mesh(roofGeom, roofMat);
-        roof.position.set(0, floors * floorHeight, 0);
-        scene.add(roof);
-        const gridHelper = new THREE.GridHelper(20, 10, 0x666666, 0x444444);
-        gridHelper.position.y = -0.1;
-        scene.add(gridHelper);
-
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        window.addEventListener('resize', () => {
-            const w = container.clientWidth;
-            const h = container.clientHeight;
-            camera.aspect = w/h;
-            camera.updateProjectionMatrix();
-            renderer.setSize(w, h);
-        });
-    }
-
-    function close3D() {
-        document.getElementById('three-modal').classList.remove('open');
-        const container = document.getElementById('three-container');
-        while (container.firstChild) container.removeChild(container.firstChild);
-        if (renderer) { renderer.dispose(); renderer = null; }
-        if (scene) { scene = null; }
-        if (camera) { camera = null; }
-    }
-
-    // ─── RAM AI ──────────────────────────────────────────────
-    async function askRam() {
-        const q = document.getElementById('ram-question').value.trim();
-        if (!q) return;
-        const responseDiv = document.getElementById('ram-response');
-        responseDiv.innerHTML = 'Thinking...';
-        const payload = {
-            q: q,
-            country: document.getElementById('gen-country').value,
-            domain: document.getElementById('gen-domain').value
-        };
-        try {
-            const res = await fetch('/api/ram', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            responseDiv.innerHTML = data.response.replace(/\*\*/g, '').replace(/\n/g, '<br>');
-        } catch(e) {
-            responseDiv.innerHTML = 'Error contacting Ram AI.';
-        }
-    }
-
-    // ─── INIT ──────────────────────────────────────────────────
-    if (currentUsername) {
-        document.getElementById('login-overlay').classList.add('hidden');
-        updateUserUI();
-        loadDashboard();
-    } else {
-        document.getElementById('login-overlay').classList.remove('hidden');
-    }
-
-    document.getElementById('forest-country').addEventListener('change', function() { updateCountryTip(this.value); });
-    document.getElementById('gen-country').addEventListener('change', function() { updateSoilOptions(this.value); });
-    updateSoilOptions(document.getElementById('gen-country').value);
-</script>
+    </script>
 </body>
 </html>
