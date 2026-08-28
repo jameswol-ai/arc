@@ -1,21 +1,17 @@
-# modules/optimisation.py
 import random
-from .aec_engine import generate_spatial_model, run_eurocode_analysis, calculate_ai_scores
+from .aec_engine import generate_spatial_model, run_eurocode_analysis
 from .cost import compute_boq
 
 def optimise_cost(domain, typology, country, soil_name, room_types, min_gfa=500, max_plot=5000):
     best = None
     best_cost = float('inf')
-    # Try a few combinations
     for _ in range(20):
         plot = random.randint(200, max_plot)
         floors = random.randint(1, 8)
-        # Ensure GFA >= min_gfa
-        gfa = plot * 0.6 * floors  # rough estimate
+        gfa = plot * 0.6 * floors
         if gfa < min_gfa:
             continue
-        # Generate concept
-        d = generate_spatial_model(domain, typology, plot, floors, baths=2, country=country, 
+        d = generate_spatial_model(domain, typology, plot, floors, baths=2, country=country,
                                    soil_name=soil_name, room_types=room_types, seed=random.randint(0,1000))
         ec = run_eurocode_analysis(d, domain)
         if ec['uls_status'] != "PASS ✅":
@@ -25,15 +21,3 @@ def optimise_cost(domain, typology, country, soil_name, room_types, min_gfa=500,
             best_cost = total_usd
             best = d
     return best, best_cost
-
-if st.button("Optimise Cost"):
-    with st.spinner("Optimising..."):
-        from modules.optimisation import optimise_cost
-        best, cost = optimise_cost(domain, typology, country, selected_soil, room_types)
-        if best:
-            st.success(f"Optimised concept found! Cost: ${cost:,.0f}")
-            # Store as a concept
-            st.session_state.generated_concepts = [best]  # replace or add
-            st.rerun()
-        else:
-            st.warning("No valid concept found.")
