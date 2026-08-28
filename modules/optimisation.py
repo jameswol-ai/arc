@@ -25,3 +25,15 @@ def optimise_cost(domain, typology, country, soil_name, room_types, min_gfa=500,
             best_cost = total_usd
             best = d
     return best, best_cost
+
+if st.button("Optimise Cost"):
+    with st.spinner("Optimising..."):
+        from modules.optimisation import optimise_cost
+        best, cost = optimise_cost(domain, typology, country, selected_soil, room_types)
+        if best:
+            st.success(f"Optimised concept found! Cost: ${cost:,.0f}")
+            # Store as a concept
+            st.session_state.generated_concepts = [best]  # replace or add
+            st.rerun()
+        else:
+            st.warning("No valid concept found.")
