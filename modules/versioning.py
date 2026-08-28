@@ -16,3 +16,11 @@ if col_save.button("Save to Library"):
     mem["designs"] = versions
     save_memory(username, mem)
     st.success("Design saved!")
+
+
+with st.expander("Version History", expanded=False):
+    if mem["designs"]:
+        for idx, ver in enumerate(mem["designs"]):
+            st.write(f"{idx+1}. {ver['type']} - {ver['timestamp']}")
+    else:
+        st.write("No saved versions.")
