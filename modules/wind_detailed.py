@@ -7,7 +7,8 @@ def compute_detailed_wind(d, country):
     z0 = 0.05
     kr = 0.19 * (z0 / 0.05) ** 0.07
     z = d["floors"] * d["structural"]["storey_height"]
-    if z < 2: z = 2
+    if z < 2:
+        z = 2
     cr = kr * (z / z0) ** 0.07
     co = 1.0
     rho = 1.25
