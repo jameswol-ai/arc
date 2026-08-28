@@ -1,7 +1,7 @@
 # =========================================================
 # Arc — AEC INTELLIGENCE
-# Clean, modern UI – no emojis
-# Features: Concepts, Ram AI, Comparison, Export, Wind, Seismic
+# Complete: PDF reports, sharing, version history,
+# cost optimisation, advanced seismic, detailed wind
 # =========================================================
 
 import streamlit as st
@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import random, pandas as pd, plotly.graph_objects as go
 import numpy as np
 
+# ─── Module imports ──────────────────────────────────────────
 from modules.config import M2_TO_FT2, format_length, format_area
 from modules.auth import (
     load_users, create_user, authenticate, add_xp, xp_for_level,
@@ -17,7 +18,7 @@ from modules.auth import (
 from modules.soil import REGION_SOIL_OPTIONS, get_soil_category, get_soil_multiplier
 from modules.aec_engine import (
     ARCH_DOMAINS, generate_spatial_model, run_eurocode_analysis, calculate_ai_scores,
-    compute_wind_load, compute_seismic_check      # new
+    compute_wind_load, compute_seismic_check
 )
 from modules.materials import compute_materials
 from modules.structural import compute_structural_design
@@ -33,9 +34,16 @@ from modules.renderers import (
     gantt_chart, radar_chart, plot_schedule_gantt
 )
 
+# ─── New modules for extra features ──────────────────────────
+from modules.pdf_generator import generate_pdf_report
+from modules.sharing import create_share_link
+from modules.optimisation import optimise_cost
+from modules.seismic_advanced import compute_advanced_seismic
+from modules.wind_detailed import compute_detailed_wind
+
 st.set_page_config(page_title="Arc – AEC Engine", page_icon="◈", layout="wide")
 
-# ─── Minimal, modern CSS ──────────────────────────────────────
+# ─── CSS (minimal, modern) ──────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
@@ -257,6 +265,31 @@ with st.sidebar:
                 st.balloons()
             st.rerun()
 
+    # ─── Cost Optimisation ──────────────────────────────────
+    if st.button("Optimise Cost", use_container_width=True):
+        with st.spinner("Optimising..."):
+            from modules.optimisation import optimise_cost
+            best, cost = optimise_cost(
+                domain, typology, country, selected_soil,
+                st.session_state.selected_room_types,
+                min_gfa=200
+            )
+            if best:
+                st.success(f"Optimised concept found! Cost: ${cost:,.0f}")
+                # Replace generated concepts with optimised one
+                st.session_state.generated_concepts = [best]
+                st.rerun()
+            else:
+                st.warning("No valid concept found.")
+
+    # ─── Version History ─────────────────────────────────────
+    with st.expander("Version History", expanded=False):
+        if mem.get("designs"):
+            for idx, ver in enumerate(reversed(mem["designs"])):
+                st.write(f"{idx+1}. {ver['type']} - {ver['timestamp'][:10]}")
+        else:
+            st.write("No saved versions.")
+
     if st.button("Logout", use_container_width=True):
         save_memory(username, mem)
         st.session_state.logged_in = False
@@ -353,8 +386,8 @@ if nav == "Concepts":
                     cost_df = compute_cost_by_trade(c, c["country"])
                     st.dataframe(cost_df.style.format({"Material": "${:,.0f}", "Labour": "${:,.0f}", "Equipment": "${:,.0f}", "Total": "${:,.0f}", "Total Local": "{:,.0f}"}), use_container_width=True)
 
-                    # ─── New: Wind Load ─────────────────────────
-                    st.markdown("#### Wind Load Analysis")
+                    # ─── Wind (simple) ─────────────────────────
+                    st.markdown("#### Wind Load Analysis (Simplified)")
                     wind = compute_wind_load(c, c["country"])
                     col_w1, col_w2, col_w3 = st.columns(3)
                     with col_w1:
@@ -364,8 +397,18 @@ if nav == "Concepts":
                     with col_w3:
                         st.metric("Base Shear", f"{wind['base_shear']} kN")
 
-                    # ─── New: Seismic Check ─────────────────────
-                    st.markdown("#### Seismic Check")
+                    # ─── Advanced Wind ──────────────────────────
+                    st.markdown("#### Detailed Wind (EC1)")
+                    dw = compute_detailed_wind(c, c["country"])
+                    st.write(f"**Basic Wind Speed:** {dw['v_b0']} m/s")
+                    st.write(f"**Terrain Factor (kr):** {dw['kr']}")
+                    st.write(f"**Roughness Coefficient (cr):** {dw['cr']}")
+                    st.write(f"**Basic Pressure (qb):** {dw['qb']} kN/m²")
+                    st.write(f"**Peak Velocity Pressure (qp):** {dw['qp']} kN/m²")
+                    st.write(f"**Wind Force (F_wind):** {dw['F_wind']} kN")
+
+                    # ─── Seismic (simple) ───────────────────────
+                    st.markdown("#### Seismic Check (Simplified)")
                     seismic = compute_seismic_check(c, c["country"])
                     col_se1, col_se2, col_se3 = st.columns(3)
                     with col_se1:
@@ -375,7 +418,17 @@ if nav == "Concepts":
                     with col_se3:
                         st.metric("Status", seismic['status'])
 
-                    # ─── Existing: Solar ─────────────────────────
+                    # ─── Advanced Seismic ───────────────────────
+                    st.markdown("#### Advanced Seismic (EC8)")
+                    aseismic = compute_advanced_seismic(c, c["country"])
+                    st.write(f"**Ground Accel. (ag):** {aseismic['ag']:.3f} m/s²")
+                    st.write(f"**Design Ground Accel. (agd):** {aseismic['agd']:.3f} m/s²")
+                    st.write(f"**Spectral Response (Sd):** {aseismic['Sd']:.3f} m/s²")
+                    st.write(f"**Base Shear (advanced):** {aseismic['base_shear']} kN")
+                    st.write(f"**Soil Factor:** {aseismic['soil_factor']}")
+                    st.write(f"**Period (T):** {aseismic['T']:.2f} s")
+
+                    # ─── Solar ──────────────────────────────────
                     st.markdown("#### Solar & Energy Analysis")
                     solar = compute_solar_potential(c)
                     col_e1, col_e2, col_e3 = st.columns(3)
@@ -389,7 +442,7 @@ if nav == "Concepts":
                         st.caption("PV Performance")
                         st.progress(min(1.0, solar['annual_energy'] / 5000), text=f"{solar['annual_energy']} kWh/yr")
 
-                    # ─── Existing: Water ─────────────────────────
+                    # ─── Water ──────────────────────────────────
                     st.markdown("#### Water Efficiency & Rainwater Harvesting")
                     water = compute_water_harvesting(c)
                     st.write(f"**Rainfall:** {water['rainfall']} mm/year")
@@ -397,13 +450,13 @@ if nav == "Concepts":
                     st.progress(water['savings_percentage']/100, text=f"{water['savings_percentage']}% of typical water use")
                     st.caption("Typical building water use: 100 m³/year")
 
-                    # ─── Existing: Green Rating ──────────────────
+                    # ─── Green Rating ──────────────────────────
                     st.markdown("#### Green Building Rating")
                     rating = compute_green_rating(c, ec)
                     st.metric("Score", f"{rating['score']}/100", delta=rating['rating'])
                     st.progress(rating['score']/100, text=f"{rating['score']}%")
 
-                    # ─── Existing: Risks ─────────────────────────
+                    # ─── Risks ──────────────────────────────────
                     st.markdown("#### Risk Register")
                     risks = [
                         {"Risk": "Foundation settlement", "Likelihood": "Medium", "Impact": "High", "Mitigation": "Soil improvement"},
@@ -414,7 +467,7 @@ if nav == "Concepts":
                     ]
                     st.table(pd.DataFrame(risks))
 
-                    # ─── Existing: Quality ──────────────────────
+                    # ─── Quality ─────────────────────────────────
                     st.markdown("#### Quality Checklist")
                     checklist = [
                         {"Phase": "Foundation", "Item": "Excavation depth", "Status": "Pass"},
@@ -487,100 +540,78 @@ if nav == "Concepts":
         asset = concepts[0]
         st.markdown("---")
         st.markdown("### Top Recommendation: Concept 1")
-        col_save, col_export = st.columns(2)
 
-        if col_save.button("Save to Library"):
-            mem["designs"].append({
-                "id": asset["id"],
-                "type": asset["type"],
-                "country": asset["country"],
-                "soil": asset["soil_name"],
-                "total_gfa": asset["total_gfa"],
-                "scores": asset["scores"],
-                "plan": asset["plan"],
-                "timestamp": datetime.now().isoformat()
-            })
-            save_memory(username, mem)
-            st.success("Design saved!")
+        col_save, col_actions = st.columns([1, 2])
 
-        with col_export:
-            # ─── Export Report ──────────────────────────────────
-            with st.expander("Export Report", expanded=False):
-                md = f"""# Arc AEC Report
+        with col_save:
+            if st.button("Save to Library"):
+                mem["designs"].append({
+                    "id": asset["id"],
+                    "type": asset["type"],
+                    "country": asset["country"],
+                    "soil": asset["soil_name"],
+                    "total_gfa": asset["total_gfa"],
+                    "scores": asset["scores"],
+                    "plan": asset["plan"],
+                    "timestamp": datetime.now().isoformat()
+                })
+                save_memory(username, mem)
+                st.success("Design saved!")
 
-## Concept Summary
-- **Type:** {asset['type']}
-- **Floors:** {asset['floors']}
-- **Total GFA:** {asset['total_gfa']:.0f} m²
-- **Country:** {asset['country']}
-- **Soil:** {asset['soil_name']}
-- **Total Cost:** ${asset['total_usd']:,.0f} (local: {asset['fx']['symbol']} {asset['total_local']:,.0f})
-
-### AI Scores
-- Architecture: {asset['scores']['arch']}%
-- Structural: {asset['scores']['struct']}%
-- Sustainability: {asset['scores']['sust']}%
-- Cost Efficiency: {asset['scores']['cost']}%
-- Composite: {asset['scores']['composite']}
-
-### Structural Design
-- Foundation: {asset['structural']['foundation']}
-- Slab System: {asset['structural']['slab_system']}
-- Storey Height: {asset['structural']['storey_height']:.2f} m
-- Columns: {asset['structural']['columns']}
-- Beams: {asset['structural']['beams']}
-- Concrete Grade: {asset['structural']['concrete_grade']}
-- Steel Grade: {asset['structural']['steel_grade']}
-
-### Eurocode Status
-- {asset['eurocode']['uls_status']}
-
-### Environmental
-- Embodied Carbon: {asset['materials']['embodied_carbon_t']} t CO₂e
-- Solar PV Potential: {compute_solar_potential(asset)['installed_capacity']:.2f} kWp
-- Rainwater Harvesting: {compute_water_harvesting(asset)['harvestable_volume']:.1f} m³/year
-
-### Green Building Rating
-- {compute_green_rating(asset, asset['eurocode'])['rating']} ({compute_green_rating(asset, asset['eurocode'])['score']}/100)
-
-### Wind & Seismic
-- Wind Pressure: {compute_wind_load(asset, asset['country'])['wind_pressure']} kN/m²
-- Seismic Zone: {compute_seismic_check(asset, asset['country'])['seismic_zone']:.2f}
-- Seismic Status: {compute_seismic_check(asset, asset['country'])['status']}
-"""
+        with col_actions:
+            # ─── PDF Export ──────────────────────────────────
+            if st.button("Export PDF Report"):
+                from modules.pdf_generator import generate_pdf_report
+                pdf_buffer = generate_pdf_report(
+                    asset, asset["scores"], asset["eurocode"],
+                    asset["materials"], asset["boq_breakdown"],
+                    compute_construction_schedule(asset),
+                    compute_solar_potential(asset),
+                    compute_water_harvesting(asset),
+                    compute_green_rating(asset, asset["eurocode"]),
+                    compute_wind_load(asset, asset["country"]),
+                    compute_seismic_check(asset, asset["country"])
+                )
                 st.download_button(
-                    label="Download Report (Markdown)",
-                    data=md,
-                    file_name="arc_report.md",
-                    mime="text/markdown"
+                    label="Download PDF",
+                    data=pdf_buffer,
+                    file_name="arc_report.pdf",
+                    mime="application/pdf"
                 )
 
-        # ─── Export CSV ──────────────────────────────────────
-        exp = pd.DataFrame([
-            {
-                "ID": c["id"],
-                "Type": c["type"],
-                "Country": c["country"],
-                "Soil": c["soil_name"],
-                "GFA": c["total_gfa"],
-                "Floors": c["floors"],
-                "Rooms": len(c["rooms"]),
-                "Cost USD": c["total_usd"],
-                "Cost Local": c["total_local"],
-                "Arch%": c["scores"]["arch"],
-                "Struct%": c["scores"]["struct"],
-                "Sust%": c["scores"]["sust"],
-                "CostEff%": c["scores"]["cost"],
-                "Composite": c["scores"]["composite"]
-            }
-            for c in concepts
-        ])
-        st.download_button(
-            "Export CSV",
-            exp.to_csv(index=False).encode(),
-            file_name="arc_concepts.csv",
-            mime="text/csv"
-        )
+            # ─── Share Design ────────────────────────────────
+            if st.button("Share Design"):
+                from modules.sharing import create_share_link
+                link = create_share_link(asset, base_url="https://your-app.streamlit.app")
+                st.write("Share this link:")
+                st.code(link)
+
+            # ─── Export CSV ──────────────────────────────────
+            exp = pd.DataFrame([
+                {
+                    "ID": c["id"],
+                    "Type": c["type"],
+                    "Country": c["country"],
+                    "Soil": c["soil_name"],
+                    "GFA": c["total_gfa"],
+                    "Floors": c["floors"],
+                    "Rooms": len(c["rooms"]),
+                    "Cost USD": c["total_usd"],
+                    "Cost Local": c["total_local"],
+                    "Arch%": c["scores"]["arch"],
+                    "Struct%": c["scores"]["struct"],
+                    "Sust%": c["scores"]["sust"],
+                    "CostEff%": c["scores"]["cost"],
+                    "Composite": c["scores"]["composite"]
+                }
+                for c in concepts
+            ])
+            st.download_button(
+                "Export CSV",
+                exp.to_csv(index=False).encode(),
+                file_name="arc_concepts.csv",
+                mime="text/csv"
+            )
 
     else:
         st.info("No designs generated yet. Configure parameters in sidebar and click Generate Concepts.")
