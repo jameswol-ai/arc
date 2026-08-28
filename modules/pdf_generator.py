@@ -1,4 +1,3 @@
-# modules/pdf_generator.py
 import io
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
@@ -33,10 +32,8 @@ def generate_pdf_report(concept, scores, ec, materials, boq, schedule, solar, wa
 
     # AI Scores (radar chart)
     story.append(Paragraph("AI Scores", heading_style))
-    # We need to generate a static image from plotly radar chart
     from modules.renderers import radar_chart
     fig = radar_chart(scores)
-    # Save as PNG to temp file
     with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
         pio.write_image(fig, tmp.name, width=400, height=300)
         img_path = tmp.name
@@ -77,7 +74,7 @@ def generate_pdf_report(concept, scores, ec, materials, boq, schedule, solar, wa
     story.append(t)
     story.append(Spacer(1, 0.3*cm))
 
-    # BOQ (first few items)
+    # BOQ (first 5 items)
     story.append(Paragraph("BOQ Highlights", heading_style))
     boq_data = [["Item", "Qty", "Total USD"]]
     for item in boq[:5]:
