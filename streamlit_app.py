@@ -149,7 +149,7 @@ with st.sidebar:
                 ec = run_eurocode_analysis(d, domain)
                 d["eurocode"] = ec
                 total_usd, total_local, fx, boq_breakdown = compute_boq(d, country)
-                arch, struct, sust, cost, comp = calculate_ai_scores(d, ec, total_usd, "")
+                arch, struct, sust, cost, comp = calculate_ai_scores(d, ec, total_usd, "", metric_score=metric["score"])
                 materials = compute_materials(d)
                 d["scores"] = {"arch": arch, "struct": struct, "sust": sust, "cost": cost, "metric": metric["score"], "composite": comp}
                 d["total_usd"] = total_usd
@@ -200,6 +200,7 @@ if nav == "Concepts":
                 ec = c["eurocode"]
                 metric = c.get("metric_design") or validate_metric_design(c)
                 summary = metric["summary"]
+                planning = c.get("planning") or {}
                 st.markdown(f"**Design brief:** {c['type']}, {c['floors']}‑storey, {len(c['rooms'])} rooms, {c['country']}. Soil: {c['soil_name']}. GFA: {format_area(c['total_gfa'])}")
                 m1, m2, m3, m4, m5 = st.columns(5)
                 with m1: st.metric("Metric Design", f"{metric['score']}/100", delta=metric["status"])
@@ -207,6 +208,13 @@ if nav == "Concepts":
                 with m3: st.metric("Efficiency", f"{summary['space_efficiency_pct']:.1f}%")
                 with m4: st.metric("Site Coverage", f"{summary['site_coverage_pct']:.1f}%")
                 with m5: st.metric("Composite", f"{sc['composite']}/100")
+                if planning:
+                    p1, p2, p3, p4 = st.columns(4)
+                    with p1: st.metric("Planning Score", f"{c.get('metric_planning_score', 0):.1f}/100")
+                    with p2: st.metric("Adjacency", f"{planning.get('adjacency_score', 0):.1f}/100")
+                    with p3: st.metric("Program Spaces", planning.get('room_program_count', len(c.get('rooms', []))))
+                    with p4: st.metric("Bathrooms", planning.get('bathroom_count', 0))
+                    st.caption(f"Planning engine: {planning.get('planning_engine', 'metric-aware-v1')} · Generated candidates: {c.get('generated_candidates', 0)}")
                 col1, col2 = st.columns([3,2])
                 with col1:
                     st.markdown("### Floor Plan")
