@@ -35,6 +35,9 @@ def test_valid_candidate_beats_cheaper_fallback(monkeypatch):
     assert cost == 100.0
     assert best["optimisation"]["status"] == "VALID"
     assert best["optimisation"]["confidence"] == "HIGH"
+    assert best["optimisation"]["candidate_count"] == 20
+    assert best["optimisation"]["valid_candidate_count"] == 1
+    assert best["optimisation"]["fallback_candidate_count"] == 19
 
 
 def test_fallback_is_explicit_when_no_valid_candidate_exists(monkeypatch):
@@ -55,6 +58,9 @@ def test_fallback_is_explicit_when_no_valid_candidate_exists(monkeypatch):
     assert best["optimisation"]["status"] == "FALLBACK"
     assert best["optimisation"]["confidence"] == "LOW"
     assert "No valid metric-planned candidate" in best["optimisation"]["reason"]
+    assert best["optimisation"]["candidate_count"] == 20
+    assert best["optimisation"]["valid_candidate_count"] == 0
+    assert best["optimisation"]["fallback_candidate_count"] == 20
 
 
 def test_returns_empty_result_when_no_structural_candidate_passes(monkeypatch):
