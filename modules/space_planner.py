@@ -96,8 +96,6 @@ def generate_room_candidate(
     target = spec.target_area * rng.uniform(0.92, 1.10)
     width, length = _balanced_dimensions(target, spec.min_width, spec.max_aspect)
 
-    # Small controlled variation keeps concepts distinct without breaking the
-    # dimensional rules.
     if rng.random() < 0.5:
         width, length = round(length, 2), round(width, 2)
 
@@ -155,7 +153,6 @@ def _place_rooms(
             row_depth = 0.0
 
         if cursor_y + h > plate_d:
-            # Try a rotated orientation before declaring failure.
             w, h = h, w
             if cursor_x + w > plate_w:
                 cursor_x = 0.0
@@ -170,7 +167,6 @@ def _place_rooms(
         cursor_x += w + 0.25
         row_depth = max(row_depth, h)
 
-    # Confirm there are no overlaps after placement.
     for i, room in enumerate(placed):
         if room["x"] + room["w"] > plate_w + PLANNING_TOLERANCE:
             return [], False
@@ -237,6 +233,7 @@ def generate_metric_plan(
     plot_size: float,
     floors: int,
     room_types: Sequence[str] | None,
+    baths: int = 0,
     seed: int = 0,
     candidates: int = 8,
 ) -> Dict[str, Any]:
@@ -247,6 +244,11 @@ def generate_metric_plan(
     requested = [str(x) for x in (room_types or []) if str(x) in RULES]
     if not requested:
         requested = ["Living Room", "Kitchen", "Bedroom", "Bathroom"] if domain == "Residential" else ["Office", "Conference", "Storage"]
+
+    # Bathrooms are controlled by the explicit bath count from the UI rather
+    # than duplicated in the free-form room-type selection.
+    requested = [x for x in requested if x != "Bathroom"]
+    requested.extend(["Bathroom"] * max(0, int(baths)))
 
     base_specs: List[str] = list(requested)
     if domain == "Residential" and "Living Room" not in base_specs:
@@ -310,6 +312,7 @@ def generate_metric_plan(
                 "core_ratio": CORE_RATIO,
                 "adjacency_score": _adjacency_score(placed),
                 "room_program_count": len(placed),
+                "bathroom_count": sum(1 for room in placed if room.get("type") == "Bathroom"),
                 "planning_engine": "metric-aware-v1",
             },
         }
@@ -327,6 +330,7 @@ def generate_metric_plan(
             "planning": {
                 "planning_engine": "metric-aware-v1",
                 "status": "INFEASIBLE",
+                "bathroom_count": 0,
             },
         }
 
