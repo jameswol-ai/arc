@@ -10,13 +10,24 @@ def _is_fallback_design(design):
     return str(planning.get("status", "")).upper() == "FALLBACK"
 
 
-def _annotate_optimisation(design, *, confidence, status, reason, candidates):
+def _annotate_optimisation(
+    design,
+    *,
+    confidence,
+    status,
+    reason,
+    candidates,
+    valid_candidates,
+    fallback_candidates,
+):
     """Attach transparent optimisation metadata without changing the API."""
     design["optimisation"] = {
         "confidence": confidence,
         "status": status,
         "reason": reason,
         "candidate_count": candidates,
+        "valid_candidate_count": valid_candidates,
+        "fallback_candidate_count": fallback_candidates,
     }
     return design
 
@@ -86,6 +97,8 @@ def optimise_cost(
                 best_valid_cost = total_usd
                 best_valid = d
 
+    evaluated = valid_candidates + fallback_candidates
+
     if best_valid is not None:
         return (
             _annotate_optimisation(
@@ -93,7 +106,9 @@ def optimise_cost(
                 confidence="HIGH",
                 status="VALID",
                 reason="Selected from structurally acceptable, metric-planned candidates.",
-                candidates=valid_candidates,
+                candidates=evaluated,
+                valid_candidates=valid_candidates,
+                fallback_candidates=fallback_candidates,
             ),
             best_valid_cost,
         )
@@ -108,7 +123,9 @@ def optimise_cost(
                     "No valid metric-planned candidate passed the structural gate; "
                     "the lowest-cost fallback candidate was retained for review."
                 ),
-                candidates=fallback_candidates,
+                candidates=evaluated,
+                valid_candidates=valid_candidates,
+                fallback_candidates=fallback_candidates,
             ),
             best_fallback_cost,
         )
