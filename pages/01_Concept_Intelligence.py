@@ -1,7 +1,7 @@
 """Arc Concept Intelligence dashboard.
 
-This page presents generated concepts as a decision workspace while keeping
-engineering calculations and raw detail in the existing Concepts view.
+Decision workspace for comparing generated concepts, selecting a preferred option,
+and exporting a concise AEC decision report.
 """
 from __future__ import annotations
 
@@ -10,15 +10,22 @@ import plotly.express as px
 import streamlit as st
 
 from modules.presentation import (
-    concepts_comparison_df,
     concept_kpis,
+    concepts_comparison_df,
     cost_breakdown_df,
     engineering_status_df,
     room_schedule_df,
     risk_matrix_df,
+    sustainability_summary,
 )
 from modules.renderers import radar_chart
-from modules.config import format_area
+from modules.pdf_generator import generate_pdf_report
+from modules.solar import compute_solar_potential
+from modules.water import compute_water_harvesting
+from modules.green_rating import compute_green_rating
+from modules.aec_engine import compute_wind_load, compute_seismic_check
+from modules.wind_detailed import compute_detailed_wind
+from modules.seismic_advanced import compute_advanced_seismic
 
 st.set_page_config(page_title="Arc · Concept Intelligence", page_icon="◈", layout="wide")
 
@@ -33,21 +40,33 @@ st.markdown(
 )
 
 st.title("Concept Intelligence")
-st.caption("A decision layer for architecture, engineering, cost and sustainability.")
+st.caption("Configure → Generate → Compare → Select → Analyse → Report")
 
 concepts = st.session_state.get("generated_concepts") or []
 if not concepts:
     st.info("Generate concepts from the Arc Concepts page first.")
     st.stop()
 
+# Keep the selected concept stable across reruns and other dashboard actions.
+previous = st.session_state.get("selected_concept_index", 0)
+if not isinstance(previous, int) or previous < 0 or previous >= len(concepts):
+    previous = 0
+
 selected_index = st.selectbox(
     "Focus concept",
     range(len(concepts)),
-    format_func=lambda i: f"Concept {i + 1} · {concepts[i].get('type', 'AEC Concept')}",
+    index=previous,
+    format_func=lambda i: f"Concept {i + 1} · {concepts[i].get('type', 'AEC Concept')} · {concept_kpis(concepts[i])['Composite']}/100",
+    key="concept_intelligence_selector",
 )
+st.session_state.selected_concept_index = selected_index
 selected = concepts[selected_index]
+st.session_state.active_design = selected
 kpi = concept_kpis(selected)
 
+# ---------------------------------------------------------
+# Executive decision strip
+# ---------------------------------------------------------
 st.markdown("### Executive Summary")
 k1, k2, k3, k4, k5, k6 = st.columns(6)
 k1.metric("Composite", f"{kpi['Composite']}/100")
@@ -57,6 +76,27 @@ k4.metric("Cost", f"${kpi['Cost (USD)']:,.0f}")
 k5.metric("Cost / m²", f"${kpi['Cost / m²']:,.0f}")
 k6.metric("Carbon", f"{kpi['Embodied Carbon (tCO₂e)']:,.1f} t")
 
+st.markdown("### Decision Snapshot")
+ds1, ds2, ds3 = st.columns([1.2, 1, 1])
+with ds1:
+    st.markdown(
+        f"**{selected.get('type', 'AEC Concept')}** · {selected.get('floors', 0)} floors · "
+        f"{len(selected.get('rooms') or [])} programmed spaces · {selected.get('country', '')}"
+    )
+    st.write(f"**Soil:** {selected.get('soil_name', 'Not specified')}")
+    st.write(f"**Planning engine:** {(selected.get('planning') or {}).get('planning_engine', 'metric-aware-v1')}")
+with ds2:
+    st.write(f"**Metric status:** {(selected.get('metric_design') or {}).get('status', 'REVIEW')}")
+    st.write(f"**Metric checks:** {kpi['Metric Checks']}")
+    st.write(f"**Space efficiency:** {kpi['Efficiency (%)']:.1f}%")
+with ds3:
+    st.write(f"**Site coverage:** {kpi['Site Coverage (%)']:.1f}%")
+    st.write(f"**Spaces:** {kpi['Spaces']}")
+    st.write(f"**Carbon / m²:** {kpi['Carbon / m²']:.1f} kgCO₂e/m²")
+
+# ---------------------------------------------------------
+# Comparison and intelligence profile
+# ---------------------------------------------------------
 st.markdown("### Concept Comparison")
 comparison = concepts_comparison_df(concepts)
 if not comparison.empty:
@@ -89,18 +129,24 @@ with left:
         key=f"intel_radar_{selected.get('id', selected_index)}",
     )
 with right:
-    st.markdown("### Decision Snapshot")
-    st.markdown(
-        f"**{selected.get('type', 'AEC Concept')}** · {selected.get('floors', 0)} floors · "
-        f"{len(selected.get('rooms') or [])} programmed spaces · {selected.get('country', '')}"
-    )
-    st.write(f"**Metric status:** {(selected.get('metric_design') or {}).get('status', 'REVIEW')}")
-    st.write(f"**Metric checks:** {kpi['Metric Checks']}")
-    st.write(f"**Space efficiency:** {kpi['Efficiency (%)']:.1f}%")
-    st.write(f"**Site coverage:** {kpi['Site Coverage (%)']:.1f}%")
-    st.write(f"**Soil:** {selected.get('soil_name', 'Not specified')}")
-    st.write(f"**Planning engine:** {(selected.get('planning') or {}).get('planning_engine', 'metric-aware-v1')}")
+    st.markdown("### Selection Rationale")
+    scores = selected.get("scores") or {}
+    score_items = {
+        "Architecture": scores.get("arch", 0),
+        "Structural": scores.get("struct", 0),
+        "Sustainability": scores.get("sust", 0),
+        "Cost": scores.get("cost", 0),
+        "Metric Design": scores.get("metric", 0),
+    }
+    strongest = max(score_items, key=score_items.get)
+    weakest = min(score_items, key=score_items.get)
+    st.write(f"**Strongest dimension:** {strongest} ({score_items[strongest]}/100)")
+    st.write(f"**Improvement priority:** {weakest} ({score_items[weakest]}/100)")
+    st.write("**Recommendation:** Advance to detailed design only after project-specific engineering verification of the preliminary checks below.")
 
+# ---------------------------------------------------------
+# Cost and space intelligence
+# ---------------------------------------------------------
 st.markdown("### Cost Intelligence")
 cost_df = cost_breakdown_df(selected)
 if not cost_df.empty:
@@ -126,10 +172,49 @@ if not rooms.empty:
     with rc2:
         st.dataframe(rooms, use_container_width=True, hide_index=True)
 
+# ---------------------------------------------------------
+# Engineering and sustainability gates
+# ---------------------------------------------------------
 st.markdown("### Engineering Gate")
 engineering = engineering_status_df(selected)
 st.dataframe(engineering, use_container_width=True, hide_index=True)
 
+with st.expander("Engineering checks", expanded=False):
+    ec = selected.get("eurocode") or {}
+    st.write("**Eurocode ULS:**", ec.get("uls_status", "REVIEW"))
+    st.write("**Wind:**", selected.get("wind", "Calculated in analysis view"))
+    st.write("**Seismic:**", selected.get("seismic", "Calculated in analysis view"))
+    try:
+        wind = compute_wind_load(selected)
+        detailed_wind = compute_detailed_wind(selected)
+        seismic = compute_seismic_check(selected)
+        advanced_seismic = compute_advanced_seismic(selected)
+        wc1, wc2, wc3, wc4 = st.columns(4)
+        wc1.metric("Wind pressure", f"{float(wind.get('wind_pressure', 0)):.2f} kN/m²")
+        wc2.metric("Wind base shear", f"{float(detailed_wind.get('base_shear', 0)):.1f} kN")
+        wc3.metric("Seismic zone", f"{float(seismic.get('seismic_zone', 0)):.2f}")
+        wc4.metric("Seismic status", str(advanced_seismic.get("status", seismic.get("status", "REVIEW"))))
+    except Exception as exc:
+        st.warning(f"Advanced engineering summary unavailable: {exc}")
+
+st.markdown("### Sustainability")
+try:
+    solar = compute_solar_potential(selected)
+    water = compute_water_harvesting(selected)
+    green = compute_green_rating(selected, selected.get("eurocode") or {})
+    sust = sustainability_summary({**selected, "solar": solar, "water": water, "green_rating": green})
+    s1, s2, s3, s4, s5 = st.columns(5)
+    s1.metric("PV", f"{sust['PV (kWp)']:.1f} kWp")
+    s2.metric("Annual energy", f"{sust['Annual Energy (kWh)']:,.0f} kWh")
+    s3.metric("CO₂ savings", f"{sust['CO₂ Savings (t/yr)']:.1f} t/yr")
+    s4.metric("Rainwater", f"{sust['Rainwater (m³/yr)']:,.1f} m³/yr")
+    s5.metric("Green score", f"{sust['Green Score']:.0f}/100")
+except Exception as exc:
+    st.warning(f"Sustainability summary unavailable: {exc}")
+
+# ---------------------------------------------------------
+# Risk and report
+# ---------------------------------------------------------
 st.markdown("### Risk Matrix")
 risks = risk_matrix_df()
 risk_left, risk_right = st.columns([2, 1])
@@ -155,6 +240,49 @@ with risk_left:
 with risk_right:
     st.dataframe(risks, use_container_width=True, hide_index=True)
 
-st.markdown("### Raw AEC Data")
-with st.expander("Concept dictionary", expanded=False):
+st.markdown("### Concept Intelligence Report")
+st.caption("The report is a decision-stage summary. Engineering values remain preliminary until project-specific design inputs and professional verification are completed.")
+report_col1, report_col2 = st.columns([1, 3])
+with report_col1:
+    generate_report = st.button("Generate PDF Report", type="primary", use_container_width=True)
+if generate_report:
+    try:
+        solar = compute_solar_potential(selected)
+        water = compute_water_harvesting(selected)
+        green = compute_green_rating(selected, selected.get("eurocode") or {})
+        wind = compute_wind_load(selected)
+        seismic = compute_seismic_check(selected)
+        boq = []
+        for item in selected.get("boq_breakdown") or []:
+            if isinstance(item, dict):
+                boq.append({
+                    "Item": item.get("Item", item.get("item", item.get("description", "Cost item"))),
+                    "Qty": item.get("Qty", item.get("quantity", "-")),
+                    "Total USD": item.get("Total USD", item.get("total_usd", item.get("cost", 0))),
+                })
+        pdf = generate_pdf_report(
+            selected,
+            selected.get("scores") or {},
+            selected.get("eurocode") or {},
+            selected.get("materials") or {},
+            boq,
+            selected.get("construction_schedule") or selected.get("schedule") or [],
+            solar,
+            water,
+            green,
+            wind,
+            seismic,
+        )
+        st.download_button(
+            "Download selected concept report",
+            data=pdf.getvalue(),
+            file_name=f"arc_concept_{selected_index + 1}_intelligence_report.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+        )
+        st.success("Report generated for the selected concept.")
+    except Exception as exc:
+        st.error(f"Report generation failed: {exc}")
+
+with st.expander("Raw AEC Data", expanded=False):
     st.json(selected)
