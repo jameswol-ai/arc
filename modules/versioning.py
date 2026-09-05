@@ -1,26 +1,32 @@
-# Inside the save button
-if col_save.button("Save to Library"):
-    # Get current versions
-    versions = mem["designs"] if "designs" in mem else []
-    new_version = {
-        "id": asset["id"],
-        "type": asset["type"],
-        "country": asset["country"],
-        "soil": asset["soil_name"],
-        "total_gfa": asset["total_gfa"],
-        "scores": asset["scores"],
-        "plan": asset["plan"],
-        "timestamp": datetime.now().isoformat()
+"""Reusable version-history helpers for the Arc Streamlit application."""
+from copy import deepcopy
+from datetime import datetime
+from typing import Any, Dict, List
+
+
+def build_version(asset: Dict[str, Any]) -> Dict[str, Any]:
+    """Create a serialisable library record from a generated design asset."""
+    return {
+        "id": asset.get("id"),
+        "type": asset.get("type"),
+        "country": asset.get("country"),
+        "soil": asset.get("soil_name"),
+        "total_gfa": asset.get("total_gfa", 0),
+        "scores": deepcopy(asset.get("scores", {})),
+        "plan": deepcopy(asset.get("plan", asset.get("rooms", []))),
+        "timestamp": datetime.now().isoformat(),
     }
-    versions.append(new_version)
+
+
+def save_version(mem: Dict[str, Any], asset: Dict[str, Any]) -> Dict[str, Any]:
+    """Append a design version to memory and return the new record."""
+    versions: List[Dict[str, Any]] = list(mem.get("designs", []))
+    version = build_version(asset)
+    versions.append(version)
     mem["designs"] = versions
-    save_memory(username, mem)
-    st.success("Design saved!")
+    return version
 
 
-with st.expander("Version History", expanded=False):
-    if mem["designs"]:
-        for idx, ver in enumerate(mem["designs"]):
-            st.write(f"{idx+1}. {ver['type']} - {ver['timestamp']}")
-    else:
-        st.write("No saved versions.")
+def get_versions(mem: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Return saved design versions without mutating the supplied memory."""
+    return list(mem.get("designs", []))
