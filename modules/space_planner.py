@@ -33,7 +33,6 @@ CIRCULATION_RATIO = 0.16
 CORE_RATIO = 0.10
 PLANNING_TOLERANCE = 0.08
 
-
 ADJACENCY_PREFERENCES: Dict[str, Tuple[str, ...]] = {
     "Living Room": ("Dining Room", "Kitchen"),
     "Dining Room": ("Living Room", "Kitchen"),
@@ -79,8 +78,12 @@ def generate_room_candidate(room_type: str, rng: random.Random, target_multiplie
     if rng.random() < 0.5:
         width, length = round(length, 2), round(width, 2)
     return {
-        "type": room_type, "w": width, "h": length, "area": round(width * length, 2),
-        "metric_target_area": round(spec.target_area, 2), "metric_min_area": round(spec.min_area, 2),
+        "type": room_type,
+        "w": width,
+        "h": length,
+        "area": round(width * length, 2),
+        "metric_target_area": round(spec.target_area, 2),
+        "metric_min_area": round(spec.min_area, 2),
         "metric_min_width": round(spec.min_width, 2),
     }
 
@@ -96,8 +99,10 @@ def _floor_plate(plot_size: float, rng: random.Random) -> Tuple[float, float, fl
 
 def _bbox_overlap(a: Dict[str, Any], b: Dict[str, Any], gap: float = 0.05) -> bool:
     return not (
-        a["x"] + a["w"] + gap <= b["x"] or b["x"] + b["w"] + gap <= a["x"]
-        or a["y"] + a["h"] + gap <= b["y"] or b["y"] + b["h"] + gap <= a["y"]
+        a["x"] + a["w"] + gap <= b["x"]
+        or b["x"] + b["w"] + gap <= a["x"]
+        or a["y"] + a["h"] + gap <= b["y"]
+        or b["y"] + b["h"] + gap <= a["y"]
     )
 
 
@@ -135,9 +140,16 @@ def _place_rooms(rooms: Sequence[Dict[str, Any]], plate_w: float, plate_d: float
 
 
 def _adjacency_score(rooms: Iterable[Dict[str, Any]]) -> float:
+    """Score preferred adjacency without assuming coordinates on legacy rooms.
+
+    Fallback and imported plans may contain room dictionaries without x/y.
+    Those rooms are still valid for area/program analysis, but they cannot
+    contribute a geometric adjacency score until placed.
+    """
     items = list(rooms)
     if len(items) < 2:
         return 0.0
+
     score = 0.0
     opportunities = 0
     for room in items:
@@ -145,14 +157,30 @@ def _adjacency_score(rooms: Iterable[Dict[str, Any]]) -> float:
         if not preferred:
             continue
         opportunities += 1
+
+        # Only geometrically score rooms that have complete placement data.
+        if any(key not in room for key in ("x", "y", "w", "h")):
+            continue
+        try:
+            cx = float(room["x"]) + float(room["w"]) / 2.0
+            cy = float(room["y"]) + float(room["h"]) / 2.0
+        except (TypeError, ValueError):
+            continue
+
         best = 0.0
-        cx, cy = room["x"] + room["w"] / 2, room["y"] + room["h"] / 2
         for other in items:
             if other is room or other.get("type") not in preferred:
                 continue
-            ox, oy = other["x"] + other["w"] / 2, other["y"] + other["h"] / 2
+            if any(key not in other for key in ("x", "y", "w", "h")):
+                continue
+            try:
+                ox = float(other["x"]) + float(other["w"]) / 2.0
+                oy = float(other["y"]) + float(other["h"]) / 2.0
+            except (TypeError, ValueError):
+                continue
             best = max(best, 1.0 / (1.0 + math.hypot(cx - ox, cy - oy)))
         score += best
+
     return round(score / opportunities * 100, 1) if opportunities else 0.0
 
 
@@ -163,37 +191,92 @@ def _candidate_score(rooms: Sequence[Dict[str, Any]], plate_area: float, floor_a
     adjacency = _adjacency_score(rooms)
     fit = max(0.0, min(100.0, room_area / plate_area * 100.0)) if plate_area else 0.0
     domain_bonus = 0.0
-    if domain == "Industrial" and any(r["type"] == "Manufacturing" for r in rooms): domain_bonus += 5.0
-    if domain == "Commercial" and any(r["type"] == "Conference" for r in rooms): domain_bonus += 3.0
-    if domain == "Residential" and any(r["type"] == "Living Room" for r in rooms): domain_bonus += 3.0
+    if domain == "Industrial" and any(r["type"] == "Manufacturing" for r in rooms):
+        domain_bonus += 5.0
+    if domain == "Commercial" and any(r["type"] == "Conference" for r in rooms):
+        domain_bonus += 3.0
+    if domain == "Residential" and any(r["type"] == "Living Room" for r in rooms):
+        domain_bonus += 3.0
     return round(efficiency_score * 0.45 + adjacency * 0.35 + fit * 0.20 + domain_bonus, 2)
 
 
 def _fallback_plan(domain: str, plate_w: float, plate_d: float, floor_area: float, baths: int) -> Dict[str, Any]:
-    """Return a guaranteed renderer-safe fallback when packing is infeasible."""
+    """Return a guaranteed renderer-safe and scorer-safe fallback."""
     min_w = max(CIRCULATION_MIN_WIDTH, MAIN_CORRIDOR_TARGET_WIDTH)
     corridor_h = max(6.0, min(plate_d * 0.20, floor_area * CIRCULATION_RATIO / min_w))
-    rooms: List[Dict[str, Any]] = [{
-        "name": "Metric Main Corridor", "type": "Corridor", "w": round(min_w, 2),
-        "h": round(corridor_h, 2), "area": round(min_w * corridor_h, 2),
-    }]
+    rooms: List[Dict[str, Any]] = [
+        {
+            "name": "Metric Main Corridor",
+            "type": "Corridor",
+            "w": round(min_w, 2),
+            "h": round(corridor_h, 2),
+            "area": round(min_w * corridor_h, 2),
+        }
+    ]
+
     core_area = max(14.0, min(floor_area * CORE_RATIO, max(14.0, plate_w * plate_d * 0.12)))
     core_w = max(1.2, min(3.0, math.sqrt(core_area)))
     core_h = round(core_area / core_w, 2)
-    rooms.append({"name": "Metric Stair Core", "type": "Stairs", "w": round(core_w, 2), "h": core_h, "area": round(core_w * core_h, 2)})
+    rooms.append(
+        {
+            "name": "Metric Stair Core",
+            "type": "Stairs",
+            "w": round(core_w, 2),
+            "h": core_h,
+            "area": round(core_w * core_h, 2),
+        }
+    )
+
     defaults = {"Residential": "Living Room", "Commercial": "Office", "Industrial": "Manufacturing"}
     fallback_type = defaults.get(domain, "Office")
     spec = room_spec(fallback_type)
     if spec:
         w, h = _balanced_dimensions(spec.target_area, spec.min_width, spec.max_aspect)
-        rooms.append({"name": f"{fallback_type} 1", "type": fallback_type, "w": w, "h": h, "area": round(w * h, 2)})
+        rooms.append(
+            {
+                "name": f"{fallback_type} 1",
+                "type": fallback_type,
+                "w": w,
+                "h": h,
+                "area": round(w * h, 2),
+            }
+        )
+
     for index in range(max(0, int(baths))):
         spec = room_spec("Bathroom")
-        w, h = _balanced_dimensions(spec.target_area if spec else 4.2, spec.min_width if spec else 1.5, spec.max_aspect if spec else 2.5)
-        rooms.append({"name": f"Bathroom {index + 1}", "type": "Bathroom", "w": w, "h": h, "area": round(w * h, 2)})
+        w, h = _balanced_dimensions(
+            spec.target_area if spec else 4.2,
+            spec.min_width if spec else 1.5,
+            spec.max_aspect if spec else 2.5,
+        )
+        rooms.append(
+            {
+                "name": f"Bathroom {index + 1}",
+                "type": "Bathroom",
+                "w": w,
+                "h": h,
+                "area": round(w * h, 2),
+            }
+        )
+
+    # Try to place the fallback so downstream renderers and geometric scoring
+    # receive the same x/y contract as normal generated plans.
     placed, ok = _place_rooms(rooms, max(plate_w, 12.0), max(plate_d, 12.0), random.Random(0))
     if ok:
         rooms = placed
+    else:
+        # Absolute last-resort placement: sequential, non-overlapping anchors.
+        # This guarantees x/y for every room even when the fallback plate is
+        # smaller than the requested program.
+        x = y = 0.0
+        for room in rooms:
+            room["x"] = round(x, 2)
+            room["y"] = round(y, 2)
+            x += float(room["w"]) + 0.25
+            if x > max(plate_w, 12.0):
+                x = 0.0
+                y += max(float(room["h"]), 1.0) + 0.25
+
     return {
         "rooms": rooms,
         "plate_width": plate_w,
@@ -203,15 +286,27 @@ def _fallback_plan(domain: str, plate_w: float, plate_d: float, floor_area: floa
         "candidate_index": -1,
         "generated_candidates": 0,
         "planning": {
-            "space_efficiency_target_pct": 72.0, "circulation_ratio": CIRCULATION_RATIO,
-            "core_ratio": CORE_RATIO, "adjacency_score": _adjacency_score(rooms),
-            "room_program_count": len(rooms), "bathroom_count": sum(r["type"] == "Bathroom" for r in rooms),
-            "planning_engine": "metric-aware-v1", "status": "FALLBACK",
+            "space_efficiency_target_pct": 72.0,
+            "circulation_ratio": CIRCULATION_RATIO,
+            "core_ratio": CORE_RATIO,
+            "adjacency_score": _adjacency_score(rooms),
+            "room_program_count": len(rooms),
+            "bathroom_count": sum(r["type"] == "Bathroom" for r in rooms),
+            "planning_engine": "metric-aware-v1",
+            "status": "FALLBACK",
         },
     }
 
 
-def generate_metric_plan(domain: str, plot_size: float, floors: int, room_types: Sequence[str] | None, baths: int = 0, seed: int = 0, candidates: int = 8) -> Dict[str, Any]:
+def generate_metric_plan(
+    domain: str,
+    plot_size: float,
+    floors: int,
+    room_types: Sequence[str] | None,
+    baths: int = 0,
+    seed: int = 0,
+    candidates: int = 8,
+) -> Dict[str, Any]:
     rng = random.Random(seed)
     plate_w, plate_d, floor_area = _floor_plate(float(plot_size), rng)
     requested = [str(x) for x in (room_types or []) if str(x) in RULES]
@@ -220,9 +315,12 @@ def generate_metric_plan(domain: str, plot_size: float, floors: int, room_types:
     requested = [x for x in requested if x != "Bathroom"]
     requested.extend(["Bathroom"] * max(0, int(baths)))
     base_specs = list(requested)
-    if domain == "Residential" and "Living Room" not in base_specs: base_specs.append("Living Room")
-    if domain == "Commercial" and "Office" not in base_specs: base_specs.append("Office")
-    if domain == "Industrial" and "Manufacturing" not in base_specs: base_specs.append("Manufacturing")
+    if domain == "Residential" and "Living Room" not in base_specs:
+        base_specs.append("Living Room")
+    if domain == "Commercial" and "Office" not in base_specs:
+        base_specs.append("Office")
+    if domain == "Industrial" and "Manufacturing" not in base_specs:
+        base_specs.append("Manufacturing")
 
     best: Dict[str, Any] | None = None
     generated = 0
@@ -234,20 +332,55 @@ def generate_metric_plan(domain: str, plot_size: float, floors: int, room_types:
             if room:
                 room["name"] = f"{room_type} {sum(1 for x in room_program if x['type'] == room_type) + 1}"
                 room_program.append(room)
+
         corridor_width = max(CIRCULATION_MIN_WIDTH, MAIN_CORRIDOR_TARGET_WIDTH)
         corridor_area = max(5.0, floor_area * CIRCULATION_RATIO)
-        room_program.append({"name": "Metric Main Corridor", "type": "Corridor", "w": round(corridor_width, 2), "h": round(corridor_area / corridor_width, 2), "area": round(corridor_area, 2)})
+        room_program.append(
+            {
+                "name": "Metric Main Corridor",
+                "type": "Corridor",
+                "w": round(corridor_width, 2),
+                "h": round(corridor_area / corridor_width, 2),
+                "area": round(corridor_area, 2),
+            }
+        )
         stair_area = max(14.0, floor_area * CORE_RATIO)
         stair_width = max(1.2, min(3.0, math.sqrt(stair_area)))
-        room_program.append({"name": "Metric Stair Core", "type": "Stairs", "w": round(stair_width, 2), "h": round(stair_area / stair_width, 2), "area": round(stair_area, 2)})
+        room_program.append(
+            {
+                "name": "Metric Stair Core",
+                "type": "Stairs",
+                "w": round(stair_width, 2),
+                "h": round(stair_area / stair_width, 2),
+                "area": round(stair_area, 2),
+            }
+        )
+
         placed, success = _place_rooms(room_program, plate_w, plate_d, candidate_rng)
         if not success:
             continue
         generated += 1
         score = _candidate_score(placed, plate_w * plate_d, floor_area, domain)
-        candidate = {"rooms": placed, "plate_width": plate_w, "plate_depth": plate_d, "floor_area": floor_area, "metric_planning_score": score, "candidate_index": candidate_index, "generated_candidates": generated,
-                     "planning": {"space_efficiency_target_pct": 72.0, "circulation_ratio": CIRCULATION_RATIO, "core_ratio": CORE_RATIO, "adjacency_score": _adjacency_score(placed), "room_program_count": len(placed), "bathroom_count": sum(1 for room in placed if room.get("type") == "Bathroom"), "planning_engine": "metric-aware-v1"}}
-        if best is None or score > best["metric_planning_score"]: best = candidate
+        candidate = {
+            "rooms": placed,
+            "plate_width": plate_w,
+            "plate_depth": plate_d,
+            "floor_area": floor_area,
+            "metric_planning_score": score,
+            "candidate_index": candidate_index,
+            "generated_candidates": generated,
+            "planning": {
+                "space_efficiency_target_pct": 72.0,
+                "circulation_ratio": CIRCULATION_RATIO,
+                "core_ratio": CORE_RATIO,
+                "adjacency_score": _adjacency_score(placed),
+                "room_program_count": len(placed),
+                "bathroom_count": sum(1 for room in placed if room.get("type") == "Bathroom"),
+                "planning_engine": "metric-aware-v1",
+            },
+        }
+        if best is None or score > best["metric_planning_score"]:
+            best = candidate
 
     if best is None:
         return _fallback_plan(domain, plate_w, plate_d, floor_area, baths)
