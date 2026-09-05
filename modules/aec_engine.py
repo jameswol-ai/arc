@@ -1,11 +1,12 @@
 # =========================================================
 # Core AEC Engine: spatial model, Eurocode, AI scores
 # Fixed weights with Metric Design Intelligence
-# Added: Wind Load Analysis, Seismic Check
+# Added: Metric-aware space planning, Wind Load Analysis, Seismic Check
 # =========================================================
 
 import random, uuid
 from .soil import get_soil_multiplier
+from .space_planner import generate_metric_plan
 
 ARCH_DOMAINS = {
     "Residential": ["Luxury Villa", "Modern Apartment", "Townhouse Studio"],
@@ -25,13 +26,35 @@ SLAB_SYSTEMS = {
     "Industrial": ["Heavy-duty Slab", "Composite Slab"],
 }
 
+ROOM_COLORS = {
+    "Bedroom": "#2a1a3a", "Bathroom": "#4a2a2a", "Ensuite": "#3a2a3a",
+    "Corridor": "#3a3a4a", "Balcony": "#4a4a3a", "Living Room": "#2a2a3a",
+    "Kitchen": "#1a2a1a", "Dining Room": "#3a2a2a", "Office": "#2a3a3a",
+    "Storage": "#3a3a2a", "Stairs": "#4a4a5a", "Conference": "#2a2a3a",
+    "Manufacturing": "#2a1a1a", "Loading Bay": "#3a2a1a",
+}
+
 
 def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soil_name, room_types=None, seed=0):
+    """Generate a spatial model using metric-aware planning before AEC analysis."""
     rng = random.Random(seed)
     plot = max(200, plot_size + rng.randint(-300, 300))
-    max_fp = int(plot * rng.uniform(0.5, 0.75))
-    fa = min(max_fp, rng.randint(100, int(max_fp * 1.3)))
-    gfa = fa * floors
+
+    # The planner generates multiple internal layouts and selects the strongest
+    # candidate before structural, cost and sustainability analysis.
+    selected_types = [r for r in (room_types or []) if r != "Bathroom"]
+    plan = generate_metric_plan(
+        domain=domain,
+        plot_size=plot,
+        floors=max(1, floors),
+        room_types=selected_types,
+        baths=max(0, baths),
+        seed=seed,
+        candidates=8,
+    )
+
+    fa = max(100.0, float(plan.get("floor_area", plot * 0.60)))
+    gfa = fa * max(1, floors)
     span = 6.0 if domain == "Residential" else (7.5 if domain == "Commercial" else 12.0)
     span *= rng.uniform(0.85, 1.15)
     cols = max(8, int((fa / (span * 5.0)) * rng.uniform(3, 5)))
@@ -41,67 +64,35 @@ def generate_spatial_model(domain, btype, plot_size, floors, baths, country, soi
     storey_height = rng.uniform(3.0, 4.2)
     wall_type = "Reinforced Concrete" if rng.random() > 0.3 else "Masonry"
 
-    rooms = [
-        {"name": "Central Corridor Gallery", "type": "Corridor", "w": 2.5, "h": 14.0, "color": "#3a3a4a"},
-        {"name": "Main Staircase Core", "type": "Stairs", "w": 4.5, "h": 4.0, "color": "#4a4a5a"},
-    ]
+    rooms = []
+    for room in plan.get("rooms", []):
+        item = dict(room)
+        item.pop("area", None)
+        item["color"] = ROOM_COLORS.get(item.get("type", ""), "#333333")
+        rooms.append(item)
 
-    room_types = room_types or []
-    room_type_map = {
-        "Bedroom": {"w": (4, 5), "h": (3.5, 4.5), "color": "#2a1a3a"},
-        "Bathroom": {"w": (2.5, 3.5), "h": (2, 3), "color": "#4a2a2a"},
-        "Ensuite": {"w": (2.5, 3.0), "h": (2, 2.5), "color": "#3a2a3a"},
-        "Corridor": {"w": (2.0, 3.0), "h": (3.0, 5.0), "color": "#3a3a4a"},
-        "Balcony": {"w": (2.0, 3.5), "h": (3.0, 5.0), "color": "#4a4a3a"},
-        "Living Room": {"w": (6, 8), "h": (5, 6), "color": "#2a2a3a"},
-        "Kitchen": {"w": (4, 5), "h": (3.5, 4.5), "color": "#1a2a1a"},
-        "Dining Room": {"w": (4, 6), "h": (4, 5), "color": "#3a2a2a"},
-        "Office": {"w": (4, 5), "h": (4, 5), "color": "#2a3a3a"},
-        "Storage": {"w": (2, 3), "h": (2, 3), "color": "#3a3a2a"},
-    }
+    # Preserve the planning metadata so the UI and downstream engines can
+    # distinguish a metric-generated plan from a legacy random layout.
+    planning = dict(plan.get("planning", {}))
+    planning["selected_candidate"] = plan.get("candidate_index")
+    planning["generated_candidates"] = plan.get("generated_candidates", 0)
+    planning["metric_planning_score"] = plan.get("metric_planning_score", 0.0)
 
-    for room_type in room_types:
-        if room_type in room_type_map:
-            specs = room_type_map[room_type]
-            w = rng.uniform(*specs["w"])
-            h = rng.uniform(*specs["h"])
-            rooms.append({
-                "name": f"{room_type} {len([r for r in rooms if r['type'] == room_type]) + 1}",
-                "type": room_type, "w": round(w, 2), "h": round(h, 2), "color": specs["color"]
-            })
-
-    if domain == "Residential":
-        domain_rooms = [
-            {"name": "Grand Living Room", "type": "Living Room", "w": rng.uniform(6, 8), "h": rng.uniform(5, 6), "color": "#2a2a3a"},
-            {"name": "Chef's Kitchen Deck", "type": "Kitchen", "w": rng.uniform(4, 5), "h": rng.uniform(3.5, 4.5), "color": "#1a2a1a"},
-        ]
-    elif domain == "Commercial":
-        domain_rooms = [
-            {"name": "Co-Working Hub Suite", "type": "Office", "w": rng.uniform(10, 14), "h": rng.uniform(7, 9), "color": "#1a3a4a"},
-            {"name": "Executive Dialogue Hall", "type": "Conference", "w": rng.uniform(5, 7), "h": rng.uniform(4, 6), "color": "#2a2a3a"},
-        ]
-    else:
-        domain_rooms = [
-            {"name": "Main Production Bay Floor", "type": "Manufacturing", "w": rng.uniform(16, 20), "h": rng.uniform(10, 14), "color": "#2a1a1a"},
-            {"name": "Logistics Dispatch Terminal", "type": "Loading Bay", "w": rng.uniform(7, 9), "h": rng.uniform(7, 9), "color": "#3a2a1a"},
-        ]
-    rooms.extend(dr for dr in domain_rooms if not any(r["name"] == dr["name"] for r in rooms))
-
-    for b in range(baths):
-        if not any(r["type"] == "Bathroom" and r["name"].endswith(str(b + 1)) for r in rooms):
-            rooms.append({"name": f"Sanitary Bathroom {b + 1}", "type": "Bathroom", "w": rng.uniform(2.5, 3.5), "h": rng.uniform(2, 3), "color": "#4a2a2a"})
-
-    doors = len(rooms) + floors * rng.randint(1, 3)
+    doors = len(rooms) + max(1, floors) * rng.randint(1, 3)
     windows = max(4, int(gfa / rng.randint(12, 20)))
     return {
         "id": str(uuid.uuid4())[:8].upper(), "domain": domain, "type": btype,
-        "plot_size": plot, "floors": floors, "floor_area": fa, "total_gfa": gfa,
+        "plot_size": plot, "floors": floors, "floor_area": round(fa, 2), "total_gfa": round(gfa, 2),
         "rooms": rooms, "doors": doors, "windows": windows, "country": country,
         "soil_name": soil_name, "soil_multiplier": get_soil_multiplier(soil_name),
-        "structural": {"columns": int(cols * floors), "beams": int(beams * floors), "span": round(span, 2),
-                        "foundation": foundation, "slab_system": slab_system, "storey_height": round(storey_height, 2),
-                        "wall_type": wall_type, "concrete_grade": rng.choice(["C25", "C30", "C35", "C40"]),
-                        "steel_grade": rng.choice(["B500B", "B500C"])}
+        "planning": planning,
+        "metric_planning_score": plan.get("metric_planning_score", 0.0),
+        "structural": {
+            "columns": int(cols * floors), "beams": int(beams * floors), "span": round(span, 2),
+            "foundation": foundation, "slab_system": slab_system, "storey_height": round(storey_height, 2),
+            "wall_type": wall_type, "concrete_grade": rng.choice(["C25", "C30", "C35", "C40"]),
+            "steel_grade": rng.choice(["B500B", "B500C"])
+        }
     }
 
 
@@ -121,11 +112,7 @@ def run_eurocode_analysis(d, domain):
 
 
 def calculate_ai_scores(asset, ec, total_usd, prompt=None, metric_score=None):
-    """Return AI discipline scores and a composite score including metric validation.
-
-    ``metric_score`` is optional for backwards compatibility. When supplied,
-    the composite uses 20% Metric Design and 20% for each existing discipline.
-    """
+    """Return AI discipline scores and a composite score including metric validation."""
     arch = 40 + min(30, asset["floors"] * 4) + min(20, len(asset["rooms"]) * 2.5) + random.randint(-10, 10)
     arch = min(100, arch)
     try:
