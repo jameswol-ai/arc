@@ -1,7 +1,6 @@
 # =========================================================
-# Arc — AEC INTELLIGENCE (FIXED)
-# Complete: PDF reports, sharing, version history,
-# cost optimisation, advanced seismic, detailed wind
+# Arc — AEC INTELLIGENCE
+# Metric Design Intelligence integrated into concept generation
 # =========================================================
 
 import streamlit as st
@@ -9,7 +8,6 @@ from datetime import datetime, timedelta
 import random, pandas as pd, plotly.graph_objects as go
 import numpy as np
 
-# ─── Module imports ──────────────────────────────────────────
 from modules.config import M2_TO_FT2, format_length, format_area
 from modules.auth import (
     load_users, create_user, authenticate, add_xp, xp_for_level,
@@ -20,6 +18,7 @@ from modules.aec_engine import (
     ARCH_DOMAINS, generate_spatial_model, run_eurocode_analysis, calculate_ai_scores,
     compute_wind_load, compute_seismic_check
 )
+from modules.metric_design import validate_metric_design
 from modules.materials import compute_materials
 from modules.structural import compute_structural_design
 from modules.construction import compute_construction_schedule
@@ -41,75 +40,24 @@ from modules.wind_detailed import compute_detailed_wind
 
 st.set_page_config(page_title="Arc – AEC Engine", page_icon="◈", layout="wide")
 
-# ─── CSS (minimal, modern) ──────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-html, body, .stApp {
-    background: #0f0f0f;
-    color: #e0e0e0;
-    font-family: 'Inter', sans-serif;
-}
-.glass-panel {
-    background: #1a1a1a;
-    border: 1px solid #2a2a2a;
-    border-radius: 12px;
-    padding: 20px 24px;
-    margin-bottom: 24px;
-}
-.stButton > button {
-    background: #2a2a2a;
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    font-weight: 500;
-    padding: 8px 20px;
-    transition: background 0.2s;
-    box-shadow: none;
-}
-.stButton > button:hover {
-    background: #3a3a3a;
-}
-[data-testid="stSidebar"] {
-    background: #0f0f0f;
-    border-right: 1px solid #2a2a2a;
-}
-.stTextInput > div > div > input,
-.stNumberInput input,
-.stSelectbox > div > div,
-.stTextArea textarea {
-    background: transparent !important;
-    border: 1px solid #333 !important;
-    border-radius: 6px;
-    color: #e0e0e0 !important;
-}
-.metric-bar-bg {
-    background: #2a2a2a;
-    border-radius: 4px;
-    height: 6px;
-}
-.metric-bar-fg {
-    background: #888;
-    height: 6px;
-    border-radius: 4px;
-}
-.stMetric .stMetricLabel {
-    color: #aaaaaa !important;
-}
-.stMetric .stMetricValue {
-    color: #e0e0e0 !important;
-}
-div[data-testid="stMetricDelta"] {
-    color: #aaaaaa !important;
-}
-h1, h2, h3, h4, h5, h6 {
-    font-weight: 400;
-    color: #e0e0e0;
-}
+html, body, .stApp { background:#0f0f0f; color:#e0e0e0; font-family:'Inter',sans-serif; }
+.glass-panel { background:#1a1a1a; border:1px solid #2a2a2a; border-radius:12px; padding:20px 24px; margin-bottom:24px; }
+.stButton > button { background:#2a2a2a; color:#fff; border:none; border-radius:8px; font-weight:500; padding:8px 20px; box-shadow:none; }
+.stButton > button:hover { background:#3a3a3a; }
+[data-testid="stSidebar"] { background:#0f0f0f; border-right:1px solid #2a2a2a; }
+.stTextInput > div > div > input, .stNumberInput input, .stSelectbox > div > div, .stTextArea textarea { background:transparent !important; border:1px solid #333 !important; border-radius:6px; color:#e0e0e0 !important; }
+.metric-bar-bg { background:#2a2a2a; border-radius:4px; height:6px; }
+.metric-bar-fg { background:#888; height:6px; border-radius:4px; }
+.stMetric .stMetricLabel { color:#aaa !important; }
+.stMetric .stMetricValue { color:#e0e0e0 !important; }
+div[data-testid="stMetricDelta"] { color:#aaa !important; }
+h1,h2,h3,h4,h5,h6 { font-weight:400; color:#e0e0e0; }
 </style>
 """, unsafe_allow_html=True)
 
-# ─── Session init ─────────────────────────────────────────────
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.username = None
@@ -125,7 +73,6 @@ if "logged_in" not in st.session_state:
 if not load_users():
     create_user("admin", "admin123")
 
-# ─── Login ────────────────────────────────────────────────────
 if not st.session_state.logged_in:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -134,11 +81,8 @@ if not st.session_state.logged_in:
             username = st.text_input("Username")
             password = st.text_input("Password", type="password")
             c1, c2 = st.columns(2)
-            with c1:
-                login_btn = st.form_submit_button("Login")
-            with c2:
-                reg_btn = st.form_submit_button("Sign up")
-
+            with c1: login_btn = st.form_submit_button("Login")
+            with c2: reg_btn = st.form_submit_button("Sign up")
             if login_btn:
                 user = authenticate(username, password)
                 if user:
@@ -147,20 +91,16 @@ if not st.session_state.logged_in:
                     st.session_state.user_data = user
                     st.session_state.memory = load_memory(username)
                     st.rerun()
-                else:
-                    st.error("Invalid credentials.")
+                else: st.error("Invalid credentials.")
             if reg_btn:
-                if not username or not password:
-                    st.error("Fill all fields.")
+                if not username or not password: st.error("Fill all fields.")
                 else:
                     try:
                         create_user(username, password)
                         st.success("Account created! Log in now.")
-                    except ValueError as e:
-                        st.error(str(e))
+                    except ValueError as e: st.error(str(e))
     st.stop()
 
-# ─── Sidebar ──────────────────────────────────────────────────
 username = st.session_state.username
 user = st.session_state.user_data
 mem = st.session_state.memory
@@ -168,145 +108,105 @@ mem = st.session_state.memory
 with st.sidebar:
     st.markdown("<div style='text-align:center;font-size:1.4rem;font-weight:300;color:#e0e0e0;'>Arc</div>", unsafe_allow_html=True)
     st.markdown(f"<div style='text-align:center;font-size:0.9rem;color:#888;'>{username} · Level {user['level']}</div>", unsafe_allow_html=True)
-
     lvl, xp = user["level"], user["xp"]
     needed = xp_for_level(lvl)
     prog = xp / needed if needed else 1
-    st.markdown(f"""
-    <div style='display:flex;align-items:center;gap:6px;margin:10px 0'>
-      <span style='font-size:10px;color:#888;'>LVL {lvl}</span>
-      <div style='flex:1;height:5px;background:#2a2a2a;border-radius:2px'>
-        <div style='width:{prog*100}%;height:100%;background:#888;border-radius:2px'></div>
-      </div>
-      <span style='font-size:9px;color:#666;'>{xp}/{needed} XP</span>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"<div style='display:flex;align-items:center;gap:6px;margin:10px 0'><span style='font-size:10px;color:#888;'>LVL {lvl}</span><div style='flex:1;height:5px;background:#2a2a2a;border-radius:2px'><div style='width:{prog*100}%;height:100%;background:#888;border-radius:2px'></div></div><span style='font-size:9px;color:#666;'>{xp}/{needed} XP</span></div>", unsafe_allow_html=True)
 
     unit = st.selectbox("Unit System", ["Metric (m, m²)", "Imperial (ft, sq ft)"])
     st.session_state.unit_system = "metric" if "Metric" in unit else "imperial"
     nav = st.radio("Navigate", ["Concepts", "Ram AI"])
     st.markdown("---")
 
-    # ─── Configuration ──────────────────────────────────────
     with st.expander("Configuration", expanded=True):
         st.markdown("**Trade Region · East African Countries**")
         country = st.selectbox("Country", list(STATIC_FX.keys()))
         domain = st.selectbox("Domain", list(ARCH_DOMAINS.keys()))
         typology = st.selectbox("Typology", ARCH_DOMAINS[domain])
         plot = st.slider("Plot Area (m²)", 200, 5000, 800, step=50)
-        if st.session_state.unit_system == "imperial":
-            st.caption(f"= {round(plot * M2_TO_FT2, 0)} sq ft")
+        if st.session_state.unit_system == "imperial": st.caption(f"= {round(plot * M2_TO_FT2, 0)} sq ft")
         floors = st.slider("Floors", 1, 12, 3)
         baths = st.slider("Bathrooms", 1, 10, 2)
-
         soil_options = REGION_SOIL_OPTIONS.get(country, ["Generic Firm Sandy Gravel"])
-        default_idx = 0
-        prev_soil = st.session_state.selected_soil_name
-        if prev_soil in soil_options:
-            default_idx = soil_options.index(prev_soil)
-        selected_soil = st.selectbox(
-            "Soil Condition", soil_options, index=default_idx,
-            format_func=lambda x: f"{x} ({get_soil_category(x)}, {get_soil_multiplier(x)}x)"
-        )
+        default_idx = soil_options.index(st.session_state.selected_soil_name) if st.session_state.selected_soil_name in soil_options else 0
+        selected_soil = st.selectbox("Soil Condition", soil_options, index=default_idx, format_func=lambda x: f"{x} ({get_soil_category(x)}, {get_soil_multiplier(x)}x)")
         st.session_state.selected_soil_name = selected_soil
-
-        # ─── Room Types ──────────────────────────────────────
         st.markdown("**Room Types to Include**")
-        room_type_options = [
-            "Bedroom", "Bathroom", "Ensuite", "Corridor", "Balcony",
-            "Living Room", "Kitchen", "Dining Room", "Office", "Storage"
-        ]
-        selected_rooms = st.multiselect(
-            "Select room types (at least one of each will be generated)",
-            options=room_type_options,
-            default=st.session_state.selected_room_types
-        )
+        room_type_options = ["Bedroom", "Bathroom", "Ensuite", "Corridor", "Balcony", "Living Room", "Kitchen", "Dining Room", "Office", "Storage"]
+        selected_rooms = st.multiselect("Select room types (at least one of each will be generated)", options=room_type_options, default=st.session_state.selected_room_types)
         st.session_state.selected_room_types = selected_rooms
 
-    # ─── Generate button ──────────────────────────────────────
     if st.button("Generate Concepts", use_container_width=True):
-        with st.spinner("Synthesizing 4 concepts..."):
+        with st.spinner("Synthesizing 4 concepts with metric validation..."):
             concepts = []
             soil_name = st.session_state.selected_soil_name
             room_types = st.session_state.selected_room_types
             for i in range(4):
-                d = generate_spatial_model(
-                    domain, typology,
-                    plot + random.randint(-400, 400),
-                    max(1, floors + random.randint(-2, 2)),
-                    max(1, baths + random.randint(-2, 2)),
-                    country, soil_name,
-                    room_types=room_types,
-                    seed=i
-                )
+                d = generate_spatial_model(domain, typology, plot + random.randint(-400, 400), max(1, floors + random.randint(-2, 2)), max(1, baths + random.randint(-2, 2)), country, soil_name, room_types=room_types, seed=i)
                 d["plan"] = d["rooms"]
+                metric = validate_metric_design(d)
+                d["metric_design"] = metric
                 ec = run_eurocode_analysis(d, domain)
                 d["eurocode"] = ec
                 total_usd, total_local, fx, boq_breakdown = compute_boq(d, country)
                 arch, struct, sust, cost, comp = calculate_ai_scores(d, ec, total_usd, "")
                 materials = compute_materials(d)
-                d["scores"] = {"arch": arch, "struct": struct, "sust": sust, "cost": cost, "composite": comp}
+                d["scores"] = {"arch": arch, "struct": struct, "sust": sust, "cost": cost, "metric": metric["score"], "composite": comp}
                 d["total_usd"] = total_usd
                 d["total_local"] = total_local
                 d["fx"] = fx
                 d["boq_breakdown"] = boq_breakdown
                 d["materials"] = materials
                 concepts.append(d)
-
-            concepts.sort(key=lambda x: x["scores"]["composite"], reverse=True)
+            concepts.sort(key=lambda x: (x["scores"]["composite"], x["scores"]["metric"]), reverse=True)
             st.session_state.generated_concepts = concepts
             st.session_state.active_design = concepts[0]
-            log_event(username, mem, f"Generated 4 concepts. Top: {concepts[0]['id']}")
+            log_event(username, mem, f"Generated 4 concepts. Top: {concepts[0]['id']} · Metric {concepts[0]['scores']['metric']}/100")
             leveled_up = add_xp(username, 20)
             st.session_state.user_data = get_user(username)
-            if leveled_up:
-                st.balloons()
+            if leveled_up: st.balloons()
             st.rerun()
 
-    # ─── Cost Optimisation ──────────────────────────────────
     if st.button("Optimise Cost", use_container_width=True):
         with st.spinner("Optimising..."):
-            best, cost = optimise_cost(
-                domain, typology, country, selected_soil,
-                st.session_state.selected_room_types,
-                min_gfa=200
-            )
+            best, cost = optimise_cost(domain, typology, country, selected_soil, st.session_state.selected_room_types, min_gfa=200)
             if best:
+                best["metric_design"] = validate_metric_design(best)
                 st.success(f"Optimised concept found! Cost: ${cost:,.0f}")
                 st.session_state.generated_concepts = [best]
+                st.session_state.active_design = best
                 st.rerun()
-            else:
-                st.warning("No valid concept found.")
+            else: st.warning("No valid concept found.")
 
-    # ─── Version History ─────────────────────────────────────
     with st.expander("Version History", expanded=False):
         if mem.get("designs"):
-            for idx, ver in enumerate(reversed(mem["designs"])):
-                st.write(f"{idx+1}. {ver['type']} - {ver['timestamp'][:10]}")
-        else:
-            st.write("No saved versions.")
-
+            for idx, ver in enumerate(reversed(mem["designs"])): st.write(f"{idx+1}. {ver['type']} - {ver['timestamp'][:10]}")
+        else: st.write("No saved versions.")
     if st.button("Logout", use_container_width=True):
         save_memory(username, mem)
         st.session_state.logged_in = False
         st.rerun()
 
-# ─── Main Content ─────────────────────────────────────────────
 if nav == "Concepts":
     if st.session_state.generated_concepts:
         concepts = st.session_state.generated_concepts
         st.markdown("## Evolution Engine Results")
-        st.caption("4 unique design concepts evaluated by Sai AI Agents")
+        st.caption("Concepts evaluated by Arc AI Agents + Metric Design Intelligence")
         names = ["Concept 1", "Concept 2", "Concept 3", "Concept 4"]
-        colors = ["#888","#999","#777","#666"]
         tabs = st.tabs(names[:len(concepts)])
-
-        # FIXED LOOP: ensure both tab and concept are correctly paired
         for idx, (tab, c) in enumerate(zip(tabs, concepts)):
             with tab:
                 sc = c["scores"]
                 ec = c["eurocode"]
+                metric = c.get("metric_design") or validate_metric_design(c)
+                summary = metric["summary"]
                 st.markdown(f"**Design brief:** {c['type']}, {c['floors']}‑storey, {len(c['rooms'])} rooms, {c['country']}. Soil: {c['soil_name']}. GFA: {format_area(c['total_gfa'])}")
+                m1, m2, m3, m4, m5 = st.columns(5)
+                with m1: st.metric("Metric Design", f"{metric['score']}/100", delta=metric["status"])
+                with m2: st.metric("Metric Checks", f"{summary['pass']}/{summary['total']}")
+                with m3: st.metric("Efficiency", f"{summary['space_efficiency_pct']:.1f}%")
+                with m4: st.metric("Site Coverage", f"{summary['site_coverage_pct']:.1f}%")
+                with m5: st.metric("Composite", f"{sc['composite']}/100")
                 col1, col2 = st.columns([3,2])
                 with col1:
                     st.markdown("### Floor Plan")
@@ -315,22 +215,29 @@ if nav == "Concepts":
                     with st.expander("Material Breakdown"):
                         st.dataframe(pd.DataFrame(c['boq_breakdown']), use_container_width=True)
                 with col2:
-                    for lbl, key, col in [("Architect AI","arch","#888"),("Structural AI","struct","#aaa"),("Sustainability AI","sust","#777"),("Cost AI","cost","#999")]:
-                        st.markdown(f"""<div style='margin-bottom:6px;'>
-                                        <div style='display:flex;align-items:center;font-size:12px;color:#888'>{lbl} {sc[key]}%</div>
-                                        <div class='metric-bar-bg'><div class='metric-bar-fg' style='width:{sc[key]}%;background:{col};'></div></div>
-                                      </div>""", unsafe_allow_html=True)
+                    for lbl, key, col in [("Architect AI","arch","#888"),("Structural AI","struct","#aaa"),("Sustainability AI","sust","#777"),("Cost AI","cost","#999"),("Metric Design","metric","#bbb")]:
+                        st.markdown(f"<div style='margin-bottom:6px;'><div style='display:flex;align-items:center;font-size:12px;color:#888'>{lbl} {sc[key]}%</div><div class='metric-bar-bg'><div class='metric-bar-fg' style='width:{sc[key]}%;background:{col};'></div></div></div>", unsafe_allow_html=True)
                     st.metric("USD Total", f"${c['total_usd']:,.0f}")
                     st.metric(f"Local ({c['fx']['currency']})", f"{c['fx']['symbol']} {c['total_local']:,.0f}")
                     st.markdown("### 3D Massing")
                     view = st.radio("View", ["Isometric","Interactive"], horizontal=True, key=f"view_{c['id']}")
-                    if view == "Isometric":
-                        st.components.v1.html(render_isometric(c["plan"], c["structural"]["span"]), height=400)
-                    else:
-                        st.plotly_chart(render_3d(c["plan"], c["floors"], c["structural"]["span"]), use_container_width=True, key=f"plot_{c['id']}")
+                    if view == "Isometric": st.components.v1.html(render_isometric(c["plan"], c["structural"]["span"]), height=400)
+                    else: st.plotly_chart(render_3d(c["plan"], c["floors"], c["structural"]["span"]), use_container_width=True, key=f"plot_{c['id']}")
 
-                # AEC Details
-                with st.expander("AEC Details (Structural, Materials, Carbon, Risks, Quality)", expanded=False):
+                with st.expander("AEC Details (Metric, Structural, Materials, Carbon, Risks, Quality)", expanded=False):
+                    st.markdown("#### Metric Design Validation")
+                    if metric["status"] == "PASS": st.success(f"Metric design review: PASS · {metric['score']}/100")
+                    elif metric["status"] == "REVIEW": st.warning(f"Metric design review: REVIEW · {metric['score']}/100")
+                    else: st.error(f"Metric design review: FAIL · {metric['score']}/100")
+                    st.write(f"**Checks:** {summary['pass']} pass · {summary['review']} review · {summary['fail']} fail")
+                    st.dataframe(pd.DataFrame(metric["checks"]), use_container_width=True, hide_index=True)
+                    if metric["warnings"]:
+                        st.markdown("**Review items**")
+                        st.dataframe(pd.DataFrame(metric["warnings"]), use_container_width=True, hide_index=True)
+                    if metric["errors"]:
+                        st.markdown("**Blocking items**")
+                        st.dataframe(pd.DataFrame(metric["errors"]), use_container_width=True, hide_index=True)
+
                     st.markdown("#### Structural Design")
                     st.write(f"**Foundation:** {c['structural']['foundation']}")
                     st.write(f"**Slab System:** {c['structural']['slab_system']}")
@@ -341,13 +248,11 @@ if nav == "Concepts":
                     st.write(f"**Columns:** {c['structural']['columns']}")
                     st.write(f"**Beams:** {c['structural']['beams']}")
                     st.write(f"**Typical Span:** {format_length(c['structural']['span'])}")
-
                     st.markdown("#### Eurocode Check")
                     st.write(f"**Design Load:** {ec['design_load']}")
                     st.write(f"**M_ed:** {ec['m_ed']}")
                     st.write(f"**M_rd:** {ec['m_rd']}")
                     st.write(f"**Status:** {ec['uls_status']}")
-
                     st.markdown("#### Material Quantities & Embodied Carbon")
                     mats = c['materials']
                     st.write(f"**Concrete:** {mats['concrete_volume']} m³")
@@ -355,10 +260,8 @@ if nav == "Concepts":
                     st.write(f"**Brick:** {mats['brick_units']} units")
                     st.write(f"**Finishes:** {format_area(mats['finish_area'])}")
                     st.write(f"**Embodied Carbon:** {mats['embodied_carbon_t']} t CO₂e")
-
                     st.markdown("#### Detailed BOQ")
                     st.dataframe(pd.DataFrame(c['boq_breakdown']), use_container_width=True)
-
                     st.markdown("#### Structural Member Sizing")
                     sd = compute_structural_design(c, ec)
                     col_s1, col_s2, col_s3 = st.columns(3)
@@ -373,28 +276,19 @@ if nav == "Concepts":
                         st.write(f"**Column Rebar:** {sd['column_bars']}×25mm bars")
                         st.write(f"**Slab Rebar:** {sd['slab_bars']}×12mm @200mm")
                         st.write(f"**Footing Rebar:** {sd['footing_bars']}×16mm")
-
                     st.markdown("#### Construction Schedule")
                     schedule_df = compute_construction_schedule(c)
                     st.dataframe(schedule_df[["Task", "Duration", "Start", "Finish", "Predecessors"]], use_container_width=True)
                     st.plotly_chart(plot_schedule_gantt(schedule_df), use_container_width=True)
-
                     st.markdown("#### Cost by Trade")
                     cost_df = compute_cost_by_trade(c, c["country"])
-                    st.dataframe(cost_df.style.format({"Material": "${:,.0f}", "Labour": "${:,.0f}", "Equipment": "${:,.0f}", "Total": "${:,.0f}", "Total Local": "{:,.0f}"}), use_container_width=True)
-
-                    # ─── Wind (simple) ─────────────────────────
+                    st.dataframe(cost_df.style.format({"Material":"${:,.0f}","Labour":"${:,.0f}","Equipment":"${:,.0f}","Total":"${:,.0f}","Total Local":"{:,.0f}"}), use_container_width=True)
                     st.markdown("#### Wind Load Analysis (Simplified)")
                     wind = compute_wind_load(c, c["country"])
                     col_w1, col_w2, col_w3 = st.columns(3)
-                    with col_w1:
-                        st.metric("Wind Speed", f"{wind['wind_speed']} m/s")
-                    with col_w2:
-                        st.metric("Wind Pressure", f"{wind['wind_pressure']} kN/m²")
-                    with col_w3:
-                        st.metric("Base Shear", f"{wind['base_shear']} kN")
-
-                    # ─── Advanced Wind ──────────────────────────
+                    with col_w1: st.metric("Wind Speed", f"{wind['wind_speed']} m/s")
+                    with col_w2: st.metric("Wind Pressure", f"{wind['wind_pressure']} kN/m²")
+                    with col_w3: st.metric("Base Shear", f"{wind['base_shear']} kN")
                     st.markdown("#### Detailed Wind (EC1)")
                     dw = compute_detailed_wind(c, c["country"])
                     st.write(f"**Basic Wind Speed:** {dw['v_b0']} m/s")
@@ -403,19 +297,12 @@ if nav == "Concepts":
                     st.write(f"**Basic Pressure (qb):** {dw['qb']} kN/m²")
                     st.write(f"**Peak Velocity Pressure (qp):** {dw['qp']} kN/m²")
                     st.write(f"**Wind Force (F_wind):** {dw['F_wind']} kN")
-
-                    # ─── Seismic (simple) ───────────────────────
                     st.markdown("#### Seismic Check (Simplified)")
                     seismic = compute_seismic_check(c, c["country"])
                     col_se1, col_se2, col_se3 = st.columns(3)
-                    with col_se1:
-                        st.metric("Seismic Zone", f"{seismic['seismic_zone']:.2f}")
-                    with col_se2:
-                        st.metric("Base Shear", f"{seismic['base_shear']} kN")
-                    with col_se3:
-                        st.metric("Status", seismic['status'])
-
-                    # ─── Advanced Seismic ───────────────────────
+                    with col_se1: st.metric("Seismic Zone", f"{seismic['seismic_zone']:.2f}")
+                    with col_se2: st.metric("Base Shear", f"{seismic['base_shear']} kN")
+                    with col_se3: st.metric("Status", seismic['status'])
                     st.markdown("#### Advanced Seismic (EC8)")
                     aseismic = compute_advanced_seismic(c, c["country"])
                     st.write(f"**Ground Accel. (ag):** {aseismic['ag']:.3f} m/s²")
@@ -424,13 +311,11 @@ if nav == "Concepts":
                     st.write(f"**Base Shear (advanced):** {aseismic['base_shear']} kN")
                     st.write(f"**Soil Factor:** {aseismic['soil_factor']}")
                     st.write(f"**Period (T):** {aseismic['T']:.2f} s")
-
-                    # ─── Solar ──────────────────────────────────
                     st.markdown("#### Solar & Energy Analysis")
                     solar = compute_solar_potential(c)
                     col_e1, col_e2, col_e3 = st.columns(3)
                     with col_e1:
-                        st.metric("Roof Area", f"{format_area(solar['roof_area'])}")
+                        st.metric("Roof Area", format_area(solar['roof_area']))
                         st.metric("Installed PV", f"{solar['installed_capacity']} kWp")
                     with col_e2:
                         st.metric("Annual Energy", f"{solar['annual_energy']:,} kWh")
@@ -438,197 +323,29 @@ if nav == "Concepts":
                     with col_e3:
                         st.caption("PV Performance")
                         st.progress(min(1.0, solar['annual_energy'] / 5000), text=f"{solar['annual_energy']} kWh/yr")
-
-                    # ─── Water ──────────────────────────────────
                     st.markdown("#### Water Efficiency & Rainwater Harvesting")
                     water = compute_water_harvesting(c)
                     st.write(f"**Rainfall:** {water['rainfall']} mm/year")
                     st.write(f"**Harvestable Volume:** {water['harvestable_volume']} m³/year")
                     st.progress(water['savings_percentage']/100, text=f"{water['savings_percentage']}% of typical water use")
                     st.caption("Typical building water use: 100 m³/year")
-
-                    # ─── Green Rating ──────────────────────────
                     st.markdown("#### Green Building Rating")
                     rating = compute_green_rating(c, ec)
                     st.metric("Score", f"{rating['score']}/100", delta=rating['rating'])
                     st.progress(rating['score']/100, text=f"{rating['score']}%")
-
-                    # ─── Risks ──────────────────────────────────
                     st.markdown("#### Risk Register")
-                    risks = [
-                        {"Risk": "Foundation settlement", "Likelihood": "Medium", "Impact": "High", "Mitigation": "Soil improvement"},
-                        {"Risk": "Steel supply delay", "Likelihood": "High", "Impact": "Medium", "Mitigation": "Pre-order steel"},
-                        {"Risk": "Labour shortage", "Likelihood": "Low", "Impact": "Medium", "Mitigation": "Local hiring plan"},
-                        {"Risk": "Weather disruption", "Likelihood": "Medium", "Impact": "Low", "Mitigation": "Flexible schedule"},
-                        {"Risk": "Cost overrun", "Likelihood": "High", "Impact": "High", "Mitigation": "10% contingency"}
-                    ]
+                    risks = [{"Risk":"Foundation settlement","Likelihood":"Medium","Impact":"High","Mitigation":"Soil improvement"},{"Risk":"Steel supply delay","Likelihood":"High","Impact":"Medium","Mitigation":"Pre-order steel"},{"Risk":"Labour shortage","Likelihood":"Low","Impact":"Medium","Mitigation":"Local hiring plan"},{"Risk":"Weather disruption","Likelihood":"Medium","Impact":"Low","Mitigation":"Flexible schedule"},{"Risk":"Cost overrun","Likelihood":"High","Impact":"High","Mitigation":"10% contingency"}]
                     st.table(pd.DataFrame(risks))
-
-                    # ─── Quality ─────────────────────────────────
                     st.markdown("#### Quality Checklist")
-                    checklist = [
-                        {"Phase": "Foundation", "Item": "Excavation depth", "Status": "Pass"},
-                        {"Phase": "Foundation", "Item": "Reinforcement placement", "Status": "Pass"},
-                        {"Phase": "Foundation", "Item": "Concrete pour", "Status": "Pass"},
-                        {"Phase": "Structure", "Item": "Column alignment", "Status": "Pass"},
-                        {"Phase": "Structure", "Item": "Beam formwork", "Status": "Pass"},
-                        {"Phase": "Structure", "Item": "Slab curing", "Status": "Pass"},
-                        {"Phase": "Finishes", "Item": "Floor flatness", "Status": "Pass"},
-                        {"Phase": "Finishes", "Item": "Wall plaster", "Status": "Pass"},
-                        {"Phase": "Finishes", "Item": "Painting", "Status": "Pass"},
-                        {"Phase": "MEP", "Item": "Electrical conduit", "Status": "Pass"},
-                        {"Phase": "MEP", "Item": "Plumbing layout", "Status": "Pass"},
-                        {"Phase": "MEP", "Item": "HVAC", "Status": "Pass"},
-                        {"Phase": "External", "Item": "Drainage", "Status": "Pass"},
-                        {"Phase": "External", "Item": "Landscaping", "Status": "Pass"},
-                        {"Phase": "External", "Item": "Access roads", "Status": "Pass"}
-                    ]
+                    checklist = [{"Phase":"Foundation","Item":"Excavation depth","Status":"Pass"},{"Phase":"Foundation","Item":"Reinforcement placement","Status":"Pass"},{"Phase":"Foundation","Item":"Concrete pour","Status":"Pass"},{"Phase":"Structure","Item":"Column alignment","Status":"Pass"},{"Phase":"Structure","Item":"Beam formwork","Status":"Pass"},{"Phase":"Structure","Item":"Slab curing","Status":"Pass"},{"Phase":"Finishes","Item":"Floor flatness","Status":"Pass"},{"Phase":"Finishes","Item":"Wall plaster","Status":"Pass"},{"Phase":"Finishes","Item":"Painting","Status":"Pass"},{"Phase":"MEP","Item":"Electrical conduit","Status":"Pass"},{"Phase":"MEP","Item":"Plumbing layout","Status":"Pass"}]
                     st.table(pd.DataFrame(checklist))
-
-        # ─── Concept Comparison ──────────────────────────────────
-        with st.expander("Compare Concepts", expanded=False):
-            comparison_data = []
-            for i, c in enumerate(concepts):
-                comparison_data.append({
-                    "Concept": f"Concept {i+1}",
-                    "Type": c["type"],
-                    "Floors": c["floors"],
-                    "GFA (m²)": c["total_gfa"],
-                    "Cost (USD)": f"${c['total_usd']:,.0f}",
-                    "Arch %": c["scores"]["arch"],
-                    "Struct %": c["scores"]["struct"],
-                    "Sust %": c["scores"]["sust"],
-                    "Cost Eff %": c["scores"]["cost"],
-                    "Composite": c["scores"]["composite"]
-                })
-            comp_df = pd.DataFrame(comparison_data)
-            st.dataframe(comp_df, use_container_width=True)
-
-        # ─── Radar across all concepts ────────────────────────
-        with st.expander("AI Score Radar (all concepts)", expanded=False):
-            radar_df = pd.DataFrame([
-                {
-                    "Concept": f"{names[i]} ({c['type']})",
-                    "Architecture": c["scores"]["arch"],
-                    "Structural": c["scores"]["struct"],
-                    "Sustainability": c["scores"]["sust"],
-                    "Cost Efficiency": c["scores"]["cost"]
-                }
-                for i, c in enumerate(concepts)
-            ])
-            cats = list(radar_df.columns[1:])
-            fig_radar = go.Figure()
-            for i, row in radar_df.iterrows():
-                fig_radar.add_trace(go.Scatterpolar(
-                    r=row[cats].values,
-                    theta=cats,
-                    fill='toself',
-                    name=row["Concept"],
-                    line_color=colors[i]
-                ))
-            fig_radar.update_layout(
-                polar=dict(radialaxis=dict(range=[0, 100])),
-                paper_bgcolor='rgba(0,0,0,0)',
-                font_color='#aaaaaa'
-            )
-            st.plotly_chart(fig_radar, use_container_width=True)
-
-        # ─── Top recommendation ──────────────────────────────
-        asset = concepts[0]
-        st.markdown("---")
-        st.markdown("### Top Recommendation: Concept 1")
-
-        col_save, col_actions = st.columns([1, 2])
-
-        with col_save:
-            if st.button("Save to Library"):
-                mem["designs"].append({
-                    "id": asset["id"],
-                    "type": asset["type"],
-                    "country": asset["country"],
-                    "soil": asset["soil_name"],
-                    "total_gfa": asset["total_gfa"],
-                    "scores": asset["scores"],
-                    "plan": asset["plan"],
-                    "timestamp": datetime.now().isoformat()
-                })
-                save_memory(username, mem)
-                st.success("Design saved!")
-
-        with col_actions:
-            # ─── PDF Export ──────────────────────────────────
-            if st.button("Export PDF Report"):
-                pdf_buffer = generate_pdf_report(
-                    asset, asset["scores"], asset["eurocode"],
-                    asset["materials"], asset["boq_breakdown"],
-                    compute_construction_schedule(asset),
-                    compute_solar_potential(asset),
-                    compute_water_harvesting(asset),
-                    compute_green_rating(asset, asset["eurocode"]),
-                    compute_wind_load(asset, asset["country"]),
-                    compute_seismic_check(asset, asset["country"])
-                )
-                st.download_button(
-                    label="Download PDF",
-                    data=pdf_buffer,
-                    file_name="arc_report.pdf",
-                    mime="application/pdf"
-                )
-
-            # ─── Share Design ────────────────────────────────
-            if st.button("Share Design"):
-                link = create_share_link(asset, base_url="https://your-app.streamlit.app")
-                st.write("Share this link:")
-                st.code(link)
-
-            # ─── Export CSV ──────────────────────────────────
-            exp = pd.DataFrame([
-                {
-                    "ID": c["id"],
-                    "Type": c["type"],
-                    "Country": c["country"],
-                    "Soil": c["soil_name"],
-                    "GFA": c["total_gfa"],
-                    "Floors": c["floors"],
-                    "Rooms": len(c["rooms"]),
-                    "Cost USD": c["total_usd"],
-                    "Cost Local": c["total_local"],
-                    "Arch%": c["scores"]["arch"],
-                    "Struct%": c["scores"]["struct"],
-                    "Sust%": c["scores"]["sust"],
-                    "CostEff%": c["scores"]["cost"],
-                    "Composite": c["scores"]["composite"]
-                }
-                for c in concepts
-            ])
-            st.download_button(
-                "Export CSV",
-                exp.to_csv(index=False).encode(),
-                file_name="arc_concepts.csv",
-                mime="text/csv"
-            )
-
     else:
-        st.info("No designs generated yet. Configure parameters in sidebar and click Generate Concepts.")
-
-elif nav == "Ram AI":
-    st.markdown("## Ram AI – Infinite Architectural Intelligence")
-    st.markdown("Ask Ram anything about construction, soil, costs, or design in East Africa.")
-    with st.form("ram_form"):
-        q = st.text_input("Your question:", placeholder="Ask Ram about soil, foundations, costs...")
-        submitted = st.form_submit_button("Ask Ram AI")
-    if submitted and q:
-        with st.spinner("Ram is thinking..."):
-            resp = ram_ai(q, country, domain)
-            st.session_state.ram_history.append(("You", q))
-            st.session_state.ram_history.append(("Ram", resp))
-    for speaker, msg in st.session_state.ram_history:
-        if speaker == "You":
-            st.markdown(f"**{speaker}:** {msg}")
-        else:
-            st.markdown(f"**{speaker}:** {msg}")
-
-st.markdown(
-    "<div style='text-align:center;padding:20px 0;color:#444;font-size:0.8rem;'>AI Powered · Data Driven · Secure · Scalable</div>",
-    unsafe_allow_html=True
-)
+        st.info("Configure the project in the sidebar and generate concepts.")
+else:
+    st.markdown("## Ram AI")
+    prompt = st.text_area("Ask Ram AI about the current design")
+    if st.button("Ask Ram"):
+        if st.session_state.active_design:
+            answer = ram_ai(prompt, st.session_state.active_design)
+            st.write(answer)
+        else: st.info("Generate a concept first.")
